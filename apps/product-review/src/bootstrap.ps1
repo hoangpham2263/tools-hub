@@ -28,7 +28,6 @@ $script:WorkflowModuleFiles = @(
     'workflow/product-workflow.ps1'
     'application/batch-folders.ps1'
     'application/reference-archive.ps1'
-    'application/missing-data.ps1'
     'workflow/batch-workflow.ps1'
     'application/configuration.ps1'
 ) | ForEach-Object { Join-Path $PSScriptRoot $_ }

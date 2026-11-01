@@ -17,19 +17,15 @@ try{
     $first=@($map.entries|Where-Object product_url -eq $url)[0]
     [IO.File]::WriteAllText($original,'source changed after attachment')
     Assert ((Get-BytesHash ([IO.File]::ReadAllBytes($first.file))) -eq $first.sha256) 'Attached image did not retain independent bytes.'
-    $script:Config=@{ActiveProductUrl=$url;ManualReferences=[Management.Automation.PSSerializer]::Deserialize([Management.Automation.PSSerializer]::Serialize($map));PhotosPerImage=1}
+    $script:Config=@{ActiveProductUrl=$url;ManualReferences=[Management.Automation.PSSerializer]::Deserialize([Management.Automation.PSSerializer]::Serialize($map))}
     $script:Batch=@{Logs=$temp}
     $context=[pscustomobject]@{product='table';presentation='placed';source_categories=@('dining-tables')}
-    $script:Verdict='FIT';$script:LibraryCalls=0
-    function Test-ReferencePhoto($Photo,$Reference,$Context,$Role){Assert ($Photo -eq $first.file -and $Role -eq 'Scene') 'Wrong link image or role.';return $script:Verdict}
-    function Select-Photo{$script:LibraryCalls++;return 'library-fallback.jpg'}
+    function Invoke-AI {throw 'Attached photos must be used as they are, without AI checks.'}
     $picked=@(Select-ProductReferences 'product.jpg' 'table' 'manual' $context)
-    Assert ($picked.Count -eq 1 -and $picked[0] -eq $first.file -and $script:LibraryCalls -eq 0) 'Manual reference did not bypass random library selection.'
-    function Test-ReferencePhoto {throw 'Manually attached photos must not trigger AI suitability QA.'}
-    Assert ((Select-ProductReferences 'product.jpg' 'table' 'manual-no-qa' $context) -eq $first.file) 'User-selected photo was not used directly.'
+    Assert ($picked.Count -eq 1 -and $picked[0] -eq $first.file) 'User-selected photo was not used directly.'
     $script:Config.ActiveProductUrl='https://example.test/p/unattached'
     $rejected=$false;try{Select-ProductReferences 'product.jpg' 'table' 'missing-manual' $context|Out-Null}catch{$rejected=$true}
-    Assert ($rejected -and $script:LibraryCalls -eq 0) 'A product image without a review must stop, never pick from the library.'
+    Assert $rejected 'A product image without a review must stop.'
     [IO.File]::WriteAllText($first.file,'tampered snapshot');$script:Config.ActiveProductUrl=$url
     $rejected=$false;try{Select-ProductReferences 'product.jpg' 'table' 'changed-manual' $context|Out-Null}catch{$rejected=$true}
     Assert $rejected 'Changed manual snapshot was used without verification.'

@@ -49,12 +49,7 @@ function Invoke-AI($PromptText, $Images, $ResultFile, $Sandbox) {
     if ($ResultFile -like '*-context.txt') {
         return '{"category_key":"polo","existing_profile":"fixture","product":"polo shirt","presentation":"worn","setting":"patio","details":"Navy panels and collar trim","reject":"bedroom","search_query":"polo shirt real photos"}'
     }
-    if ($ResultFile -like '*-fit-*.txt') {
-        if ($Images[0] -like '*mixed*') { throw 'Unrelated review photos must not precede matching references.' }
-        if ($ResultFile -like '*-p2-fit-*.txt' -and $PromptText -notmatch 'BACKGROUND/SCENE') { throw 'Second source must be evaluated for its scene, not its person.' }
-        if ($ResultFile -like '*-p2-fit-*.txt' -and $Images.Count -ne 3) { throw 'Scene compatibility must include the selected person.' }
-        'FIT' | Set-Content -LiteralPath $ResultFile; return 'FIT'
-    }
+    if ($ResultFile -like '*-fit-*.txt') { throw 'Attached review photos must not be checked by AI.' }
     if ($ResultFile -like '*-quality-*.txt') { throw 'Image QA must not run.' }
     if ($ResultFile -like '*-review.txt') {
         if ($Images.Count -ne 1 -or -not (Test-Path -LiteralPath $Images[0])) { throw 'Review missing finished image.' }
@@ -66,8 +61,6 @@ function Invoke-AI($PromptText, $Images, $ResultFile, $Sandbox) {
         "The navy pattern is subtle.`nIt looks good with the shorts." | Set-Content -LiteralPath $ResultFile
         return "The navy pattern is subtle.`nIt looks good with the shorts."
     }
-    $fitPattern = $ResultFile -replace '-image.txt$', '-p*-fit-*.txt'
-    if (@(Get-ChildItem -Path $fitPattern).Count -ne 1) { throw 'Exactly one review reference must be selected.' }
     if ($Images.Count -ne 2 -or $Images[0] -eq $Images[1]) { throw 'Expected one review image and one separate product image.' }
     if ($Images[1] -notlike '*-product.png') { throw 'Separate product reference order is incorrect.' }
     if ($PromptText -notmatch 'one continuous camera frame' -or $PromptText -notmatch 'Image 1 is the REVIEW reference' -or $PromptText -notmatch 'Image 2 is the PRODUCT reference') { throw 'Missing review/product reference roles.' }
@@ -83,9 +76,12 @@ function Invoke-AI($PromptText, $Images, $ResultFile, $Sandbox) {
     $queue = Join-Path $tempRoot 'workspace/urls.txt'
     New-Item -ItemType Directory -Force (Split-Path $queue -Parent) | Out-Null
     @('https://example.test/products/one', 'https://example.test/products/two', 'https://example.test/products/fail') | Set-Content $queue
+    # Each link has the review photo the user attached (Nhập ảnh), as the app passes it.
+    . (Join-Path $root 'src/bootstrap.ps1')
+    foreach ($name in @('one', 'two', 'fail')) { $map = Save-ManualReference $tempRoot "https://example.test/products/$name" (Join-Path $sources 'one.png') }
     $batchFailed = $false
     try {
-        & (Join-Path $tempRoot 'src/run-images.ps1') -ThrottleLimit 2 -PhotosPerImage 2 -LocalOnly
+        & (Join-Path $tempRoot 'src/run-images.ps1') -ThrottleLimit 2 -LocalOnly -ReferenceMapFile $map
     } catch {
         if ($_.Exception.Message -notlike 'Batch incomplete:*') { throw }
         $batchFailed = $true
@@ -129,12 +125,12 @@ function Invoke-AI($PromptText, $Images, $ResultFile, $Sandbox) {
     Assert (@(Get-ChildItem $csv.DirectoryName -Filter '*-review-status.json' -Recurse).Count -eq 3) 'Delivered images must await user review.'
     # Resume the failed queue through the same public entry point.
     'allow success' | Set-Content (Join-Path $tempRoot 'data/source-photos/allow-review-success.flag')
-    & (Join-Path $tempRoot 'src/run-images.ps1') -ThrottleLimit 2 -PhotosPerImage 2 -LocalOnly
+    & (Join-Path $tempRoot 'src/run-images.ps1') -ThrottleLimit 2 -LocalOnly -ReferenceMapFile $map
     Assert (-not ([IO.File]::ReadAllText($queue).Trim())) 'Successful retry must empty the queue.'
     $retryCsv = Get-ChildItem (Join-Path $tempRoot 'workspace/output') -Filter results.json -Recurse | Where-Object FullName -ne $csv.FullName
     $retryRows = @(Import-BatchRows $retryCsv.FullName)
     Assert ($retryRows.Count -eq 1 -and $retryRows[0].product_handle -eq 'fail' -and $retryRows[0].author) 'Retry must export only the previously failed product with final metadata.'
-    & (Join-Path $tempRoot 'src/run-images.ps1') -List $queue -LocalOnly
+    & (Join-Path $tempRoot 'src/run-images.ps1') -List $queue -LocalOnly -ReferenceMapFile $map
     Assert (@(Get-ChildItem (Join-Path $tempRoot 'workspace/output') -Directory).Count -eq 2) 'Empty queue must not create an extra batch.'
     . (Join-Path $root 'src/bootstrap.ps1')
     $profiles = @(Get-ReviewStyleProfiles (Join-Path $root 'data/review-style.json'))

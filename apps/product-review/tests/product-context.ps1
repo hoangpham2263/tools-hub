@@ -4,20 +4,15 @@ $root = Split-Path $PSScriptRoot -Parent
 . (Join-Path $root 'src/bootstrap.ps1')
 $tempDir = Join-Path $TestWorkspaceRoot ('product-context-test-' + [Guid]::NewGuid().ToString('N'))
 New-Item -ItemType Directory -Path $tempDir | Out-Null
-$script:Config = @{ PhotosPerImage = 2; ProductContexts = @(Get-ProductContexts (Join-Path $root 'data/product-contexts.json')); ReviewStyles = @() }
+$script:Config = @{ ProductContexts = @(Get-ProductContexts (Join-Path $root 'data/product-contexts.json')); ReviewStyles = @() }
 $script:Batch = @{ Dir = $tempDir; Images = $tempDir; Logs = $tempDir; Refs = (Join-Path $tempDir "refs") }
 $script:Config.SourceDir = $tempDir
 $script:Config.WritingStyle = Get-WritingStyle (Join-Path $root 'data/writing-style.json')
 'product' | Set-Content (Join-Path $tempDir 'actual-product.png')
 'person' | Set-Content (Join-Path $tempDir 'person.png')
 function Get-Reference($Url, $ItemId) { return (Join-Path $tempDir 'actual-product.png') }
-function Select-Photo($Reference, $Handle, $ItemId, $Exclude, $Role, $Context, $SubjectPhoto) {
-    if ($Role -eq 'Scene') {
-        if ($Context.id -ne 'apron' -or $SubjectPhoto -ne (Join-Path $tempDir 'person.png')) { throw 'Scene was not evaluated with the selected person and product.' }
-        throw 'No suitable source photo found after 2 checks.'
-    }
-    return (Join-Path $tempDir 'person.png')
-}
+# The review photo the user attached to this product.
+function Select-ProductReferences($Reference, $Handle, $ItemId, $Context) { return (Join-Path $tempDir 'person.png') }
 function Invoke-AI($PromptText, $Images, $ResultFile, $Sandbox) {
     if ($ResultFile -like '*-context.txt') {
         if($script:Classification){return $script:Classification}
@@ -53,7 +48,7 @@ try {
     $script:Classification='{"category_key":"coffee-table","existing_profile":"custom","product":"Low wooden table","presentation":"placed","setting":"Living room","details":"Low wood slab and legs","reject":"High dining chairs"}'
     $table=Resolve-ProductContext 'table' (Join-Path $tempDir 'actual-product.png') 'real-table'
     if($table.presentation -ne 'placed'){throw 'Apparel correction changed the presentation of actual furniture.'}
-    Write-Host 'PASS: product contexts, single-pass delivery without visual QA, contextual fallback and apron-focused reviews.' -ForegroundColor Green
+    Write-Host 'PASS: product contexts, single-pass delivery without visual QA, attached review photo and apron-focused reviews.' -ForegroundColor Green
 } finally {
     $resolved = [IO.Path]::GetFullPath($tempDir)
     $allowed = [IO.Path]::GetFullPath($TestWorkspaceRoot).TrimEnd('\') + '\'

@@ -1093,7 +1093,7 @@ async function startBatch() {
   Object.assign(run, { text: ui.cmbText.value, image: ui.cmbBackend.value });
   // Shown on the progress line for the whole run: which AI writes, which one draws.
   run.ai = `Viết review: ${ui.cmbText.selectedOptions[0]?.text} · Tạo ảnh: ${ui.cmbBackend.selectedOptions[0]?.text}`;
-  const r = await fetch("/api/run", { method: "POST", body: JSON.stringify({ per: 1, threads: ui.numThr.value, backend: run.image, text: run.text }) });
+  const r = await fetch("/api/run", { method: "POST", body: JSON.stringify({ threads: ui.numThr.value, backend: run.image, text: run.text }) });
   if (!r.ok) {
     const body = await r.json().catch(() => ({}));
     return appendLog("Chưa khởi động được lượt xử lý: " + (body.error || r.status));

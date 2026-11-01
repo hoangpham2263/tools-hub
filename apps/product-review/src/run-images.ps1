@@ -1,12 +1,12 @@
 ﻿# Batch pipeline: one product URL per line in urls.txt. Each run creates a timestamped batch.
-# For every URL: load product, select subject/scene references, create one photo, write a review.
+# For every URL: load product, take the review photo the user attached, create one photo, write a review.
 # URLs are processed in parallel (-ThrottleLimit); results are committed one by one in the main thread.
 param(
     [Alias('UrlList')][string]$List = (Join-Path (Split-Path $PSScriptRoot -Parent) 'workspace/urls.txt'),
     [Alias('InputDir')][string]$SourceDir = (Join-Path (Split-Path $PSScriptRoot -Parent) 'data/source-photos'),
     [string]$OutDir = (Join-Path (Split-Path $PSScriptRoot -Parent) 'workspace/output'),
-    [int]$MaxTries = 5,
-    [Alias('ReferencePhotosPerImage')][int]$PhotosPerImage = 2,
+    # Ignored: one attached review photo per image. Kept so older callers still start.
+    [Alias('ReferencePhotosPerImage')][int]$PhotosPerImage = 1,
     [ValidateRange(1, 4)][int]$ThrottleLimit = 2,
     [string]$Model = '',
     [string]$ReferenceMapFile = '',
@@ -22,8 +22,6 @@ $ErrorActionPreference = 'Stop'
 $OutputEncoding = [Text.UTF8Encoding]::new($false)
 [Console]::InputEncoding = $OutputEncoding
 [Console]::OutputEncoding = $OutputEncoding
-if ($MaxTries -lt 1) { throw 'MaxTries must be positive.' }
-if ($PhotosPerImage -lt 1) { throw 'PhotosPerImage must be positive.' }
 if ($ThrottleLimit -lt 1) { throw 'ThrottleLimit must be positive.' }
 foreach ($variableName in @('List', 'SourceDir', 'OutDir')) {
     Set-Variable $variableName ($ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath((Get-Variable $variableName -ValueOnly)))
@@ -34,7 +32,7 @@ $ProjectRoot = Split-Path $PSScriptRoot -Parent
 # Model AI from Cấu hình, unless -Model is given.
 $ai = Get-AiSettings $ProjectRoot
 if (-not $Model) { $Model = $ai.model }
-$script:Config = New-WorkflowConfiguration $ProjectRoot $SourceDir $MaxTries $PhotosPerImage $Model
+$script:Config = New-WorkflowConfiguration $ProjectRoot $SourceDir $Model
 $script:Config.ReasoningEffort = $ai.effort
 $script:Config.DriveRequired = -not $LocalOnly
 if($LocalOnly){$script:Config.Drive=$null}

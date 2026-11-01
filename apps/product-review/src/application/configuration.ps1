@@ -1,9 +1,9 @@
-﻿function New-WorkflowConfiguration([string]$ProjectRoot, [string]$SourceDir, [int]$MaxTries, [int]$PhotosPerImage, [string]$Model) {
+﻿function New-WorkflowConfiguration([string]$ProjectRoot, [string]$SourceDir, [string]$Model) {
     $workspace = Initialize-ProjectWorkspace $ProjectRoot
     $contexts = @(Get-ProductContexts (Join-Path $ProjectRoot 'data/product-contexts.json'))
     $catalog = Get-SourceCatalog $SourceDir
     return @{
-        SourceDir = $SourceDir; MaxTries = $MaxTries; Model = $Model; PhotosPerImage = $PhotosPerImage
+        SourceDir = $SourceDir; Model = $Model
         ReviewSamples = @(Get-ReviewSamples (Join-Path $ProjectRoot 'data/review-samples.jsonl'))
         ProductContexts = $contexts
         SourceCatalog = $catalog

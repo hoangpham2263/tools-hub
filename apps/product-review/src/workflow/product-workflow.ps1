@@ -12,12 +12,7 @@ function Invoke-ProductItem($Item, [string]$ItemId, $Brands) {
     $product = Read-ProductInput $Item $ItemId
     $download = $product.Reference
     try {
-        try { $picked = @(Select-ProductReferences $product.Reference $Item.Handle $ItemId $product.Context) }
-        catch {
-            if ($_.Exception.Message -notmatch 'No suitable') { throw }
-            Save-MissingData $Item $ItemId $product.Context $product.Reference $_.Exception.Message
-            throw "[CAUSE:MISSING_DATA] No suitable sample photo for $($product.Context.product). Recorded in missing-data."
-        }
+        $picked = @(Select-ProductReferences $product.Reference $Item.Handle $ItemId $product.Context)
         $request = New-ProductImageRequest $product.Reference $ItemId $product.Context $picked $Brands
         $bundle = Save-ProductReferenceBundle $Item $ItemId $product.Context $request $picked.Count
         $product.Reference = $bundle.ProductPath

@@ -109,7 +109,7 @@ function Invoke-BatchWorkflow([string]$ProjectRoot, [string]$List, [string]$OutD
                 # The unwrapped message first: PowerShell 7 wraps Out-String error text mid-sentence.
                 @($inner; $_ | Out-String; $_.ScriptStackTrace; $job.PS.Streams.Error | Format-List * -Force | Out-String) |
                     Set-Content -LiteralPath $errorLog -Encoding UTF8
-                $causeTag = if ($inner -match '\[CAUSE:(DRIVE_CONFIG|DRIVE_AUTH|DRIVE_UPLOAD|BRIDGE|AUTH|QUOTA|NETWORK|AI_TIMEOUT|BUSY|PROCESS_ACTIVE|STORE_LOCKED|PRODUCT_TIMEOUT|PRODUCT_NETWORK|PRODUCT_ACCESS|PRODUCT_NOT_FOUND|PRODUCT_DOWNLOAD|MISSING_DATA|OUTPUT_MISSING|OUTPUT_INVALID|TOOL_ERROR)\]') { $Matches[0] + ' ' } else { '' }
+                $causeTag = if ($inner -match '\[CAUSE:(DRIVE_CONFIG|DRIVE_AUTH|DRIVE_UPLOAD|BRIDGE|AUTH|QUOTA|NETWORK|AI_TIMEOUT|BUSY|PROCESS_ACTIVE|STORE_LOCKED|PRODUCT_TIMEOUT|PRODUCT_NETWORK|PRODUCT_ACCESS|PRODUCT_NOT_FOUND|PRODUCT_DOWNLOAD|OUTPUT_MISSING|OUTPUT_INVALID|TOOL_ERROR)\]') { $Matches[0] + ' ' } else { '' }
                 # Warning formatting wraps long records, losing reset details in the UI's
                 # line reader. Emit the same WARNING prefix as one unwrapped log line.
                 Write-Host "WARNING: [ITEM $($job.Index)] Failed; ${causeTag}URL and source kept for retry. $inner" -ForegroundColor Yellow
@@ -124,7 +124,6 @@ function Invoke-BatchWorkflow([string]$ProjectRoot, [string]$List, [string]$OutD
             }
             if ($pending -gt 0) { Start-Sleep -Milliseconds 400 }
         }
-        Write-MissingDataSummary $script:Batch
         Complete-BatchExport $results (Join-Path $ProjectRoot 'data/names.txt')
         Write-Host "`nDone: $($results.Count)/$($urls.Count) exported in $([int]((Get-Date) - $started).TotalSeconds)s" -ForegroundColor Green
         Write-Host "Results: $($script:Batch.Dir)"

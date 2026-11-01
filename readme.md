@@ -62,7 +62,6 @@ apps/product-review/workspace/output/<thời-gian>/
   logs/              log AI và lỗi từng sản phẩm
   results.json       kết quả chờ duyệt
   loox_import.csv    có sau khi duyệt xong
-  missing-data.csv   (nếu có) sản phẩm thiếu ảnh mẫu
 ```
 
 Trên Drive, mỗi tool có một thư mục trong `Tools Hub/`; Product Review dùng `Tools Hub/Product Review/`: `Ảnh đã tạo/`, `Nguồn ảnh/`, `Logs/`.

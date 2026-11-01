@@ -24,17 +24,10 @@ Per-product steps, in execution order
      Missing/unusable product references stop this item.
 
   02 SelectReferences
-     Input: reference, context and requested reference count.
-     Output: one subject reference plus compatible scene references if available.
-     Category takes priority, then original/stock provenance, then mixed review
-     photos. Library candidates require a suitability check; user-attached photos are used directly after file/hash checks.
-     Scene checks include the actual product and the selected person when relevant.
-     Candidates come from data/source-photos/ via catalog.json categories.
-     A real reference is required. If none passes the check, the item
-     stops, its URL remains queued and missing-data/<item>/ records the product
-     image and info.json. The batch writes missing-data.csv after all workers finish.
-     Object scenes do not require people, clothing, fictional names or a golf example.
-     Selection never consumes or edits source photos.
+     Input: the review photo the user attached to this link (computer, Drive library
+     or clipboard). No AI call: the photo is used as it is after file/hash checks.
+     A link without a review photo stops with [CAUSE:PRODUCT_INPUT]; its URL stays queued.
+     Source photos are never consumed or edited.
 
   03 CreateImage
      Input: selected references, actual product and writing/scene rules.

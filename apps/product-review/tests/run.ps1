@@ -1,5 +1,5 @@
 ﻿# All checks run in fresh PowerShell processes (Windows PowerShell 5.1 on Windows, pwsh on macOS); no paid AI calls.
-param([string[]]$Name = @('csv', 'workspace', 'ui-status', 'setup-check', 'quota', 'ai-retry', 'cli-process', 'source-data', 'reference-archive', 'product-input', 'manual-product', 'product-context', 'reference-fallback', 'scene-selection', 'image-output', 'image-delivery', 'image-tool-errors', 'manual-references', 'review-writing', 'review-metadata', 'review-pipeline', 'browser-backend', 'drive-storage', 'drive-delivery', 'multi-scene', 'batch-review', 'app-update', 'support-report', 'batch-import'))
+param([string[]]$Name = @('csv', 'workspace', 'ui-status', 'setup-check', 'quota', 'ai-retry', 'cli-process', 'source-data', 'reference-archive', 'product-input', 'manual-product', 'product-context', 'reference-fallback', 'image-output', 'image-delivery', 'image-tool-errors', 'manual-references', 'review-writing', 'review-metadata', 'review-pipeline', 'browser-backend', 'drive-storage', 'drive-delivery', 'multi-scene', 'batch-review', 'app-update', 'support-report', 'batch-import'))
 $ErrorActionPreference = 'Stop'
 $onWindows = ($PSVersionTable.PSEdition -eq 'Desktop') -or $IsWindows
 # Suites that draw test images with System.Drawing, which macOS lacks, are skipped there.

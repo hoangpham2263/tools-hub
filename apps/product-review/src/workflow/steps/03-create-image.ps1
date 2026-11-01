@@ -3,14 +3,9 @@ function New-ProductImageRequest([string]$Reference, [string]$ItemId, $Context, 
     $output = Join-Path $script:Batch.Images "$ItemId.png"
     $images = @($picked) + @($reference)
     $productIndex = $images.Count
-    $sceneCount = $picked.Count
     $isObject = $context.presentation -and $context.presentation -ne 'worn'
     $sceneBase = ''
-    $sceneInstruction = if ($sceneCount -gt 1) {
-        "Images 2 through $sceneCount are scene references only. Use image 2 as the main setting if it matches the required product context. Preserve that setting's existing objects; do not borrow props or people from other scene images or combine different locations. Do not invent a replacement setting."
-    } else {
-        'Image 1 also supplies the real setting. Preserve its compatible visible surroundings; do not invent a different location.'
-    }
+    $sceneInstruction = 'Image 1 also supplies the real setting. Preserve its compatible visible surroundings; do not invent a different location.'
     # A real logo is never reused: only where the product shows one, it becomes a fictional brand.
     $avoid = @($Brands.ToArray()) -join ', '
     $brandInstruction = @"
@@ -83,7 +78,6 @@ Target product: $($context.product). Presentation: $($context.presentation).
 Image 1 is the IMMUTABLE BASE PHOTO, not an inspiration or style reference. It may show a room, a desk, a floor, a lap, a car or an outdoor spot; whatever it shows is the setting of the result.
 Keep its exact canvas size, crop, camera position, perspective, surfaces, walls, floor, background,
 lighting, colors and all unrelated objects unchanged.
-Any additional scene images are context only and must not replace or redesign image 1.
 Image $productIndex (the last attached image) is the ACTUAL PRODUCT reference and controls only the product itself.
 Its background, room, walls, floor, rug, windows, furniture and props are NOT part of the result: never return image $productIndex or its setting, re-rendered or restyled.
 The result must be recognizably image 1 with the product added: compared side by side, it shows the same background, surfaces and objects as image 1.

@@ -52,10 +52,9 @@ CLI exit 0 không xác nhận công cụ tạo ảnh thành công. Giữ console
 - Ảnh người dùng gắn được dùng trực tiếp, không chặn vì kích thước tối thiểu hay chấm chất lượng/độ phù hợp. Không thêm lại thông báo “Reference image is too small” hoặc bước xét ảnh trước khi tạo. Giữ đúng cặp ảnh đã chọn và hash đầu vào.
 - Kho dùng tên tiếng Việt có dấu theo nhóm hàng chung như `Áo`, `Nội thất`; không chia theo website, không gọi kho áo là kho cả quần áo. Giữ nhóm khác để dùng về sau. `source_group` là nhóm thư mục; `category` là mã danh mục chi tiết để chọn ảnh và áp dụng bài học.
 - Chuyển kho phải cập nhật đường dẫn, giữ nguồn, hash và lịch sử sử dụng. Kiểm tra inventory thực tế trong catalog, không coi số đếm trong tài liệu là luôn cập nhật.
-- (Hàm chọn ảnh từ kho cũ chỉ còn cho test, app không gọi.) Khi chọn, đúng danh mục, góc ghép, độ nét và diện tích thay thế tương đương; phòng bàn nhỏ hoặc bàn tiệc quá dài không mặc nhiên hợp sản phẩm khác. Không kéo dài sản phẩm để lấp đồ cũ. Tránh CGI, collage, ảnh cận hoặc bị che vùng ghép.
-- Luân phiên ảnh phù hợp theo lịch sử. Có một ảnh đạt thì dừng tìm, không cần đủ số ảnh tối đa. FIT/NOFIT đã lưu chỉ áp dụng khi khớp cả URL sản phẩm và hash ảnh; FIT chỉ nói về bối cảnh, không xác nhận chất lượng kết quả.
+- App không tự chọn hay chấm ảnh review (đã bỏ chọn ảnh từ kho, kiểm tra FIT/NOFIT và missing-data). Link chưa gắn ảnh review dừng với `[CAUSE:PRODUCT_INPUT]`. Không kéo dài sản phẩm để lấp đồ cũ.
+- Ảnh review có thể chụp bất cứ gì (phòng, bàn, sàn, xe…). Prompt đồ vật gọi ảnh 1 là ảnh gốc, không phải "căn phòng": khi ảnh review không phải phòng mà ảnh sản phẩm là phòng, AI web (Flow) từng trả lại chính phòng của ảnh sản phẩm.
 - Dữ liệu bổ sung cần file thật, nguồn, SHA256, kích thước và ghi nhận kiểm tra. Phân biệt gallery khách hàng, ảnh nhà sản xuất và ảnh review; không gắn nhãn Judge.me cho nguồn khác.
-- Có review chữ không có nghĩa có ảnh phù hợp. Khi cần dùng kho mà không có ảnh đạt, lưu missing-data và giữ URL; không tự tạo phòng thay thế.
 
 ## 6. Review mẫu và báo cáo
 
@@ -84,7 +83,7 @@ CLI exit 0 không xác nhận công cụ tạo ảnh thành công. Giữ console
 
 - `src/application/agent-lessons.ps1`: đọc khối bài học trong file này.
 - `src/application/image-feedback.ps1`: lọc bài học theo URL/danh mục để đưa vào prompt.
-- `src/workflow/steps/02-select-references.ps1`: chọn ảnh tham khảo và lịch sử dùng kho.
+- `src/workflow/steps/02-select-references.ps1`: lấy ảnh review người dùng gắn (kiểm tra file/hash); danh mục kho ảnh trên máy.
 - `src/workflow/steps/03-create-image.ps1`: vai trò ảnh đầu vào và yêu cầu tạo ảnh.
 - `src/workflow/steps/04-complete-image.ps1`, `src/infrastructure/image-output.ps1`: xuất PNG và phục hồi lỗi kết nối.
 - `src/application/reference-archive.ps1`: snapshot, nguồn và hash đầu vào.

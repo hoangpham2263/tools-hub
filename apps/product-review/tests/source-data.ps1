@@ -75,13 +75,5 @@ if (Test-Path -LiteralPath $expansionPath) {
     }
     if (@($expansion.fit_checks | Where-Object verdict -eq FIT).Count -lt 6) { throw 'Missing checked room alternatives for the twelve-chair product.' }
 }
-$script:Config = @{ SourceDir = $dir; SourceCatalog = $catalog; MaxTries = 1; ProductContexts = @(Get-ProductContexts (Join-Path $root 'data/product-contexts.json')) }
-$script:Batch = @{ Logs = $TestWorkspaceRoot }
-function Invoke-AI($PromptText, $Images, $ResultFile) {
-    $entry = $script:Config.SourceCatalog[$Images[0]]
-    if ($entry.category -ne 'polo-shirts' -or $entry.source_kind -eq 'review') { throw 'Category/provenance selection priority failed.' }
-    return 'FIT'
-}
-Select-Photo 'product.png' 'polo-shirt' 'catalog-test' | Out-Null
 Remove-Item -LiteralPath $dir -Recurse -Force
-Write-Host "PASS: $($entries.Count) catalogued photos, downloaded groups only, provenance hashes and category selection."
+Write-Host "PASS: $($entries.Count) catalogued photos, downloaded groups only, and provenance hashes."

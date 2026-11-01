@@ -86,6 +86,8 @@ $script:MovedFiles = @(
     'apps/product-review/src/infrastructure/browser-bridge.ps1'
     'apps/product-review/src/infrastructure/antigravity.ps1'
     'apps/product-review/src/infrastructure/platform.ps1'
+    'apps/product-review/src/application/missing-data.ps1'
+    'apps/product-review/tests/scene-selection.ps1'
     'hub/extension/content-common.js'
     'hub/extension/content-chatgpt.js'
     'hub/extension/content-flow.js'

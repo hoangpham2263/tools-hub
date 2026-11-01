@@ -19,19 +19,10 @@ function ConvertTo-UiEvent([string]$Line, [int]$CurrentIndex = 0) {
         $event.Kind = 'Call'; $event.Backend = $Matches[1]
     } elseif ($line -match '^(Model AI|Viết review): (.+)$') {
         $event.Kind = 'Info'; $event.Text = $line.Trim()
-    } elseif ($line -match '^Missing data: (\d+)') {
-        $event.Kind = 'Info'
-        $event.Text = "$($Matches[1]) sản phẩm thiếu ảnh mẫu (xem missing-data.csv)."
     } elseif ($line -match '^\[PRODUCT\]') {
         $event.Kind = 'Stage'; $event.Stage = 'Đang chuẩn bị'
     } elseif ($line -match '^\[CLASSIFY\]') {
         $event.Kind = 'Stage'; $event.Stage = 'Đang nhận diện sản phẩm'
-    } elseif ($line -match '^\[REFERENCE-COUNT\] Using (\d+)') {
-        $event.Kind = 'Stage'; $event.Stage = 'Đã chọn ảnh mẫu phù hợp'
-    } elseif ($line -match '^\[SELECT\] Subject') {
-        $event.Kind = 'Stage'; $event.Stage = 'Đang chọn người mẫu'
-    } elseif ($line -match '^\[SELECT\] Scene') {
-        $event.Kind = 'Stage'; $event.Stage = 'Đang chọn bối cảnh'
     } elseif ($line -match '^\[MANUAL-REFERENCE\]') {
         $event.Kind='Stage';$event.Stage='Đã nhận ảnh bạn gắn'
     } elseif ($line -match '^\[IMAGE\]') {
@@ -88,8 +79,6 @@ function ConvertTo-UiEvent([string]$Line, [int]$CurrentIndex = 0) {
             $event.Text = "Sản phẩm $($event.Index): trang chặn truy cập, hãy gắn ảnh sản phẩm."
         } elseif ($line -match '\[CAUSE:PRODUCT_NOT_FOUND\]') {
             $event.Text = "Sản phẩm $($event.Index): không tìm thấy sản phẩm, kiểm tra link."
-        } elseif ($line -match '\[CAUSE:MISSING_DATA\]') {
-            $event.Text = "Sản phẩm $($event.Index): thiếu ảnh mẫu cho loại này."
         } elseif ($line -match '\[CAUSE:PRODUCT_DOWNLOAD\]') {
             $event.Text = "Sản phẩm $($event.Index): chưa tải được trang, thử lại sau."
         } elseif ($line -match '\[CAUSE:BRIDGE\].*(Google Flow của tài khoản đang chọn[^\r\n]*)') {
@@ -127,8 +116,6 @@ function ConvertTo-UiEvent([string]$Line, [int]$CurrentIndex = 0) {
             $event.Text = "Sản phẩm $($event.Index): không đọc được ảnh sản phẩm, kiểm tra link."
         } elseif ($line -match 'Image technical validation failed') {
             $event.Text="Sản phẩm $($event.Index): file ảnh lỗi, link được giữ để chạy lại."
-        } elseif ($line -match 'No suitable real scene reference|No suitable source photo found') {
-            $event.Text = "Sản phẩm $($event.Index): chưa tìm được ảnh mẫu thực tế phù hợp."
         }
     } elseif ($line -match '^Done: (\d+)/(\d+) exported in (\d+)s') {
         $event.Kind = 'Summary'; $event.Done = [int]$Matches[1]; $event.Total = [int]$Matches[2]; $event.Seconds = [int]$Matches[3]

@@ -13,7 +13,6 @@
         Logs    = Join-Path $dir 'logs'
         Refs    = Join-Path $dir 'refs'
         Csv     = Join-Path $dir 'loox_import.csv'
-        MissingData = Join-Path $dir 'missing-data'
     }
     # URL history belongs to the output batch; source photos remain reusable.
     New-Item -ItemType Directory -Force $batch.Images, $batch.Logs, $batch.Refs | Out-Null

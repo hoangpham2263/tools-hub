@@ -77,13 +77,13 @@ async function receive(line) {
   if (event.Kind === "Output") run.resultFolder = event.Path;
   run.events.push(event);
 }
-async function startRun({ per = 1, threads = 1, backend = "codex", text = "codex" }) {
+async function startRun({ threads = 1, backend = "codex", text = "codex" }) {
   if (run.proc) throw new Error("Đang chạy.");
   await mkdir(logs, { recursive: true });
   const stamp = Date.now();
   Object.assign(run, { events: [], index: 0, stopped: false, exitCode: null, resultFolder: "", done: false,
     logFile: join(logs, `image-batch-mac-${stamp}.log`), errFile: join(logs, `image-batch-mac-${stamp}.err.log`) });
-  const args = ["-PhotosPerImage", String(per), "-ThrottleLimit", String(threads)];
+  const args = ["-ThrottleLimit", String(threads)];
   // Tạo ảnh: Codex, or Google Flow in the tools' own Chrome (bridge/ + hub/extension/).
   if (["flow", "chatgpt"].includes(backend)) args.push("-ImageBackend", backend);
   // Viết review: Codex, Gemini web in the same Chrome, or the Antigravity CLI, for every text step.
