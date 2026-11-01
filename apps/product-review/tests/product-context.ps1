@@ -49,7 +49,7 @@ try {
     $script:Classification='{"category_key":"polo-shirts","existing_profile":"polo","product":"Striped polo shirt","presentation":"placed","setting":"Laid flat on a wooden table","details":"Back print and stripes visible; front fastening not visible","reject":"Do not introduce a wearer"}'
     $polo=Resolve-ProductContext 'polo' (Join-Path $tempDir 'actual-product.png') 'flat-polo'
     $request=New-ProductImageRequest (Join-Path $tempDir 'actual-product.png') 'flat-polo' $polo @((Join-Path $tempDir 'person.png')) $brands
-    if($polo.presentation -ne 'worn' -or $request.Prompt -match 'IMMUTABLE BASE ROOM|wooden table|Do not introduce a wearer' -or $request.Prompt -notmatch 'REPLACE THE EXISTING GARMENT' -or $polo.details -notmatch 'front fastening not visible'){throw 'Flat apparel source still routes into a furniture scene or loses limits of visible design.'}
+    if($polo.presentation -ne 'worn' -or $request.Prompt -match 'IMMUTABLE BASE|wooden table|Do not introduce a wearer' -or $request.Prompt -notmatch 'REPLACE THE EXISTING GARMENT' -or $polo.details -notmatch 'front fastening not visible'){throw 'Flat apparel source still routes into a furniture scene or loses limits of visible design.'}
     $script:Classification='{"category_key":"coffee-table","existing_profile":"custom","product":"Low wooden table","presentation":"placed","setting":"Living room","details":"Low wood slab and legs","reject":"High dining chairs"}'
     $table=Resolve-ProductContext 'table' (Join-Path $tempDir 'actual-product.png') 'real-table'
     if($table.presentation -ne 'placed'){throw 'Apparel correction changed the presentation of actual furniture.'}
