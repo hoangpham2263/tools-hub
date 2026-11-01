@@ -1,74 +1,21 @@
-﻿# Image generation through the signed-in ChatGPT / Google Flow tab (bridge/ + hub/extension/).
+﻿# Image generation and Gemini text through the signed-in ChatGPT / Google Flow / Gemini tab of the user's own Chrome
+# (hub/bridge + hub/extension).
 $script:BridgeUrl = 'http://127.0.0.1:8765'
 $script:BridgeProjectRoot = Split-Path (Split-Path $PSScriptRoot -Parent) -Parent
 
 function Get-ImageBridgeStatus {
     try { return Invoke-RestMethod -Uri "$script:BridgeUrl/status" -TimeoutSec 3 } catch { return $null }
 }
-function Test-ImageBridge {
-    $status = Get-ImageBridgeStatus
-    if ($null -eq $status) { return $null }
-    return [bool]$status.extension
-}
 
-# After Cập nhật the bridge and the extension still run the old files: a bridge started on an older server.mjs is
-# stopped (Start-ImageBridge starts it again), an extension of another version than hub/extension/manifest.json reloads.
-function Stop-StaleImageBridge([string]$ProjectRoot) {
-    $status = Get-ImageBridgeStatus
-    if ($null -eq $status) { return }
-    $changed = [DateTimeOffset]::new((Get-Item -LiteralPath (Join-Path $ProjectRoot 'bridge/server.mjs')).LastWriteTimeUtc).ToUnixTimeMilliseconds()
-    if ([long]$status.code -eq $changed) { return }
-    try { Invoke-RestMethod -Method Post -Uri "$script:BridgeUrl/quit" -TimeoutSec 3 | Out-Null } catch {}
-    for ($i = 0; $i -lt 20 -and $null -ne (Get-ImageBridgeStatus); $i++) { Start-Sleep -Milliseconds 250 }
-    if ($null -eq (Get-ImageBridgeStatus)) { return }
-    # A bridge from before /quit: stop its process (started with this file's full path).
-    $server = Join-Path $ProjectRoot 'bridge/server.mjs'
-    if ($script:OnWindows) {
-        Get-CimInstance Win32_Process -Filter "Name='node.exe'" | Where-Object { $_.CommandLine -like "*$server*" } | ForEach-Object { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue }
-    } else { & pkill -f $server 2>$null }
-    for ($i = 0; $i -lt 20 -and $null -ne (Get-ImageBridgeStatus); $i++) { Start-Sleep -Milliseconds 250 }
-}
-function Update-ImageBridgeExtension([string]$ProjectRoot) {
-    $status = Get-ImageBridgeStatus
-    if ($null -eq $status) { return }
-    $version = [string](Get-Content -LiteralPath (Join-Path (Get-HubRoot $ProjectRoot) 'hub/extension/manifest.json') -Raw -Encoding UTF8 | ConvertFrom-Json).version
-    if ($status.extension -and $status.extensionVersion -and $status.extensionVersion -ne $version) {
-        try { Invoke-RestMethod -Method Post -Uri "$script:BridgeUrl/reload" -TimeoutSec 3 | Out-Null } catch {}
-        for ($i = 0; $i -lt 40; $i++) {
-            Start-Sleep -Milliseconds 500
-            $now = Get-ImageBridgeStatus
-            if ($now -and $now.extension -and $now.extensionVersion -eq $version) { return }
-        }
-    }
-}
-
-# Start the local bridge when it is not running, then wait for the extension to connect.
+# The shared bridge (hub/bridge) and the Tools Hub extension in the user's own Chrome: hub/bridge/ensure.mjs installs
+# and starts the bridge (again after Cập nhật), starts Chrome when the extension is not connected and reloads an
+# extension of another version.
 function Start-ImageBridge([string]$ProjectRoot) {
-    Stop-StaleImageBridge $ProjectRoot
-    $state = Test-ImageBridge
-    if ($null -eq $state) {
-        $server = Join-Path $ProjectRoot 'bridge/server.mjs'
-        # Its one package (ws) is installed on first use, so no setup step is needed for it.
-        if (-not (Test-Path -LiteralPath (Join-Path $ProjectRoot 'bridge/node_modules/ws'))) {
-            Push-Location (Join-Path $ProjectRoot 'bridge')
-            try { & npm install --silent --no-audit --no-fund 2>&1 | Out-Null } finally { Pop-Location }
-            if (-not (Test-Path -LiteralPath (Join-Path $ProjectRoot 'bridge/node_modules/ws'))) { throw '[CAUSE:BRIDGE] Chưa cài được bridge (npm install trong bridge/). Kiểm tra mạng rồi chạy lại.' }
-        }
-        # It notes why it stopped in workspace/logs/bridge-exit.log.
-        if ($script:OnWindows) { Start-Process node -ArgumentList ('"' + $server + '"') -WindowStyle Hidden | Out-Null }
-        else { Start-Process node -ArgumentList $server | Out-Null }
-    }
-    # The tools' own Chrome (hub/browser.mjs), signed in from Cấu hình, runs with no window: started hidden, or started
-    # again hidden when it was left open in a window after signing in. Then the extension connects to the bridge.
-    $browser = Join-Path (Get-HubRoot $ProjectRoot) 'hub/browser.mjs'
-    $flags = @(if ([int]((& node --version) -replace '^v(\d+).*', '$1') -lt 22) { '--experimental-websocket' })
-    $answer = (& node @flags $browser start | Select-Object -Last 1) | ConvertFrom-Json
-    if ($answer.error) { throw "[CAUSE:BRIDGE] $($answer.error)" }
-    for ($i = 0; $i -lt 60; $i++) {
-        if (Test-ImageBridge) { Update-ImageBridgeExtension $ProjectRoot; return }
-        Start-Sleep -Milliseconds 750
-    }
-    throw '[CAUSE:BRIDGE] Extension Tools Hub chưa kết nối. Mở Cấu hình, bấm Mở ở dòng Chrome của tool rồi đăng nhập Google (Flow, Gemini), ChatGPT.'
+    $ensure = Join-Path (Get-HubRoot $ProjectRoot) 'hub/bridge/ensure.mjs'
+    $answer = $null
+    try { $answer = (& node $ensure | Select-Object -Last 1) | ConvertFrom-Json } catch {}
+    if (-not $answer) { throw '[CAUSE:BRIDGE] Không bật được bridge (hub/bridge). Mở Cấu hình xem Node.js đã cài chưa rồi chạy lại.' }
+    if (-not $answer.ok) { throw "[CAUSE:BRIDGE] $($answer.error)" }
 }
 
 # A bridge that stopped mid-run (the call ends with no answer, then Connection refused) is started again, so the

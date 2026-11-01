@@ -73,10 +73,15 @@ try{
     Move-LegacyLayout $legacy
     Assert ((Get-Content "$tool/workspace/drive.json") -eq 'my login' -and (Test-Path "$tool/workspace/output/run1/results.json")) 'The login and runs must move into the tool.'
     Assert ((Get-Content "$legacy/workspace/version.txt") -eq 'v2') 'The installed version stays with the hub.'
-    Assert ((Test-Path "$tool/data/source-photos/Áo/a.jpg") -and (Test-Path "$tool/bridge/node_modules/ws/index.js")) 'Downloaded photos and the bridge must move, not be fetched again.'
+    Assert ((Test-Path "$tool/data/source-photos/Áo/a.jpg") -and (Test-Path "$legacy/hub/bridge/node_modules/ws/index.js")) 'Downloaded photos and the bridge must move, not be fetched again.'
     $agents=Get-Content "$tool/AGENTS.md" -Raw
     Assert ($agents.Contains('# Hướng dẫn tool') -and $agents.Contains('riêng máy') -and $agents.Contains('chung a') -and -not (Test-Path "$legacy/AGENTS.md")) "This machine's lessons must join the tool's AGENTS.md."
     Assert (-not (Test-Path "$legacy/data") -and -not (Test-Path "$legacy/src/ui") -and -not (Test-Path "$legacy/bridge") -and (Test-Path "$legacy/src/gui.ps1") -and (Test-Path "$legacy/src/mac/server.mjs")) 'Old files go; the two entry points old installs open stay.'
+    # The bridge and the extension moved from the tool to hub/: the tool's copies go, the installed package moves.
+    $parts=Join-Path $temp 'parts'
+    foreach($p in @("$parts/hub/bridge/package.json","$parts/hub/extension/manifest.json","$parts/apps/product-review/bridge/node_modules/ws/index.js","$parts/apps/product-review/bridge/server.mjs","$parts/apps/product-review/extension/manifest.json")){New-Item -ItemType File -Force -Path $p|Out-Null}
+    Move-SharedBrowserParts $parts
+    Assert ((Test-Path "$parts/hub/bridge/node_modules/ws/index.js") -and -not (Test-Path "$parts/apps/product-review/bridge") -and -not (Test-Path "$parts/apps/product-review/extension")) 'The bridge package moves to hub/bridge; the tool keeps no bridge or extension of its own.'
     New-Item -ItemType Directory -Force -Path "$legacy/.git","$legacy/data"|Out-Null
     Move-LegacyLayout $legacy
     Assert (Test-Path "$legacy/data") 'A git checkout must never be tidied.'

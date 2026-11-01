@@ -52,7 +52,7 @@ function Move-LegacyLayout([string]$Root) {
     if (Test-Path -LiteralPath $photos) {
         foreach ($group in @(Get-ChildItem -LiteralPath $photos -Directory -Force)) { & $move $group.FullName (Join-Path $app "data/source-photos/$($group.Name)") }
     }
-    & $move (Join-Path $Root 'bridge/node_modules') (Join-Path $app 'bridge/node_modules')
+    & $move (Join-Path $Root 'bridge/node_modules') (Join-Path $Root 'hub/bridge/node_modules')
     foreach ($old in @('data', 'tests', 'tools', 'bridge', 'extension', 'test.cmd', 'test.sh', 'setup.cmd', 'setup.command')) {
         Remove-Item -LiteralPath (Join-Path $Root $old) -Recurse -Force -ErrorAction SilentlyContinue
     }
@@ -63,5 +63,18 @@ function Move-LegacyLayout([string]$Root) {
     }
     foreach ($dir in @(Get-ChildItem -LiteralPath (Join-Path $Root 'src') -Recurse -Directory -Force -ErrorAction SilentlyContinue | Sort-Object { $_.FullName.Length } -Descending)) {
         if (-not @(Get-ChildItem -LiteralPath $dir.FullName -Force).Count) { Remove-Item -LiteralPath $dir.FullName -Force }
+    }
+}
+
+# The bridge and the Chrome extension were each tool's (apps/<id>/bridge, apps/<id>/extension) before they became the
+# hub's (hub/bridge, hub/extension), shared by every tool. An install updated from then: the installed package moves to
+# hub/bridge (not fetched again) and the tool's copies go. A git checkout is never touched.
+function Move-SharedBrowserParts([string]$Root) {
+    if ((Test-Path -LiteralPath (Join-Path $Root '.git')) -or -not (Test-Path -LiteralPath (Join-Path $Root 'hub/bridge/package.json'))) { return }
+    foreach ($tool in @(Get-ChildItem -LiteralPath (Join-Path $Root 'apps') -Directory -ErrorAction SilentlyContinue)) {
+        $modules = Join-Path $tool.FullName 'bridge/node_modules'
+        if ((Test-Path -LiteralPath $modules) -and -not (Test-Path -LiteralPath (Join-Path $Root 'hub/bridge/node_modules'))) { Move-Item -LiteralPath $modules -Destination (Join-Path $Root 'hub/bridge/node_modules') }
+        Remove-Item -LiteralPath (Join-Path $tool.FullName 'bridge') -Recurse -Force -ErrorAction SilentlyContinue
+        if (Test-Path -LiteralPath (Join-Path $Root 'hub/extension/manifest.json')) { Remove-Item -LiteralPath (Join-Path $tool.FullName 'extension') -Recurse -Force -ErrorAction SilentlyContinue }
     }
 }

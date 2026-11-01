@@ -2,6 +2,7 @@
 /workspace/
 /apps/*/workspace/
 /apps/*/bridge/node_modules/
+/hub/bridge/node_modules/
 /worker/.wrangler/
 /worker/*/.wrangler/
 # Sample photos are downloaded per group from Drive; only the catalog is versioned.

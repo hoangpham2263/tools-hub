@@ -1,4 +1,5 @@
-// Local bridge: the PowerShell workflow POSTs a job over HTTP, the extension receives it over WebSocket.
+// Local bridge, shared by every tool: a tool POSTs a job over HTTP, the Tools Hub extension (hub/extension, in the
+// user's own Chrome) receives it over WebSocket. ensure.mjs starts it and waits for the extension.
 // Listens on 127.0.0.1 only; nothing is exposed to the network.
 import { createServer } from "node:http";
 import { appendFileSync, mkdirSync, readFileSync, statSync } from "node:fs";
@@ -13,12 +14,17 @@ const MIME = { ".png": "image/png", ".jpg": "image/jpeg", ".jpeg": "image/jpeg",
 
 // The Google account chosen on Cấu hình for Flow and Gemini (<hub>/workspace/config/google-account.json); "" is Google's
 // default, the first one signed in.
-const hubConfig = join(dirname(fileURLToPath(import.meta.url)), "..", "..", "..", "workspace", "config", "google-account.json");
+const hubConfig = join(dirname(fileURLToPath(import.meta.url)), "..", "..", "workspace", "config", "google-account.json");
 const chosenGoogleAccount = () => { try { return String(JSON.parse(readFileSync(hubConfig, "utf8")).email || ""); } catch { return ""; } };
 
 // When this file was last changed, as the running bridge loaded it: after an update the app sees an older one and
 // restarts it (POST /quit; browser-bridge.ps1).
 const code = Math.floor(statSync(fileURLToPath(import.meta.url)).mtimeMs);
+
+// What the extension reports while it works, with the time: <hub>/workspace/logs/bridge.log (started anew with the
+// bridge), as the bridge runs detached with no output of its own.
+const logFile = join(dirname(fileURLToPath(import.meta.url)), "..", "..", "workspace", "logs", "bridge.log");
+function log(line) { try { mkdirSync(dirname(logFile), { recursive: true }); appendFileSync(logFile, `${new Date().toISOString()} ${line}\n`); } catch {} }
 
 export function createBridge({ fetchImpl = fetch, googleAccount = chosenGoogleAccount, quit = () => process.exit(0) } = {}) {
   let extension = null, extensionVersion = "";
@@ -27,12 +33,23 @@ export function createBridge({ fetchImpl = fetch, googleAccount = chosenGoogleAc
   const server = createServer(async (req, res) => {
     const send = (status, body) => { res.writeHead(status, { "content-type": "application/json; charset=utf-8" }); res.end(JSON.stringify(body)); };
     try {
-      if (req.method === "GET" && req.url === "/status") return send(200, { extension: !!extension, extensionVersion: extension ? extensionVersion : "", code });
+      if (req.method === "GET" && req.url === "/status") return send(200, { extension: !!extension, extensionVersion: extension ? extensionVersion : "", code, pid: process.pid });
       if (req.method === "POST" && req.url === "/quit") { send(200, { ok: true }); return setTimeout(quit, 100); }
       if (req.method === "POST" && req.url === "/reload") {
         if (!extension) return send(503, { error: "Extension chưa kết nối." });
         extension.send(JSON.stringify({ type: "reload" }));
         return send(200, { ok: true });
+      }
+      // Who is signed in to Google (Flow, Gemini) and ChatGPT in that Chrome, read by the extension: Cấu hình.
+      if (req.method === "GET" && req.url === "/logins") {
+        if (!extension) return send(503, { error: "Extension chưa kết nối." });
+        const id = randomUUID();
+        const result = await new Promise((resolve, reject) => {
+          const timer = setTimeout(() => { pending.delete(id); reject(new Error("timeout")); }, 20000);
+          pending.set(id, { resolve, timer });
+          extension.send(JSON.stringify({ type: "logins", id }));
+        });
+        return send(result.ok ? 200 : 502, result.ok ? { google: !!result.google, accounts: result.accounts || [], chatgpt: !!result.chatgpt } : { error: result.error });
       }
       if (req.method !== "POST" || req.url !== "/generate") return send(404, { error: "not found" });
       let raw = "";
@@ -52,6 +69,7 @@ export function createBridge({ fetchImpl = fetch, googleAccount = chosenGoogleAc
         const timer = setTimeout(() => { pending.delete(id); reject(new Error("timeout")); }, (timeoutSec + 60) * 1000);
         pending.set(id, { resolve, timer });
         const account = job.platform === "chatgpt" ? "" : googleAccount();
+        log(`[${id.slice(0, 8)}] ${job.platform} job sent`);
         extension.send(JSON.stringify({ type: "generate", id, platform: job.platform, prompt: job.prompt, images, timeoutSec, account }));
       });
       if (!result.ok) return send(502, { error: result.error });
@@ -83,11 +101,12 @@ export function createBridge({ fetchImpl = fetch, googleAccount = chosenGoogleAc
       let message;
       try { message = JSON.parse(data); } catch { return; }
       if (message.type === "hello") extensionVersion = String(message.version || "");
-      if (message.type === "progress") console.log(`[${message.id.slice(0, 8)}] ${message.stage}`);
+      if (message.type === "progress") log(`[${String(message.id).slice(0, 8)}] ${message.stage}`);
       if (message.type === "result" && pending.has(message.id)) {
         const { resolve, timer } = pending.get(message.id);
         clearTimeout(timer);
         pending.delete(message.id);
+        if (message.type === "result" && !message.ok) log(`[${message.id.slice(0, 8)}] error: ${message.error}`);
         resolve(message);
       }
     });
@@ -97,10 +116,10 @@ export function createBridge({ fetchImpl = fetch, googleAccount = chosenGoogleAc
 }
 
 if (import.meta.url === `file://${process.argv[1]}` || process.argv[1]?.endsWith("server.mjs")) {
-  // Why a bridge stopped mid-run, kept across restarts: <tool>/workspace/logs/bridge-exit.log.
-  const exitLog = join(dirname(fileURLToPath(import.meta.url)), "..", "workspace", "logs", "bridge-exit.log");
+  // Why a bridge stopped mid-run, kept across restarts: <hub>/workspace/logs/bridge-exit.log.
+  const exitLog = join(dirname(fileURLToPath(import.meta.url)), "..", "..", "workspace", "logs", "bridge-exit.log");
   const note = (text) => { try { mkdirSync(dirname(exitLog), { recursive: true }); appendFileSync(exitLog, `${new Date().toISOString()} pid ${process.pid} ${text}\n`); } catch {} };
-  // Started by a run, its output is that run's pipe, closed once the run ends: a later line must not stop it (EPIPE).
+  // Started by an older run, its output can be that run's pipe, closed once the run ends: a later line must not stop it (EPIPE).
   for (const stream of [process.stdout, process.stderr]) stream.on("error", () => {});
   process.on("uncaughtException", (error) => { note(`crash: ${error?.stack || error}`); process.exit(1); });
   process.on("unhandledRejection", (error) => note(`unhandled rejection: ${error?.stack || error}`));

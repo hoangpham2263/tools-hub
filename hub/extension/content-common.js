@@ -1,5 +1,7 @@
 // Helpers shared by the ChatGPT and Flow content scripts.
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+// A step of the job, for the bridge's log (<hub>/workspace/logs/bridge.log).
+const note = (stage) => chrome.runtime.sendMessage({ type: "progress", stage: `${location.host}: ${stage}` }).catch(() => {});
 
 async function waitFor(check, timeoutMs, label) {
   const until = Date.now() + timeoutMs;

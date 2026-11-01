@@ -1,5 +1,5 @@
-﻿# Install on Windows, run from the Cài button in the Cấu hình window: Node.js, Codex CLI, ChatGPT sign-in and each
-# tool's browser bridge, each only when missing, then the same readiness check as Cấu hình.
+﻿# Install on Windows, run from the Cài button in the Cấu hình window: Node.js, Codex CLI, ChatGPT sign-in and the
+# bridge (hub/bridge), each only when missing, then the same readiness check as Cấu hình.
 $ErrorActionPreference = 'Continue'
 [Console]::OutputEncoding = [Text.UTF8Encoding]::new($false)
 $root = Split-Path (Split-Path $PSScriptRoot -Parent) -Parent
@@ -42,7 +42,7 @@ $status = (& codex login status 2>&1 | Out-String)
 if ($LASTEXITCODE -ne 0 -or $status -notmatch '(?i)logged in') { codex login } else { Write-Host 'Đã đăng nhập.' }
 
 Step 'Cầu nối trình duyệt'
-foreach ($bridge in @(Get-ChildItem -LiteralPath (Join-Path $root 'apps') -Directory -ErrorAction SilentlyContinue | ForEach-Object { Join-Path $_.FullName 'bridge' })) {
+foreach ($bridge in @(Join-Path $root 'hub/bridge')) {
     if (Test-Path -LiteralPath (Join-Path $bridge 'package.json')) { Push-Location $bridge; npm install --silent; Pop-Location; Write-Host "Đã cài: $bridge" }
 }
 

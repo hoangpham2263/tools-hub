@@ -2,10 +2,10 @@
 // settings as hub/setup/*.ps1, kept once per install in <hub>/workspace/config.
 //   GET /setup[?back=<path>]        the Cấu hình page (page.html, page.js; tool.css from hub/assets)
 //   POST /api/setup                 the steps (setup-check.ps1 -AsJson)
-//   POST /api/setup-step {step}     install: Codex and every tool's browser bridge; login: codex login with a
-//                                   one-time code, typed on the sign-in page opened in the tools' own Chrome;
-//                                   browser: that Chrome, to sign in to Google Flow, ChatGPT (hub/browser.mjs);
-//                                   google: Google's account chooser there (sign in, add or switch an account);
+//   POST /api/setup-step {step}     install: Codex and the bridge (hub/bridge); login: codex login with a
+//                                   one-time code, typed on the sign-in page opened in the user's Chrome;
+//                                   browser: Chrome's extensions page and hub/extension, to install the Tools Hub
+//                                   extension; google: Google's account chooser in Chrome (sign in, add or switch);
 //                                   site {site}: gemini, flow or chatgpt opened there; antigravity: a terminal
 //                                   with agy, where /login (/logout first to switch) signs it in
 //   GET /api/setup-login            { code } while a sign-in waits for it
@@ -14,12 +14,11 @@
 //   GET|POST /api/config/google     the Google account Flow and Gemini run with: { email } / choose { email } ("" is
 //                                   Google's default, the first one signed in)
 import { execFile, spawn } from "node:child_process";
-import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { homedir } from "node:os";
-import { findTool as findIn, runTool, psCommand, psFile, onWindows, killTree, openTerminal } from "../platform.mjs";
-import { browserArgs } from "../browser.mjs";
+import { findTool as findIn, runTool, psCommand, psFile, onWindows, killTree, openTerminal, openChrome } from "../platform.mjs";
 import { createSetupReader } from "./setup-report.mjs";
 
 const here = dirname(fileURLToPath(import.meta.url));
@@ -44,12 +43,10 @@ export function createConfigApi({ hubRoot, pwsh, env = process.env }) {
   const googleAccount = () => { try { return String(JSON.parse(readFileSync(googleFile, "utf8")).email || ""); } catch { return ""; } };
   const withAccount = (url) => (googleAccount() ? `${url}?authuser=${encodeURIComponent(googleAccount())}` : url);
   const workspace = q(join(hubRoot, "workspace"));
-  const openInToolsChrome = (urls, done) => execFile(process.execPath, browserArgs(urls ? "open" : "login", ...(urls || [])), { cwd: hubRoot, env, timeout: 15 * 60000, windowsHide: true }, (err, stdout) => {
-    let r = {}; try { r = JSON.parse(String(stdout).trim().split(/\r?\n/).pop()); } catch { r = { error: err?.message || "Không mở được Chrome của tool." }; }
-    done(r);
-  });
+  // A page in the user's own Chrome, where the AIs are signed in and the Tools Hub extension runs.
+  const openInChrome = (url, done) => openChrome(url).then((error) => done(error ? { error } : { ok: true }));
   // codex login opens the system's default browser; with --device-auth it prints a page and a code instead, so the
-  // page opens in the tools' own Chrome and Cấu hình shows the code to type there.
+  // page opens in Chrome and Cấu hình shows the code to type there.
   // Đăng nhập again while one waits: that one stops (its answer says so) and a new code comes.
   let loginCode = "", login = null;
   const codexLogin = (codex, done) => {
@@ -65,7 +62,7 @@ export function createConfigApi({ hubRoot, pwsh, env = process.env }) {
       if (opened || !url || !code || !current()) return;
       opened = true;
       loginCode = code;
-      openInToolsChrome([url], (r) => { if (r.error) { loginCode = ""; killTree(child); done({ error: r.error }); } });
+      openInChrome(url, (r) => { if (r.error) { loginCode = ""; killTree(child); done({ error: r.error }); } });
     };
     child.stdout.on("data", read);
     child.stderr.on("data", read);
@@ -97,13 +94,13 @@ export function createConfigApi({ hubRoot, pwsh, env = process.env }) {
       return true;
     }
     if (path === "/api/setup-step" && req.method === "POST") {
-      // Cài (Codex via npm, then each tool's browser bridge) or Đăng nhập (opens the browser, waits for the sign-in).
+      // Cài (Codex via npm, then the bridge) or Đăng nhập (opens the browser, waits for the sign-in).
       const { step, site } = await body(req);
-      // Each AI's own sign-in page in the tools' Chrome (a window), to sign in or switch accounts there.
+      // Each AI's own sign-in page in Chrome, to sign in or switch accounts there.
       const SITES = { gemini: "https://gemini.google.com/app", flow: "https://flow.google.com/", chatgpt: "https://chatgpt.com/" };
       if (step === "google" || (step === "site" && SITES[site])) {
         const url = step === "google" ? "https://accounts.google.com/AccountChooser?continue=https%3A%2F%2Fgemini.google.com%2Fapp" : site === "chatgpt" ? SITES[site] : withAccount(SITES[site]);
-        openInToolsChrome([url], (r) => json(res, r.error ? 500 : 200, r));
+        openInChrome(url, (r) => json(res, r.error ? 500 : 200, r));
         return true;
       }
       if (step === "antigravity") {
@@ -115,8 +112,10 @@ export function createConfigApi({ hubRoot, pwsh, env = process.env }) {
         return true;
       }
       if (step === "browser") {
-        // The first time this downloads Chrome for Testing (about 150 MB) before it opens.
-        openInToolsChrome(null, (r) => json(res, r.error ? 500 : 200, r));
+        // Installing the extension: Chrome's extensions page, and the folder to choose there (Tải tiện ích đã giải nén).
+        const folder = join(hubRoot, "hub", "extension");
+        if (onWindows) execFile("explorer.exe", [folder], () => {}); else execFile("open", [folder], () => {});
+        openInChrome("chrome://extensions", (r) => json(res, r.error ? 500 : 200, r));
         return true;
       }
       const npm = findTool("npm"), codex = findTool("codex");
@@ -132,10 +131,8 @@ export function createConfigApi({ hubRoot, pwsh, env = process.env }) {
       const [cmd, args] = [npm, ["install", "-g", "@openai/codex"]];
       runTool(cmd, args, { cwd: hubRoot, timeout: 15 * 60000, env, windowsHide: true }, (err, stdout, stderr) => {
         if (err) return json(res, 500, { error: (String(stderr || stdout).trim().split(/\r?\n/).pop() || err.message).slice(0, 300) });
-        const bridges = readdirSync(join(hubRoot, "apps"), { withFileTypes: true }).filter((d) => d.isDirectory())
-          .map((d) => join(hubRoot, "apps", d.name, "bridge")).filter((b) => existsSync(join(b, "package.json")));
-        const next = () => (bridges.length ? runTool(npm, ["install", "--silent"], { cwd: bridges.shift(), timeout: 10 * 60000, env, windowsHide: true }, next) : json(res, 200, { ok: true }));
-        next();
+        // The shared bridge between the tools and the Tools Hub extension (hub/bridge).
+        runTool(npm, ["install", "--silent"], { cwd: join(hubRoot, "hub", "bridge"), timeout: 10 * 60000, env, windowsHide: true }, () => json(res, 200, { ok: true }));
       });
       return true;
     }

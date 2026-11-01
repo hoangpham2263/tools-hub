@@ -6,7 +6,7 @@ $ErrorActionPreference = 'Stop'
 $script:Repo = 'hoangpham2263/tools-hub'
 $script:Asset = 'tools-hub.zip'
 # Local data the hub and each tool write; an update keeps it as it is (a tool's AGENTS.md is merged, see Merge-AgentInstructions).
-$script:KeepPaths = '^(workspace|\.git|apps/[^/]+/(workspace|AGENTS\.md|bridge/node_modules))(/|$)'
+$script:KeepPaths = '^(workspace|\.git|hub/bridge/node_modules|apps/[^/]+/(workspace|AGENTS\.md|bridge/node_modules))(/|$)'
 
 function Copy-AppUpdate([string]$Source, [string]$Target) {
     foreach ($file in @(Get-ChildItem -LiteralPath $Source -Recurse -File -Force)) {
@@ -107,6 +107,7 @@ function Update-App([string]$Root) {
         Copy-AppUpdate $source $Root
         foreach ($tool in @(Get-ChildItem -LiteralPath (Join-Path $source 'apps') -Directory)) { Merge-AgentInstructions $tool.FullName (Join-Path $Root "apps/$($tool.Name)") }
         Move-LegacyLayout $Root
+        Move-SharedBrowserParts $Root
         New-Item -ItemType Directory -Force -Path (Split-Path $versionFile -Parent) | Out-Null
         Set-Content -LiteralPath $versionFile -Value $latest -Encoding ASCII
     } finally { Remove-Item -LiteralPath $temp -Recurse -Force -ErrorAction SilentlyContinue }

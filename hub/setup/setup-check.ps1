@@ -44,7 +44,7 @@ if ($codexAuthFile -and -not $apiKey) {
 $checks.Add([pscustomobject]@{
     Ok = $loggedIn
     Message = $(if ($apiKey) { 'Tài khoản: đã cấu hình API, tính phí riêng.' } elseif ($loggedIn) { 'ChatGPT: đã đăng nhập.' } else { 'ChatGPT: chưa đăng nhập hoặc phiên đăng nhập đã hết hạn.' })
-    Action = 'Bấm Đăng nhập rồi nhập mã hiện ra ở trang đăng nhập ChatGPT trong Chrome của tool.'
+    Action = 'Bấm Đăng nhập rồi nhập mã hiện ra ở trang đăng nhập ChatGPT trong Chrome.'
 })
 . (Join-Path $PSScriptRoot 'quota.ps1')
 $quotaAvailable = $false
@@ -85,20 +85,18 @@ if (Test-Path -LiteralPath $driveFile) {
 }
 # The main window shows what is left; here only when it resets, to keep the step short.
 $quotaText = if ($quotaAvailable -and $quota.Resets) { "Đặt lại: $($quota.Resets)" } else { (@($quotaMessages) -join ' ').Trim() }
-# The tools' own Chrome (hub/browser.mjs): for runs on Google Flow or ChatGPT in the browser. Optional; its profile
-# exists once it has been opened to sign in.
-$browserDir = Join-Path (Split-Path (Split-Path $PSScriptRoot -Parent) -Parent) 'workspace/browser'
-$browserReady = (Test-Path -LiteralPath (Join-Path $browserDir 'profile/Default'))
-# Who is signed in there, from its cookies (hub/browser.mjs logins; starts it hidden if needed). Google covers Flow and
-# Gemini web.
-$web = $null
-if ($browserReady -and $node) {
+# The Tools Hub extension (hub/extension) in the user's own Chrome, for runs on Google Flow, Gemini or ChatGPT in the
+# browser, and who is signed in there (hub/bridge/ensure.mjs --logins, read by the extension). Only checks: Chrome is
+# not started for it. Google covers Flow and Gemini web.
+$extensionDir = Join-Path (Split-Path $PSScriptRoot -Parent) 'extension'
+$web = $null; $extensionState = 'warn'
+if ($node) {
     try {
-        $flags = @(if ([int]((& node --version) -replace '^v(\d+).*', '$1') -lt 22) { '--experimental-websocket' })
-        $web = (& node @flags (Join-Path (Split-Path (Split-Path $PSScriptRoot -Parent) -Parent) 'hub/browser.mjs') logins | Select-Object -Last 1) | ConvertFrom-Json
-        if ($web.error) { $web = $null }
-    } catch { $web = $null }
+        $answer = (& node (Join-Path (Split-Path $PSScriptRoot -Parent) 'bridge/ensure.mjs') --logins --no-open | Select-Object -Last 1) | ConvertFrom-Json
+        if ($answer.ok) { $extensionState = 'ok'; $web = $answer.logins } elseif ($answer.extension -eq $false) { $extensionState = 'fail' }
+    } catch {}
 }
+$browserReady = $extensionState -eq 'ok'
 # The Google account Flow and Gemini run with, chosen on Cấu hình (workspace/config/google-account.json { email });
 # none chosen is Google's default, the first one signed in. A choice no longer signed in there is dropped.
 $googleChoiceFile = Get-SharedConfigPath (Join-Path (Split-Path (Split-Path $PSScriptRoot -Parent) -Parent) 'workspace') 'google-account.json'
@@ -113,12 +111,12 @@ function Get-WebStep([string]$Id, [string]$Title, [string]$Site, [string]$Uses) 
     }
     $account = if ($state -ne 'ok' -or -not $accounts.Count) { '' } elseif ($script:googleChoice) { $script:googleChoice } else { [string]$accounts[0] }
     $detail = switch ($state) {
-        'wait' { 'Mở Chrome của tool trước.' }
-        'warn' { 'Chưa kiểm tra được. Bấm Mở để xem trong Chrome của tool.' }
-        'ok' { if ($accounts.Count -gt 1) { "Flow và Gemini chạy bằng tài khoản đang chọn ($($accounts.Count) tài khoản đã đăng nhập)." } else { 'Đã đăng nhập trong Chrome của tool.' } }
-        default { 'Chưa đăng nhập. Bấm Mở rồi đăng nhập Google trong Chrome của tool.' }
+        'wait' { 'Mở Chrome có extension Tools Hub trước.' }
+        'warn' { 'Chưa kiểm tra được. Bấm Đăng nhập để xem trong Chrome.' }
+        'ok' { if ($accounts.Count -gt 1) { "Flow và Gemini chạy bằng tài khoản đang chọn ($($accounts.Count) tài khoản đã đăng nhập)." } else { 'Đã đăng nhập trong Chrome.' } }
+        default { 'Chưa đăng nhập. Bấm Đăng nhập rồi đăng nhập Google trong Chrome.' }
     }
-    # Google's account chooser in the tools' Chrome: sign in, add or switch the account. Accounts: every one signed in
+    # Google's account chooser in Chrome: sign in, add or switch the account. Accounts: every one signed in
     # there, for the page to choose from.
     [pscustomobject]@{ Id = $Id; Title = $Title; State = $state; Detail = $detail; Account = $account; Accounts = $(if ($state -eq 'ok') { @($accounts) } else { @() }); Uses = $Uses; Action = $(if ($browserReady) { 'google' } else { '' }) }
 }
@@ -151,8 +149,8 @@ $steps = @(
         Action = $(if ($engine) { 'login' } else { '' }) }
     [pscustomobject]@{ Id = 'quota'; Title = 'Hạn mức sử dụng'; State = $(if (-not $loggedIn) { 'wait' } elseif ($apiKey -or $quotaAvailable) { 'ok' } else { 'warn' })
         Detail = $(if (-not $loggedIn) { 'Đăng nhập trước.' } else { $quotaText }); Action = '' }
-    [pscustomobject]@{ Id = 'browser'; Title = 'Chrome của tool'; State = $(if ($browserReady) { 'ok' } else { 'warn' })
-        Detail = $(if ($browserReady) { 'Đã mở để đăng nhập. Bấm Mở để đăng nhập thêm hoặc lại.' } else { 'Chưa mở. Bấm Mở rồi đăng nhập Google (Flow, Gemini), ChatGPT (lần đầu tải khoảng 150 MB).' })
+    [pscustomobject]@{ Id = 'browser'; Title = 'Extension Tools Hub'; State = $extensionState
+        Detail = $(switch ($extensionState) { 'ok' { 'Đã kết nối trong Chrome. Các tool mở tab riêng trong nhóm Tools Hub.' } 'fail' { "Chưa cài trong Chrome. Bấm Mở: chrome://extensions, bật Chế độ nhà phát triển, Tải tiện ích đã giải nén, chọn thư mục $extensionDir." } default { 'Chrome chưa mở (hoặc chưa cài Node.js). Bấm Mở để mở Chrome.' } })
         Action = 'browser' }
     Get-WebStep 'google' 'Google (Flow, Gemini web)' 'google' 'Tạo ảnh: Google Flow · Viết review: Gemini web'
     [pscustomobject]@{ Id = 'antigravity'; Title = 'Antigravity CLI'; State = $agyState; Detail = $agyDetail; Account = $agyAccount; Uses = 'Viết review: Antigravity CLI'; Action = $(if ($agy) { 'antigravity' } else { '' }) }

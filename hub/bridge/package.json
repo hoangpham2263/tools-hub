@@ -1,8 +1,8 @@
 {
-  "name": "product-review-bridge",
+  "name": "tools-hub-bridge",
   "private": true,
   "type": "module",
-  "description": "Local bridge between Product Review (Tools Hub) and the browser extension.",
+  "description": "Local bridge between the Tools Hub tools and the Tools Hub extension.",
   "scripts": { "start": "node server.mjs", "test": "node --test" },
   "dependencies": { "ws": "8.18.0" }
 }

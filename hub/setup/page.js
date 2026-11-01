@@ -29,18 +29,18 @@
   };
   for (const id of AI) item(id, $("#ai"));
   for (const id of BASE) item(id, $("#base"));
-  const NAMES = { login: "Codex (ChatGPT)", google: "Google (Flow, Gemini web)", antigravity: "Antigravity CLI", drive: "Mật khẩu app", node: "Node.js", codex: "Codex", browser: "Chrome của tool" };
+  const NAMES = { login: "Codex (ChatGPT)", google: "Google (Flow, Gemini web)", antigravity: "Antigravity CLI", drive: "Mật khẩu app", node: "Node.js", codex: "Codex", browser: "Extension Tools Hub" };
   for (const [id, row] of items) row.name.textContent = NAMES[id];
   const LABELS = { install: "Cài", browser: "Mở", login: "Đăng nhập", drive: "Đăng nhập", google: "Đăng nhập", antigravity: "Đăng nhập" };
-  // Beside the sign-in button: the AI's own site in the tools' Chrome, to see or switch the account there.
+  // Beside the sign-in button: the AI's own site in Chrome, to see or switch the account there.
   const SITES = { login: [["Mở ChatGPT", "chatgpt"]], google: [["Mở Gemini", "gemini"], ["Mở Flow", "flow"]] };
   const WAIT = {
     install: "Đang cài…",
-    browser: "Đang mở Chrome của tool (lần đầu tải về, có thể vài phút)…",
-    login: "Đang mở trang đăng nhập ChatGPT trong Chrome của tool…",
-    google: "Đã mở trang chọn tài khoản Google trong Chrome của tool: đăng nhập, thêm hoặc đổi tài khoản ở đó, xong bấm Kiểm tra lại.",
+    browser: "Đã mở trang tiện ích của Chrome và thư mục extension: bật Chế độ nhà phát triển, bấm Tải tiện ích đã giải nén, chọn thư mục vừa mở, xong bấm Kiểm tra lại.",
+    login: "Đang mở trang đăng nhập ChatGPT trong Chrome…",
+    google: "Đã mở trang chọn tài khoản Google trong Chrome: đăng nhập, thêm hoặc đổi tài khoản ở đó, xong bấm Kiểm tra lại.",
     antigravity: "Đã mở Terminal chạy Antigravity: gõ /logout nếu muốn đổi tài khoản, rồi /login và đăng nhập Google trên trang mở ra. Xong bấm Kiểm tra lại.",
-    site: "Đã mở trang trong Chrome của tool. Đăng nhập hoặc đổi tài khoản ở đó, xong bấm Kiểm tra lại.",
+    site: "Đã mở trang trong Chrome. Đăng nhập hoặc đổi tài khoản ở đó, xong bấm Kiểm tra lại.",
   };
 
   let checking = false;
@@ -107,7 +107,7 @@
     checking = false;
   };
 
-  // While Codex signs in: the one-time code to type on the page opened in the tools' Chrome, with Chép mã.
+  // While Codex signs in: the one-time code to type on the page opened in Chrome, with Chép mã.
   let watching = 0;
   const watchLogin = () => {
     if (watching) return;
@@ -131,7 +131,7 @@
         copy.textContent = done ? "Đã chép" : "Chưa chép được";
         setTimeout(() => { copy.textContent = "Chép mã"; }, 2000);
       };
-      detail.replaceChildren(`Mã đăng nhập: ${code} `, copy, ". Dán vào trang đăng nhập vừa mở trong Chrome của tool (đăng nhập tài khoản ChatGPT muốn dùng). Lỗi thì bấm lại để lấy mã mới.");
+      detail.replaceChildren(`Mã đăng nhập: ${code} `, copy, ". Dán vào trang đăng nhập vừa mở trong Chrome (đăng nhập tài khoản ChatGPT muốn dùng). Lỗi thì bấm lại để lấy mã mới.");
       for (const b of buttons()) b.disabled = false;
     }, 1000);
   };
@@ -160,7 +160,7 @@
     pass.focus();
   };
 
-  // Installing, opening the tools' Chrome or signing in runs on this computer; the steps are checked again after.
+  // Installing, opening Chrome or signing in runs on this computer; the steps are checked again after.
   const buttons = () => [...document.querySelectorAll(".item .side .btn")];
   const fix = async (step, row, site) => {
     if (step.Action === "drive") return drive(step, row);

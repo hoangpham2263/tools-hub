@@ -8,7 +8,9 @@ const flowImages = () => new Set([...document.images].filter(isFlowImage).map((i
 async function generateFlow(job) {
   const composer = () => document.querySelector('.ProseMirror[contenteditable="true"]');
   let editor = await waitFor(composer, 30000, "ô nhập Flow");
+  note(`composer found, visible: ${document.visibilityState}`);
   if (flowAgentOn()) {
+    note("turning Tác nhân off");
     await turnAgentOff();
     editor = await waitFor(composer, 30000, "ô nhập Flow");
   }
@@ -19,6 +21,7 @@ async function generateFlow(job) {
   // A new project sometimes drops the first paste (nothing ever uploads): paste again into the composer it has now.
   for (let paste = 1; paste <= 3; paste++) {
     await pasteFiles(editor, files);
+    note(`pasted ${files.length} reference(s), try ${paste}`);
     if (!files.length) break;
     const uploaded = () => {
       if (agreeToConsent()) return false;
@@ -32,6 +35,7 @@ async function generateFlow(job) {
     // Flow draws the composer again once a reference is attached.
     editor = await waitFor(composer, 30000, "ô nhập Flow");
   }
+  note(files.length ? "references uploaded" : "no references");
   typePrompt(editor, job.prompt);
   const button = await waitFor(() => document.querySelector("button.generate-icon-button:not([disabled])"), 30000, "nút tạo của Flow");
   button.scrollIntoView({ block: "center" });
@@ -40,7 +44,9 @@ async function generateFlow(job) {
   const started = () => !editor.innerText.includes(job.prompt.slice(0, 20)) || button.disabled || !button.isConnected;
   const box = button.getBoundingClientRect();
   const clicked = await chrome.runtime.sendMessage({ type: "click", x: box.left + box.width / 2, y: box.top + box.height / 2 }).catch(() => null);
-  if (!clicked?.ok || !(await waitFor(started, 15000, "").catch(() => false))) {
+  const going = clicked?.ok && (await waitFor(started, 15000, "").catch(() => false));
+  note(going ? "generation started" : `generate click did not start it (${clicked?.error || "no answer"})`);
+  if (!going) {
     button.style.outline = "3px solid #f5b400";
     button.style.outlineOffset = "3px";
     chrome.runtime.sendMessage({ type: "needs-click", platform: "flow" });
@@ -81,6 +87,7 @@ function agreeToConsent() {
   if (Date.now() - lastConsentClick < 1000) return true;
   if (++consentClicks > 20) throw new Error(FLOW_CONSENT);
   lastConsentClick = Date.now();
+  note(`agreeing to the image-rights dialog (${consentClicks})`);
   const box = buttons.at(-1).getBoundingClientRect();
   chrome.runtime.sendMessage({ type: "click", x: box.left + box.width / 2, y: box.top + box.height / 2 }).catch(() => null);
   return true;

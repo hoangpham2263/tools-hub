@@ -47,7 +47,17 @@ export function killTree(proc) {
   try { process.kill(-proc.pid, "SIGKILL"); } catch { try { proc.kill("SIGKILL"); } catch {} }
 }
 
-// A window of its own on macOS: the tools' own Chrome (hub/browser.mjs) in app mode (no tabs or address bar); before
+// The user's own Chrome, where the Tools Hub extension (hub/extension) is installed and the AIs are signed in: started,
+// or a page opened in it. background: Chrome is not brought to the front (a run starting it).
+export function openChrome(url = "", { background = false } = {}) {
+  return new Promise((resolve) => {
+    const done = (err) => resolve(err ? "Không mở được Google Chrome. Cài Google Chrome rồi thử lại." : "");
+    if (onWindows) return execFile("cmd", ["/c", "start", "", "chrome", ...(url ? [url] : [])], { windowsHide: true }, done);
+    execFile("open", [...(background ? ["-g"] : []), "-a", "Google Chrome", ...(url ? [url] : [])], done);
+  });
+}
+
+// A window of its own on macOS: Chrome for Testing (hub/browser.mjs) in app mode (no tabs or address bar); before
 // it is downloaded, the user's Chrome, else the default browser. On Windows the app window (hub/launch.ps1) shows the
 // pages, so nothing opens here.
 export function appWindow(url, size = "1120,840") {
