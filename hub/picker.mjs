@@ -29,8 +29,9 @@ const version = (() => {
 })();
 const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
 
-// tool.json: "platforms" [{ name, color }] it works with, "features" a few short lines.
-const card = (t) => `<span class="top"><img src="/icon/${esc(t.id)}" alt=""><span><span class="name">${esc(t.name)}</span>`
+// tool.json: "platforms" [{ name, color }] it works with, "features" a few short lines, "status": "dev" while a tool
+// does not work yet (badge Đang phát triển; it still opens, for working on it).
+const card = (t) => `<span class="top"><img src="/icon/${esc(t.id)}" alt=""><span><span class="name">${esc(t.name)}${t.status === "dev" ? ' <span class="dev">Đang phát triển</span>' : ""}</span>`
   + `<span class="plat">${(t.platforms || []).map((p) => `<span style="--c:${esc(p.color || "#888")}"><i></i>${esc(p.name)}</span>`).join("")}</span></span></span>`
   + `<ul>${(t.features || []).map((f) => `<li>${esc(f)}</li>`).join("")}</ul>`;
 const page = () => `<!doctype html><html lang="vi"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
@@ -42,13 +43,15 @@ const page = () => `<!doctype html><html lang="vi"><head><meta charset="utf-8"><
 .tools button:hover{border-color:var(--accent);background:#fff}
 .tools .top{display:flex;gap:12px;align-items:center}.tools img{width:48px;height:48px;flex:none}
 .tools .name{display:block;font-size:15px;line-height:1.3}
+.tools .dev{display:inline-block;margin-left:6px;padding:1px 7px;border:1px solid #d9a441;border-radius:10px;font-size:11px;color:#9a6a10;background:#fff7e6;vertical-align:2px}
+.tools .is-dev button{opacity:.75}.tools .is-dev button:hover{opacity:1}
 .tools .plat{display:flex;flex-wrap:wrap;gap:2px 8px;margin-top:3px;font-size:11.5px;color:var(--muted)}.tools .plat span{display:inline-flex;align-items:center;gap:4px;white-space:nowrap}
 .tools .plat i{width:7px;height:7px;border-radius:50%;background:var(--c)}
 .tools ul{list-style:none;margin:14px 0 0;padding:12px 0 0;border-top:1px solid #e3e3e3;font-size:13px;line-height:1.75}
 .tools li{position:relative;padding-left:20px}.tools li::before{content:"✓";position:absolute;left:2px;color:var(--accent)}
 @media (max-width:900px){.tools{grid-template-columns:repeat(2,minmax(0,1fr))}}body{min-height:100vh;display:flex;flex-direction:column}main{flex:1}footer{padding:0 20px 16px;text-align:center;font-size:12px}</style><script src="/hub/hub.js" defer></script></head>
 <body><main><header><h1>Tools Hub</h1></header><div class="setup-status" id="setupStatus" role="status"></div><section class="group"><h2>Công cụ</h2><div class="tools list">
-${tools.map((t) => `<form method="post" action="/open/${esc(t.id)}"><button class="card" type="submit" title="${esc(t.description)}">${card(t)}</button></form>`).join("")}
+${tools.map((t) => `<form method="post" action="/open/${esc(t.id)}"${t.status === "dev" ? ' class="is-dev"' : ""}><button class="card" type="submit" title="${esc(t.description)}">${card(t)}</button></form>`).join("")}
 </div></section></main><footer class="muted">© ${new Date().getFullYear()} Tools Hub</footer></body></html>`;
 
 // A tool with its own server: its address when it is running, else "".

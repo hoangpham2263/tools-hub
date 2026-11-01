@@ -1,6 +1,6 @@
 ﻿function Get-WritingStyle([string]$Path) {
     $style = Get-Content -LiteralPath $Path -Raw -Encoding UTF8 | ConvertFrom-Json
-    if ($style.schema_version -ne 1 -or -not $style.review_rules -or -not $style.scene_rules) { throw 'Invalid writing style data.' }
+    if ($style.schema_version -ne 1 -or -not $style.review_rules) { throw 'Invalid writing style data.' }
     return $style
 }
 

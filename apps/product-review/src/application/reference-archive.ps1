@@ -14,7 +14,7 @@ function Save-ProductReferenceBundle($Item, [string]$ItemId, $Context, $Request,
         if ($index -lt $ReferenceCount) {
             $isPerson = $index -eq 0 -and (-not $Context.presentation -or $Context.presentation -eq 'worn')
             $role = if ($isPerson) { 'subject' } else { 'scene' }
-            $label = if ($isPerson) { 'Người và bối cảnh tham khảo' } elseif ($Request.SceneBase -and $index -eq 0) { 'Phòng gốc dùng để ghép sản phẩm' } else { 'Bối cảnh tham khảo' }
+            $label = if ($isPerson) { 'Người và bối cảnh tham khảo' } elseif ($Request.SceneBase -and $index -eq 0) { 'Ảnh review gốc dùng để ghép sản phẩm' } else { 'Bối cảnh tham khảo' }
         } elseif ($index -eq $ReferenceCount) { $role = 'product'; $label = 'Sản phẩm gốc' }
         $extension = [IO.Path]::GetExtension($original).ToLowerInvariant()
         if ($extension -notmatch '^\.[a-z0-9]+$') { throw 'Invalid image extension for reference archive.' }

@@ -38,7 +38,7 @@ function Invoke-CodexProcess($PromptText,$CommandArgs,$Trace){
     foreach($case in @('quota','corrupt','missing','empty-reply','other-error','valid')){
         $caseDir=Join-Path $temp $case;New-Item -ItemType Directory -Path $caseDir|Out-Null
         $queue=Join-Path $caseDir 'urls.txt';$url|Set-Content -LiteralPath $queue
-        $script:Config=@{ManualReferences=(Read-ManualReferenceMap $mapPath);SourceDir=$temp;SourceCatalog=@{};Model='';WritingStyle=@{scene_rules=@()};AiRetryDelaySeconds=0;TestCase=$case;TestPng=$product;TestCalls=(Join-Path $caseDir 'calls.txt')}
+        $script:Config=@{ManualReferences=(Read-ManualReferenceMap $mapPath);SourceDir=$temp;SourceCatalog=@{};Model='';AiRetryDelaySeconds=0;TestCase=$case;TestPng=$product;TestCalls=(Join-Path $caseDir 'calls.txt')}
         $errorMessage=''
         try{Invoke-BatchWorkflow $root $queue (Join-Path $caseDir 'out') 1 (@($script:WorkflowModuleFiles)+@($fixture))}
         catch{$errorMessage=$_.Exception.Message}

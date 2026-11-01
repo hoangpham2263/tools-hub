@@ -9,7 +9,7 @@ try{
     $room=Join-Path $temp 'original.png';$raw=Join-Path $temp 'raw.png'
     New-TestPng $room 20 20 ([byte[]](139,69,19));New-TestPng $raw 20 20 ([byte[]](255,255,255))
     $script:Batch=@{Logs=$temp;Images=$temp}
-    $script:Config=@{ActiveProductUrl='https://example.test/table';WritingStyle=@{scene_rules=@()};FeedbackRoot=''}
+    $script:Config=@{ActiveProductUrl='https://example.test/table';FeedbackRoot=''}
     $context=[pscustomobject]@{product='table';presentation='placed';setting='bare room';details='solid slab legs';reject='new props';branding='none';source_categories=@('dining-tables')}
     $request=New-ProductImageRequest $raw '001-table' $context @($room) ([Collections.ArrayList]::new())
     Assert ($request.Prompt -match 'SINGLE-PASS DELIVERY' -and $request.Prompt -match 'DIRECT IMAGE DELIVERY') 'Direct image delivery instructions are missing.'

@@ -20,7 +20,9 @@ function Get-ProductContext([string]$Handle) {
 # Classify the actual image, not just keywords: a golf cart is not golf clothing.
 function Resolve-ProductContext([string]$Handle, [string]$Reference, [string]$ItemId) {
     $profileIds = @($script:Config.ProductContexts | Where-Object id -ne generic | ForEach-Object id) -join ', '
-    $libraryCategories = @($script:Config.SourceCatalog.Values | ForEach-Object category | Where-Object { $_ } | Sort-Object -Unique) -join ', '
+    # Category keys must match on every machine: lessons in AGENTS.md and prompt rules (dining-tables) are keyed by them.
+    $known = @(Get-SampleCatalogEntries $script:Config.SourceDir | ForEach-Object category) + @(Read-AgentLessons $script:Config.AgentInstructionsPath | ForEach-Object category)
+    $knownCategories = @($known | Where-Object { $_ } | Sort-Object -Unique) -join ', '
     Write-Host '  [CLASSIFY] Identifying the actual product...' -ForegroundColor Cyan
     $prompt = @"
 Identify the actual product in this image. Handle is a hint only: $Handle
@@ -30,7 +32,7 @@ electronics, furniture, tools and future categories without a fixed product-type
 Return one JSON object, no Markdown, with these fields:
 existing_profile: one of [$profileIds] only if the actual image shows that apparel type,
 otherwise custom. For example a golf cart is NOT golf apparel, and a capacitor is NOT a cap;
-category_key: if the product belongs to one of the sample library categories [$libraryCategories],
+category_key: if the product belongs to one of these known categories [$knownCategories],
 use that exact key; otherwise a stable broad category in lowercase kebab-case, e.g. headphones;
 product: short accurate product name;
 presentation: one of worn, held, placed, vehicle (how it should appear, not its industry);

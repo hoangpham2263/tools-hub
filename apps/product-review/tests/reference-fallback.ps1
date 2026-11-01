@@ -3,7 +3,7 @@ $ErrorActionPreference = 'Stop'
 $root = Split-Path $PSScriptRoot -Parent
 . (Join-Path $root 'src/bootstrap.ps1')
 function Assert($Condition, [string]$Message) { if (-not $Condition) { throw $Message } }
-$script:Config = @{ WritingStyle = [pscustomobject]@{ scene_rules = @() }; AgentInstructionsPath=(Join-Path $root 'AGENTS.md') }
+$script:Config = @{ AgentInstructionsPath=(Join-Path $root 'AGENTS.md') }
 $script:Batch = @{ Images = $TestWorkspaceRoot; Logs = $TestWorkspaceRoot }
 $context = [pscustomobject]@{ product = 'apron'; presentation = 'worn'; setting = 'cafe'; source_categories = @('aprons'); details = 'black apron'; branding = 'preserve logo'; reject = 'golf' }
 # Object edits keep the attached review photo as the base.

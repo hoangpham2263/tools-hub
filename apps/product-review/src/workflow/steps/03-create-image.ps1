@@ -43,9 +43,8 @@ Never paste a product cutout, inset, floating shirt or extra physical garment on
 Product-specific details: $($context.details)
 Match the item's actual type, main colors, construction, proportions and design. Do not reinterpret an apron as a shirt.
 Match the replacement garment to the existing person's perspective, scale, daylight, shadows and color temperature. Preserve the review photo's existing surroundings; do not invent a different location.
-Use a natural portrait composition, preferably showing the person and some surroundings, like a casual phone photo.
 Keep real skin texture, believable anatomy, fabric folds, and contact shadows. Avoid a glossy catalog or studio-ad look.
-Scene guidance: $($script:Config.WritingStyle.scene_rules -join ' ')
+Keep image 1's framing, moment and camera character. Do not add objects, people, props or activities absent from image 1.
 When worn, the target item should look worn naturally; otherwise keep its existing folded, laid-flat or placed presentation. Never paste it on, recolor the whole body, or make it unnaturally bright.
 $brandInstruction
 Match embroidery or print to the fabric perspective, wrinkles, and lighting.
@@ -97,7 +96,6 @@ Do not relight, recolor, sharpen, blur or restyle the room. Do not add scratches
 Context descriptions and suggested tableware are compatibility guidance, not permission to add a banquet or redesign the room.
 For example, "set for an everyday meal" does not require plates, food or cups. Keep an originally bare table bare unless the user explicitly asks for added props. Existing room props may remain; do not invent missing-context failures to justify decorating.
 NO INVENTED PROPS: absence in the original base photo must remain absence. Add only the actual target product and explicitly user-requested components. Do not introduce plates, bowls, food, drinks, cups, cutlery, books, vases, plants, people, pets, rugs, lights, artwork or any other decoration absent from that photo. Empty areas and bare surfaces must stay empty. Preserve existing room objects in place. Props surrounding the product in its source photo are NOT part of the target product and must not be transplanted into an empty room or any other base photo. AI-inferred activities, generic lifestyle guidance and saved setting descriptions never authorize additions. Only an explicit user request may authorize an extra object; never add one merely to make the scene look more natural or attractive.
-The base photo's camera character takes precedence over generic photography style guidance.
 DIRECT IMAGE DELIVERY: save the complete image returned by the image tool as the output PNG.
 The application exports this image directly without further image processing. Preserve image 1 through the image edit itself, using the original framing and camera character. Return the first completed image; the user reviews it.
 No collage, split screen, duplicated product, advertising copy or added endorsement.
@@ -115,8 +113,10 @@ Do not modify any input file. Reply briefly in English.
 function Invoke-ImageGeneration($Request, [string]$ItemId, [int]$Attempt, [string]$InterruptionReason) {
     $instruction = $Request.Prompt
     $images = @($Request.Images)
-    if ($Attempt -gt 1) {
-        $instruction += "`nThe previous submission was interrupted before complete delivery: $InterruptionReason This is a transport retry, not a visual rejection. Keep the same product and original room. Reuse any complete raw image already saved; only finish missing delivery files. Do not visually critique or improve an existing image."
+    $backend = if ($script:Config -and $script:Config.ImageBackend) { $script:Config.ImageBackend } else { 'codex' }
+    # A web AI gets each retry as a fresh request with the same inputs; only Codex works with saved files.
+    if ($Attempt -gt 1 -and $backend -eq 'codex') {
+        $instruction += "`nThe previous submission was interrupted before complete delivery: $InterruptionReason This is a transport retry, not a visual rejection. Keep the same product and the same review photo. Reuse any complete raw image already saved; only finish missing delivery files. Do not visually critique or improve an existing image."
         $previousImage=Join-Path $script:Batch.Logs "$ItemId-attempt-$($Attempt-1)-generated.png"
         if(Test-Path -LiteralPath $previousImage){
             $images+=@($previousImage)
@@ -127,7 +127,6 @@ function Invoke-ImageGeneration($Request, [string]$ItemId, [int]$Attempt, [strin
     $logName = if ($Attempt -eq 1) { "$ItemId-image.txt" } else { "$ItemId-image-retry-$Attempt.txt" }
     # Previous attempts are archived above; a no-op AI call must not pass on a stale output.
     if(Test-Path -LiteralPath $Request.Output){Remove-Item -LiteralPath $Request.Output -Force}
-    $backend = if ($script:Config -and $script:Config.ImageBackend) { $script:Config.ImageBackend } else { 'codex' }
     if ($backend -ne 'codex') {
         Write-Host "  [IMAGE-BACKEND] $backend" -ForegroundColor Cyan
         $result = Invoke-HubAI -Kind image -Ai $backend -Prompt $instruction -Images $images -Output $Request.Output

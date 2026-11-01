@@ -20,11 +20,11 @@ function Invoke-AI($PromptText, $Images, $ResultFile, $Sandbox) {
     }
     if ($ResultFile -like '*-quality-*.txt') { throw 'Image QA must not run.' }
     if ($ResultFile -like '*-review.txt') {
-        if ($PromptText -notmatch 'reviewed product is: bib apron' -or $PromptText -notmatch 'not the white T-shirt underneath') { throw 'Review is not focused on the apron.' }
+        if ($PromptText -notmatch 'reviewed product is: bib apron' -or $PromptText -notmatch 'unrelated underlayer' -or $PromptText -match 'Product URL|Product handle|white T-shirt|surrounding room') { throw 'Review is not focused on the product, or still gets the link or apron-only wording.' }
         return 'The black bib keeps the simple front pockets easy to see.'
     }
     $script:ImageCalls++
-    if ($PromptText -notmatch 'Scene guidance: Show one ordinary moment') { throw 'Missing natural scene guidance.' }
+    if ($PromptText -notmatch 'Keep image 1.s framing, moment and camera character' -or $PromptText -match 'Scene guidance|natural portrait composition') { throw 'Garment edits must keep the review photo framing without restaging guidance.' }
     if ($Images.Count -ne 2 -or $PromptText -notmatch 'Image 1 also supplies the real setting' -or $PromptText -notmatch 'Image 2 is the PRODUCT reference') { throw 'Scene fallback changed reference roles incorrectly.' }
     if ($PromptText -notmatch 'Never add GOLF' -or $PromptText -match 'cafe service counter|Product use context|Reject these context') { throw 'Apron branding rules missing, or old scene-picking context leaked into the prompt.' }
     if ($PromptText -notmatch 'SINGLE-PASS DELIVERY') { throw 'Single-pass generation contract is missing.' }

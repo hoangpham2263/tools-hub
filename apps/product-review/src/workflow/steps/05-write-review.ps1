@@ -11,18 +11,16 @@
     $promptText = @"
 Write one short English draft review for demo data, suitable for either a 4/5 or 5/5 rating.
 The rating and author will be assigned later. Do not mention a rating, stars, or author name.
-Product handle: $Handle
-Product URL (context only, do not browse): $Url
 Use the attached finished photo. The reviewed product is: $($Context.product).
 Focus on these visible details of that product: $($Context.details)
-Do not review an unrelated underlayer or accessory instead. For an apron, discuss the apron,
-not the white T-shirt underneath. Choose only one or two concrete visible observations.
+Do not review an unrelated underlayer, accessory or other item in the photo instead.
+Choose only one or two concrete visible observations.
 Use a conversational observation about the actual product. First person is optional, never required.
 Write whatever you notice in the photo as a quick personal comment, not a catalog description.
 There is no required opening or sentence structure. A reaction, fragment, first-person thought,
 or visible detail can all work. Do not default to 'The [product/detail] is/looks ...'.
 Do not merely replace 'The' with another stock opener. Let the observation decide the wording.
-For placed objects, discuss shape, visible grain, color, proportions or the surrounding room;
+For placed objects, discuss shape, visible grain, color, proportions or how it sits in the photo;
 only discuss clothing or an outfit when the actual product is worn.
 Do not assume a wife, mother, gift buyer, gender, or relationship from a name.
 $sampleText
