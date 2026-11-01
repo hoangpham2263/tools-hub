@@ -137,7 +137,7 @@ function Invoke-ImageGeneration($Request, [string]$ItemId, [int]$Attempt, [strin
     $backend = if ($script:Config -and $script:Config.ImageBackend) { $script:Config.ImageBackend } else { 'codex' }
     if ($backend -ne 'codex') {
         Write-Host "  [IMAGE-BACKEND] $backend" -ForegroundColor Cyan
-        $result = Invoke-BrowserImage $backend $instruction $images $Request.Output
+        $result = Invoke-HubAI -Kind image -Ai $backend -Prompt $instruction -Images $images -Output $Request.Output
         [IO.File]::WriteAllText((Join-Path $script:Batch.Logs $logName), "backend: $backend`nsource: $($result.source)`nbytes: $($result.bytes)", [Text.UTF8Encoding]::new($false))
         return 'BRAND: none'
     }

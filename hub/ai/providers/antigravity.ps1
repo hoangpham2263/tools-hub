@@ -1,4 +1,4 @@
-﻿# Text steps through the Antigravity CLI (Viết review: Antigravity CLI), signed in with Google; no API key.
+﻿# Antigravity CLI (agy), signed in with Google: text only, no API key.
 # agy takes its prompt only as an argument, so the prompt and its images go into a folder of their own and agy is
 # told to read them there (also clear of Windows' command-line length limit).
 
@@ -6,7 +6,7 @@ function Get-AntigravityCommand {
     $command = Get-Command agy -ErrorAction SilentlyContinue | Select-Object -First 1
     if ($command) { return $command.Source }
     foreach ($path in @((Join-Path $HOME '.local/bin/agy'), (Join-Path $HOME '.local/bin/agy.exe'))) { if (Test-Path -LiteralPath $path) { return $path } }
-    throw 'AI failed. Chưa có Antigravity CLI (agy). Cài Antigravity rồi đăng nhập Google, hoặc chọn Viết review khác. [CAUSE:AUTH]'
+    throw 'AI failed. Chưa có Antigravity CLI (agy). Cài Antigravity rồi đăng nhập Google, hoặc chọn AI khác. [CAUSE:AUTH]'
 }
 
 function Invoke-AntigravityText([string]$Prompt, [string[]]$Images, [string]$ResultFile, [int]$TimeoutSec = 300) {

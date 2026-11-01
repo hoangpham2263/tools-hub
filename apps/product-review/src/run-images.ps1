@@ -44,11 +44,11 @@ if($script:Config.DriveRequired){
 }
 $script:Config.ImageBackend = $ImageBackend
 $script:Config.TextBackend = $TextBackend
-if ($ImageBackend -ne 'codex' -or $TextBackend -eq 'gemini') { Start-ImageBridge $ProjectRoot }
+if ($ImageBackend -ne 'codex' -or $TextBackend -eq 'gemini') { Start-ImageBridge -NewSession }
 if($ReferenceMapFile){$script:Config.ManualReferences=Read-ManualReferenceMap $ReferenceMapFile}
 # What each step runs on; the Codex model only matters where Codex is used.
-$names = @{ codex = "Codex ($(Get-AiModelSummary $ProjectRoot))"; gemini = 'Gemini web'; antigravity = 'Antigravity CLI'; flow = 'Google Flow'; chatgpt = 'ChatGPT web' }
-Write-Host "Viết review: $($names[$TextBackend]) | Tạo ảnh: $($names[$ImageBackend])"
+$name = { param($Id) if ($Id -eq 'codex') { "Codex ($(Get-AiModelSummary $ProjectRoot))" } else { (Get-HubAIProvider $Id).Name } }
+Write-Host "Viết review: $(& $name $TextBackend) | Tạo ảnh: $(& $name $ImageBackend)"
 try {
     Invoke-BatchWorkflow $ProjectRoot $List $OutDir $ThrottleLimit $script:WorkflowModuleFiles
 } catch {

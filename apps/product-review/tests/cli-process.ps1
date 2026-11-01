@@ -1,7 +1,7 @@
 ﻿. (Join-Path $PSScriptRoot 'helpers.ps1')
 $ErrorActionPreference='Stop'
-. (Join-Path (Split-Path $PSScriptRoot -Parent) 'src/infrastructure/platform.ps1')
-. (Join-Path (Split-Path $PSScriptRoot -Parent) 'src/infrastructure/codex.ps1')
+. (Join-Path (Split-Path $PSScriptRoot -Parent) '../../hub/ai/common.ps1')
+. (Join-Path (Split-Path $PSScriptRoot -Parent) '../../hub/ai/providers/codex.ps1')
 function Assert($Condition,[string]$Message){if(-not $Condition){throw $Message}}
 $testArea=Join-Path $TestWorkspaceRoot ('cli-process-test-'+[Guid]::NewGuid().ToString('N'))
 New-Item -ItemType Directory -Path $testArea|Out-Null

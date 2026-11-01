@@ -4,6 +4,14 @@
 // Flow's own images: flow.google.com/asb/<id> now, flow-content.google/image/<id> before.
 const isFlowImage = (img) => /^https:\/\/(flow\.google\.com\/asb\/|flow-content\.google\/image\/)/.test(img.src);
 const flowImages = () => new Set([...document.images].filter(isFlowImage).map((img) => img.src.split("?")[0]));
+// Each item of the project grid is named: an uploaded file by its file name (ref-1.jpg, from the bridge), an image Flow
+// made by a title of its own. That tells a reference that finished uploading late from a result.
+// A run keeps using one project per account (the background), so the grid also holds the items of earlier jobs, under
+// the same names: a reference of this job is an item of its name that was not there before, or whose image is new.
+const tiles = () => [...document.querySelectorAll("flow-grid-tile-container")];
+const tileName = (el) => el.closest("flow-grid-tile-container")?.getAttribute("aria-label") || "";
+const named = (name) => tiles().filter((t) => t.getAttribute("aria-label") === name);
+const freshImage = (tile, before) => [...tile.querySelectorAll("img")].some((img) => isFlowImage(img) && !before.has(img.src.split("?")[0]) && img.complete && img.naturalWidth > 0);
 
 async function generateFlow(job) {
   const composer = () => document.querySelector('.ProseMirror[contenteditable="true"]');
@@ -14,28 +22,41 @@ async function generateFlow(job) {
     await turnAgentOff();
     editor = await waitFor(composer, 30000, "ô nhập Flow");
   }
+  // The grid shows only the items in view, newest first: from the top, the new items of this job are the first ones.
+  document.querySelector(".cdk-virtual-scrollable")?.scrollTo({ top: 0 });
+  await sleep(500);
   const before = flowImages();
   const files = filesFromJob(job);
+  const names = new Set(files.map((f) => f.name));
+  const counts = Object.fromEntries(files.map((f) => [f.name, named(f.name).length]));
   consentClicks = 0;
-  // Uploaded references appear in the project grid as well; record them so they are not mistaken for results.
-  // A new project sometimes drops the first paste (nothing ever uploads): paste again into the composer it has now.
-  for (let paste = 1; paste <= 3; paste++) {
-    await pasteFiles(editor, files);
-    note(`pasted ${files.length} reference(s), try ${paste}`);
-    if (!files.length) break;
+  // Each reference shows up in the project grid under its file name: uploading, then done. A project sometimes drops
+  // a paste (no item ever comes): only the files with no item yet are pasted again, so none is sent twice.
+  const done = (name) => named(name).some((t) => freshImage(t, before));
+  const arrived = (name) => named(name).length > counts[name] || done(name);
+  let missing = files;
+  for (let paste = 1; paste <= 3 && missing.length; paste++) {
+    await pasteFiles(editor, missing);
+    note(`pasted ${missing.map((f) => f.name).join(", ")}, try ${paste}`);
     const uploaded = () => {
       if (agreeToConsent()) return false;
-      return flowImages().size >= before.size + files.length;
+      return files.every((f) => done(f.name));
     };
-    try { await waitFor(uploaded, paste === 3 ? 120000 : 45000, "tải ảnh tham khảo lên Flow"); break; }
-    catch (error) { if (paste === 3 || error.message === FLOW_CONSENT) throw error; editor = await waitFor(composer, 30000, "ô nhập Flow"); }
+    try { await waitFor(uploaded, 45000, "tải ảnh tham khảo lên Flow"); missing = []; }
+    catch (error) {
+      if (error.message === FLOW_CONSENT) throw error;
+      // Still uploading (its item is there): wait for it longer instead of sending it again.
+      missing = files.filter((f) => !arrived(f.name));
+      if (!missing.length) { await waitFor(uploaded, 120000, "tải ảnh tham khảo lên Flow"); break; }
+      if (paste === 3) throw error;
+      editor = await waitFor(composer, 30000, "ô nhập Flow");
+    }
   }
   if (files.length) {
     flowImages().forEach((src) => before.add(src));
     // Flow draws the composer again once a reference is attached.
     editor = await waitFor(composer, 30000, "ô nhập Flow");
   }
-  note(files.length ? "references uploaded" : "no references");
   typePrompt(editor, job.prompt);
   const button = await waitFor(() => document.querySelector("button.generate-icon-button:not([disabled])"), 30000, "nút tạo của Flow");
   button.scrollIntoView({ block: "center" });
@@ -53,7 +74,10 @@ async function generateFlow(job) {
   }
 
   const src = await waitFor(() => {
-    const fresh = [...document.images].find((img) => isFlowImage(img) && !before.has(img.src.split("?")[0]) && img.complete && img.naturalWidth > 0);
+    // Never one of the references (even one that finished uploading after the generation started), nor an item of an
+    // earlier job that came into view later: only the first few tiles are this job's.
+    const recent = new Set(tiles().slice(0, files.length + 4));
+    const fresh = [...document.images].find((img) => isFlowImage(img) && recent.has(img.closest("flow-grid-tile-container")) && !before.has(img.src.split("?")[0]) && !names.has(tileName(img)) && img.complete && img.naturalWidth > 0);
     return fresh?.src;
   }, (job.timeoutSec || 600) * 1000, "Flow tạo ảnh (bấm Bắt đầu tạo trong tab Flow)");
   button.style.outline = "";

@@ -43,8 +43,12 @@ export function createConfigApi({ hubRoot, pwsh, env = process.env }) {
   const googleAccount = () => { try { return String(JSON.parse(readFileSync(googleFile, "utf8")).email || ""); } catch { return ""; } };
   const withAccount = (url) => (googleAccount() ? `${url}?authuser=${encodeURIComponent(googleAccount())}` : url);
   const workspace = q(join(hubRoot, "workspace"));
-  // A page in the user's own Chrome, where the AIs are signed in and the Tools Hub extension runs.
-  const openInChrome = (url, done) => openChrome(url).then((error) => done(error ? { error } : { ok: true }));
+  // A page in the user's own Chrome, where the AIs are signed in: in the Tools Hub tab group, opened by the extension
+  // (hub/bridge/ensure.mjs --open; without the extension, a plain new tab).
+  const openInChrome = (url, done) => execFile(process.execPath, [join(hubRoot, "hub", "bridge", "ensure.mjs"), "--open", url], { cwd: hubRoot, env, timeout: 120000, windowsHide: true }, (err, stdout) => {
+    let r = {}; try { r = JSON.parse(String(stdout).trim().split(/\r?\n/).pop()); } catch { r = { error: err?.message || "Không mở được Chrome." }; }
+    done(r.opened ? { ok: true } : { error: r.error || "Không mở được Chrome." });
+  });
   // codex login opens the system's default browser; with --device-auth it prints a page and a code instead, so the
   // page opens in Chrome and Cấu hình shows the code to type there.
   // Đăng nhập again while one waits: that one stops (its answer says so) and a new code comes.
@@ -115,7 +119,8 @@ export function createConfigApi({ hubRoot, pwsh, env = process.env }) {
         // Installing the extension: Chrome's extensions page, and the folder to choose there (Tải tiện ích đã giải nén).
         const folder = join(hubRoot, "hub", "extension");
         if (onWindows) execFile("explorer.exe", [folder], () => {}); else execFile("open", [folder], () => {});
-        openInChrome("chrome://extensions", (r) => json(res, r.error ? 500 : 200, r));
+        // Not through the extension: this is where it gets installed.
+        openChrome("chrome://extensions").then((error) => json(res, error ? 500 : 200, error ? { error } : { ok: true }));
         return true;
       }
       const npm = findTool("npm"), codex = findTool("codex");

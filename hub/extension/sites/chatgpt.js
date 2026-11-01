@@ -1,4 +1,5 @@
-// ChatGPT: submit through the composer, then read the result with the page's own GET APIs.
+// ChatGPT: submit through the composer, then read the result with the page's own GET APIs. The conversation the job
+// made is then removed from the history (as the page's own Xoá does), so a run leaves no chats behind.
 async function chatgptAuth() {
   const session = await fetch("/api/auth/session", { credentials: "include" }).then((r) => r.json());
   if (!session.accessToken) throw new Error("ChatGPT chưa đăng nhập.");
@@ -30,6 +31,8 @@ async function generateChatgpt(job) {
   const response = await fetch(item.url, { credentials: "include" });
   if (!response.ok) throw new Error(`Tải ảnh ChatGPT lỗi ${response.status}`);
   const blob = await response.blob();
+  await fetch(`/backend-api/conversation/${conversationId}`, { method: "PATCH", credentials: "include", headers: { ...headers, "content-type": "application/json" }, body: JSON.stringify({ is_visible: false }) })
+    .then((r) => note(r.ok ? "conversation removed" : `conversation not removed (${r.status})`), () => note("conversation not removed"));
   return { mime: blob.type || "image/png", data: await blobToBase64(blob), source: `https://chatgpt.com/c/${conversationId}` };
 }
 

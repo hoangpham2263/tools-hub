@@ -6,6 +6,11 @@ function Assert($Condition,[string]$Message){if(-not $Condition){throw $Message}
 $temp=Join-Path $TestWorkspaceRoot ('browser-backend-'+[Guid]::NewGuid().ToString('N'))
 New-Item -ItemType Directory -Path $temp|Out-Null
 try{
+    # The shared bridge is found from the hub's AI core.
+    Assert (Test-Path (Join-Path $script:BridgeHubRoot 'hub/bridge/ensure.mjs')) 'The AI core does not find hub/bridge.'
+    Assert (@(Get-HubAIChoices image | ForEach-Object id) -join ',' -eq 'codex,flow,chatgpt') 'Image AIs are listed from the registry.'
+    $unsupported = try { Invoke-HubAI -Kind image -Ai gemini -Prompt 'x' -Output (Join-Path $temp 'x.png'); '' } catch { $_.Exception.Message }
+    Assert ($unsupported -match '\[CAUSE:UNSUPPORTED\]') 'An AI is only asked for work it can do.'
     # Codex file-delivery lines never reach the browser tab.
     $clean=ConvertTo-BrowserPrompt "Create one photo.`nSave a new PNG at this exact path: C:\x.png`nDo not modify any input file.`nEnd your reply with a line: BRAND: <name>"
     Assert ($clean -eq 'Create one photo.') 'Browser prompt kept Codex delivery lines.'

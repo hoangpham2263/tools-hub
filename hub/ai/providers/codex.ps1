@@ -1,12 +1,5 @@
-﻿# AI backend (Codex CLI). Dot-sourced by run-images.ps1.
-# Reads: $script:Config.Model, $script:Config.ReasoningEffort, $script:Batch.Dir
-
-function ConvertTo-CliArgument([string]$Value) {
-    if ($Value -and $Value -notmatch '[\s"]') { return $Value }
-    $escaped = [regex]::Replace($Value, '(\\*)"', '$1$1\"')
-    $escaped = [regex]::Replace($escaped, '(\\+)$', '$1$1')
-    return '"' + $escaped + '"'
-}
+﻿# Codex CLI (codex exec), signed in with ChatGPT (Cấu hình → Đăng nhập Codex): text and images, no API key.
+# Invoke-CodexExec is the provider; the rest runs and reads one CLI process. Uses common.ps1.
 
 function Get-CodexLaunch {
     $path = (Get-Command codex -ErrorAction Stop).Source
@@ -173,31 +166,26 @@ function Get-CodexTokenUsage([string]$Trace) {
     if ($found) { return $total } else { return $null }
 }
 
-# Run `codex exec` with a prompt and optional images. Returns the model's text reply.
-function Invoke-AI([string]$PromptText, [string[]]$Images, [string]$ResultFile, [string]$Sandbox = 'read-only') {
+# One codex exec call: the reply is written to $ResultFile and returned. -Sandbox workspace-write lets Codex save the
+# image the prompt asks for (an image call), tried once: its caller can first recover a file Codex saved anyway.
+# A text call is retried on a busy service or a lost stream, at most $Attempts times; never with another model, and
+# never on a sign-in, credit or input error.
+function Invoke-CodexExec([string]$PromptText, [string[]]$Images, [string]$ResultFile, [string]$WorkDir,
+    [string]$Sandbox = 'read-only', [string]$Model = '', [string]$Effort = '', [int]$TimeoutSec = 0,
+    [int]$ReconnectSec = 60, [int]$Attempts = 0, [int]$RetryDelaySec = -1) {
     $isImage = $Sandbox -eq 'workspace-write'
-    # Viết review: Gemini web (the tools' own Chrome, browser-bridge.ps1) or the Antigravity CLI (antigravity.ps1)
-    # handles every text step instead of Codex.
-    $textBackend = if ($script:Config) { $script:Config.TextBackend } else { '' }
-    if (-not $isImage -and $textBackend -eq 'gemini') { return Invoke-BrowserText $PromptText $Images $ResultFile }
-    if (-not $isImage -and $textBackend -eq 'antigravity') { return Invoke-AntigravityText $PromptText $Images $ResultFile }
-    # Image retries are owned by Complete-ProductImage, which can first recover saved files.
-    $maxAttempts = if ($isImage) { 1 } else { 3 }
-    $timeout = if ($isImage) { 480 } else { 180 }
-    $timeoutKey = if ($isImage) { 'ImageTimeoutSeconds' } else { 'AiTimeoutSeconds' }
-    if ($script:Config.ContainsKey($timeoutKey)) { $timeout = [Math]::Max(1, [int]$script:Config[$timeoutKey]) }
-    $reconnectTimeout = 60
-    if ($script:Config.ContainsKey('AiReconnectTimeoutSeconds')) { $reconnectTimeout = [Math]::Max(1, [int]$script:Config.AiReconnectTimeoutSeconds) }
+    $maxAttempts = if ($Attempts -gt 0) { $Attempts } elseif ($isImage) { 1 } else { 3 }
+    if ($TimeoutSec -le 0) { $TimeoutSec = if ($isImage) { 480 } else { 180 } }
     for ($attempt = 1; $attempt -le $maxAttempts; $attempt++) {
         $attemptFile = if ($attempt -eq 1) { $ResultFile } else { "$ResultFile.attempt-$attempt.txt" }
-        $commandArgs = @('exec', '--json', '--skip-git-repo-check', '-s', $Sandbox, '-C', $script:Batch.Dir, '-o', $attemptFile)
-        if ($script:Config.Model) { $commandArgs += @('-m', $script:Config.Model) }
-        if ($script:Config.ReasoningEffort) { $commandArgs += @('-c', "model_reasoning_effort=$($script:Config.ReasoningEffort)") }
+        $commandArgs = @('exec', '--json', '--skip-git-repo-check', '-s', $Sandbox, '-C', $WorkDir, '-o', $attemptFile)
+        if ($Model) { $commandArgs += @('-m', $Model) }
+        if ($Effort) { $commandArgs += @('-c', "model_reasoning_effort=$Effort") }
         foreach ($photo in $Images) { $commandArgs += @('-i', $photo) }
         $trace = "$attemptFile.console.log"
         # A new invocation must not accidentally consume an old last-message file.
         if(Test-Path -LiteralPath $attemptFile){Remove-Item -LiteralPath $attemptFile -Force}
-        $execution = Invoke-CodexProcess $PromptText $commandArgs $trace $timeout $reconnectTimeout
+        $execution = Invoke-CodexProcess $PromptText $commandArgs $trace $TimeoutSec $ReconnectSec
         # Every call's tokens, failed ones too, so the app can add them up for the run.
         $usage = Get-CodexTokenUsage $trace
         if ($usage) { Write-Host "[TOKENS] in=$($usage.Input) cached=$($usage.Cached) out=$($usage.Output)" }
@@ -229,8 +217,7 @@ function Invoke-AI([string]$PromptText, [string[]]$Images, [string]$ResultFile, 
                 elseif ($transient) { 'BUSY' } else { 'UNKNOWN' }
             throw "AI failed. Details: $trace [CAUSE:$cause]"
         }
-        $delay = [int](3 * [Math]::Pow(2, $attempt - 1))
-        if ($script:Config.ContainsKey('AiRetryDelaySeconds')) { $delay = [int]$script:Config.AiRetryDelaySeconds }
+        $delay = if ($RetryDelaySec -ge 0) { $RetryDelaySec } else { [int](3 * [Math]::Pow(2, $attempt - 1)) }
         Write-Host "  [RETRY] AI busy; attempt $($attempt + 1)/$maxAttempts in ${delay}s..." -ForegroundColor Yellow
         if ($delay -gt 0) { Start-Sleep -Seconds $delay }
     }

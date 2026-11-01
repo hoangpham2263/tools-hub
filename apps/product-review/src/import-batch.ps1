@@ -5,7 +5,7 @@ param([Parameter(Mandatory)][string]$File, [string]$Folder = '', [string]$Status
 $ErrorActionPreference = 'Stop'
 [Console]::OutputEncoding = [Text.UTF8Encoding]::new($false)
 $root = Split-Path $PSScriptRoot -Parent
-. (Join-Path $PSScriptRoot 'infrastructure/platform.ps1')
+. (Join-Path $PSScriptRoot '../../../hub/ai/common.ps1')
 . (Join-Path $PSScriptRoot 'infrastructure/source-catalog.ps1')
 . (Join-Path $PSScriptRoot 'application/image-feedback.ps1')
 . (Join-Path $PSScriptRoot 'application/manual-references.ps1')

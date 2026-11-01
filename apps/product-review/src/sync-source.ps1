@@ -7,7 +7,7 @@ $ErrorActionPreference = 'Stop'
 [Console]::OutputEncoding = [Text.UTF8Encoding]::new($false)
 $root = Split-Path $PSScriptRoot -Parent
 . (Join-Path $PSScriptRoot 'application/workspace.ps1')
-. (Join-Path $PSScriptRoot 'infrastructure/platform.ps1')
+. (Join-Path $PSScriptRoot '../../../hub/ai/common.ps1')
 . (Join-Path $PSScriptRoot 'infrastructure/drive-storage.ps1')
 . (Join-Path $PSScriptRoot 'infrastructure/source-catalog.ps1')
 . (Join-Path $PSScriptRoot 'infrastructure/source-sync.ps1')

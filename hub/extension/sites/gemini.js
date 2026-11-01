@@ -1,8 +1,11 @@
 // Gemini (gemini.google.com): attach the images, type the prompt, send, then return the reply's text once it has
-// finished. Used for the workflow's text steps (Viết review: Gemini web); a plain click sends here.
+// finished. Used for the workflow's text steps (Viết review: Gemini web); a plain click sends here. Every job runs in
+// a temporary chat (Cuộc trò chuyện tạm thời), which Gemini keeps out of the history, so a run leaves no chats behind.
 function geminiReplyText(markdown) {
   // Code blocks carry a language label and buttons; keep only their code.
   const copy = markdown.cloneNode(true);
+  // Source chips (an attached image's file name, a cited page) sit inside the reply's text; they are not the answer.
+  copy.querySelectorAll("sources-carousel-inline, source-inline-chip").forEach((chip) => chip.remove());
   for (const block of copy.querySelectorAll("code-block, .code-block")) {
     const code = block.querySelector("code");
     block.replaceWith(document.createTextNode(`\n${code ? code.textContent : block.textContent}\n`));
@@ -14,7 +17,19 @@ function geminiReplyText(markdown) {
   return text.trim();
 }
 
+// The temporary-chat button by the composer; on, Gemini shows its temporary-chat card over an empty chat.
+const temporaryOn = () => !!document.querySelector(".temporary-chat-card");
+async function temporaryChat() {
+  if (temporaryOn()) return;
+  const button = await waitFor(() => [...document.querySelectorAll("button")].find((b) => /^(Cuộc trò chuyện tạm thời|Temporary chat)$/i.test(b.getAttribute("aria-label") || "")), 15000, "").catch(() => null);
+  if (!button) { note("no temporary-chat button: a normal chat"); return; }
+  button.click();
+  if (!(await waitFor(temporaryOn, 10000, "").catch(() => false))) note("temporary chat did not turn on: a normal chat");
+}
+
 async function generateGemini(job) {
+  await waitFor(() => document.querySelector('.ql-editor[contenteditable="true"]'), 30000, "ô nhập Gemini (đã đăng nhập Google chưa?)");
+  await temporaryChat();
   const editor = await waitFor(() => document.querySelector('.ql-editor[contenteditable="true"]'), 30000, "ô nhập Gemini (đã đăng nhập Google chưa?)");
   const before = document.querySelectorAll("model-response").length;
   const files = filesFromJob(job);

@@ -1,12 +1,10 @@
 ﻿# Ordered module manifest shared by the entry point and parallel workers.
 $script:WorkflowModuleFiles = @(
-    'infrastructure/platform.ps1'
+    '../../../hub/ai/ai.ps1'
     'application/workspace.ps1'
     '../../../hub/setup/ai-settings.ps1'
     'infrastructure/file-system.ps1'
-    'infrastructure/codex.ps1'
-    'infrastructure/browser-bridge.ps1'
-    'infrastructure/antigravity.ps1'
+    'infrastructure/ai.ps1'
     'infrastructure/drive-storage.ps1'
     'infrastructure/url-queue.ps1'
     'infrastructure/csv.ps1'

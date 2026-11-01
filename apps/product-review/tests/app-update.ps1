@@ -82,6 +82,10 @@ try{
     foreach($p in @("$parts/hub/bridge/package.json","$parts/hub/extension/manifest.json","$parts/apps/product-review/bridge/node_modules/ws/index.js","$parts/apps/product-review/bridge/server.mjs","$parts/apps/product-review/extension/manifest.json")){New-Item -ItemType File -Force -Path $p|Out-Null}
     Move-SharedBrowserParts $parts
     Assert ((Test-Path "$parts/hub/bridge/node_modules/ws/index.js") -and -not (Test-Path "$parts/apps/product-review/bridge") -and -not (Test-Path "$parts/apps/product-review/extension")) 'The bridge package moves to hub/bridge; the tool keeps no bridge or extension of its own.'
+    # Files that moved (AI calls to hub/ai, site scripts to hub/extension/sites) go; the files that replaced them stay.
+    foreach($p in @("$parts/hub/ai/ai.ps1","$parts/apps/product-review/src/infrastructure/codex.ps1","$parts/apps/product-review/src/infrastructure/ai.ps1","$parts/hub/extension/content-flow.js","$parts/hub/extension/sites/flow.js")){New-Item -ItemType File -Force -Path $p|Out-Null}
+    Remove-MovedFiles $parts
+    Assert (-not (Test-Path "$parts/apps/product-review/src/infrastructure/codex.ps1") -and -not (Test-Path "$parts/hub/extension/content-flow.js") -and (Test-Path "$parts/apps/product-review/src/infrastructure/ai.ps1") -and (Test-Path "$parts/hub/extension/sites/flow.js")) 'Moved files must go and their replacements stay.'
     New-Item -ItemType Directory -Force -Path "$legacy/.git","$legacy/data"|Out-Null
     Move-LegacyLayout $legacy
     Assert (Test-Path "$legacy/data") 'A git checkout must never be tidied.'

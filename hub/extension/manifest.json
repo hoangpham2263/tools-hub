@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Tools Hub",
-  "version": "0.5.6",
+  "version": "0.6.1",
   "description": "Cầu nối local của Tools Hub: nhận việc từ các tool (tạo ảnh, viết chữ), làm trong tab Google Flow, Gemini, ChatGPT đang đăng nhập và trả kết quả về máy.",
   "background": {
     "service_worker": "background.js"
@@ -29,8 +29,8 @@
         "https://chatgpt.com/*"
       ],
       "js": [
-        "content-common.js",
-        "content-chatgpt.js"
+        "sites/common.js",
+        "sites/chatgpt.js"
       ],
       "run_at": "document_idle"
     },
@@ -39,8 +39,8 @@
         "https://flow.google.com/*"
       ],
       "js": [
-        "content-common.js",
-        "content-flow.js"
+        "sites/common.js",
+        "sites/flow.js"
       ],
       "run_at": "document_idle"
     },
@@ -49,8 +49,8 @@
         "https://gemini.google.com/*"
       ],
       "js": [
-        "content-common.js",
-        "content-gemini.js"
+        "sites/common.js",
+        "sites/gemini.js"
       ],
       "run_at": "document_idle"
     }

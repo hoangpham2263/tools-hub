@@ -6,7 +6,7 @@ $srcDir = Split-Path $PSScriptRoot -Parent
 $root = Split-Path $srcDir -Parent
 . (Join-Path $srcDir 'application/workspace.ps1')
 . (Join-Path $srcDir '../../../hub/setup/ai-settings.ps1')
-. (Join-Path $srcDir 'infrastructure/platform.ps1')
+. (Join-Path $srcDir '../../../hub/ai/common.ps1')
 . (Join-Path $srcDir 'infrastructure/drive-storage.ps1')
 $workspace = Initialize-ProjectWorkspace $root
 . (Join-Path $srcDir 'infrastructure/source-catalog.ps1')

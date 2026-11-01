@@ -1,4 +1,4 @@
-﻿# Cross-platform helpers: the workflow runs on Windows PowerShell 5.1 and on PowerShell 7 (Windows/macOS).
+﻿# Helpers every AI provider and tool shares: the tools run on Windows PowerShell 5.1 and on PowerShell 7 (Windows/macOS).
 $script:OnWindows = ($PSVersionTable.PSEdition -eq 'Desktop') -or $IsWindows
 
 # Stop a process and every child it started.
@@ -58,4 +58,12 @@ function ConvertTo-PngFile([string]$Path) {
 # Open a folder or file with the system viewer.
 function Open-SystemPath([string]$Path) {
     if ($script:OnWindows) { Start-Process explorer.exe -ArgumentList ('"' + $Path + '"') } else { & open $Path }
+}
+
+# One argument of a command line, quoted the way Windows' CommandLineToArgvW reads it back.
+function ConvertTo-CliArgument([string]$Value) {
+    if ($Value -and $Value -notmatch '[\s"]') { return $Value }
+    $escaped = [regex]::Replace($Value, '(\\*)"', '$1$1\"')
+    $escaped = [regex]::Replace($escaped, '(\\+)$', '$1$1')
+    return '"' + $escaped + '"'
 }

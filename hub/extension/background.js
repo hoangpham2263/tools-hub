@@ -1,20 +1,35 @@
 // Router: keeps a WebSocket to the local bridge (hub/bridge) and forwards each job to the matching tab.
 // The job is submitted inside the signed-in tab, so the page itself handles its own anti-abuse checks.
 // It runs in the user's own Chrome: jobs only use tabs it opened itself, in the Chrome window already open, in a tab
-// group named Tools Hub; the user's own tabs are never touched. A site only works in a tab that is shown (Gemini stops
-// answering behind another tab), so a job shows its tab and then goes back to the tab the user was on.
+// group named Tools Hub; the user's own tabs are never touched. One tab per site, reused by every job of a run; a run
+// starts by closing the group's tabs (session). A site only works in a tab that is shown (Gemini stops answering behind
+// another tab), so jobs run one at a time (the bridge sends them so, the queue here keeps it), each showing its tab and
+// then going back to the tab the user was on. A site's files are sites/<site>.js; a new AI is one more entry in SITES.
 const BRIDGE_URL = "ws://127.0.0.1:8765";
 // hosts: the tabs to look through; page: a tab a job can run in (a Flow project, under /u/<n>/ for another account).
 const SITES = {
-  chatgpt: { hosts: "https://chatgpt.com/*", page: /^https:\/\/chatgpt\.com\//, start: "https://chatgpt.com/" },
+  chatgpt: { hosts: "https://chatgpt.com/*", page: /^https:\/\/chatgpt\.com\//, start: "https://chatgpt.com/", fresh: true },
   flow: { hosts: "https://flow.google.com/*", page: /^https:\/\/flow\.google\.com\/(u\/\d+\/)?project\//, start: "https://flow.google.com/" },
-  gemini: { hosts: "https://gemini.google.com/*", page: /^https:\/\/gemini\.google\.com\//, start: "https://gemini.google.com/app" },
+  gemini: { hosts: "https://gemini.google.com/*", page: /^https:\/\/gemini\.google\.com\//, start: "https://gemini.google.com/app", fresh: true },
 };
 // Flow and Gemini run with the Google account chosen on Cấu hình (job.account; "" is Google's default, the first one
 // signed in), opened with ?authuser=; Google then shows the page under /u/<n>/.
 const startUrl = (platform, account) => SITES[platform].start + (account ? `?authuser=${encodeURIComponent(account)}` : "");
-// One job at a time per site: parallel workflow threads share its tab.
-const queues = {};
+// fresh: every job starts on the site's start page, a new chat, so earlier images and answers are never reused.
+// One job at a time over every site: parallel workflow threads, and tools, wait their turn.
+let queue = Promise.resolve();
+const GROUP = "Tools Hub";
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+// Chrome refuses tab changes while the user drags a tab ("Tabs cannot be edited right now"): try again shortly.
+async function tabsCall(call) {
+  for (let i = 0; ; i++) {
+    try { return await call(); } catch (error) {
+      if (i >= 20 || !/cannot be edited|dragging/i.test(String(error.message || error))) throw error;
+      await sleep(300);
+    }
+  }
+}
+const answer = (id, work) => work.then((r) => reply({ type: "result", id, ok: true, ...r }), (e) => reply({ type: "result", id, ok: false, error: String(e.message || e) }));
 
 let socket = null;
 
@@ -30,8 +45,10 @@ function connect() {
   socket.onmessage = (event) => {
     let job;
     try { job = JSON.parse(event.data); } catch { return; }
-    if (job.type === "generate") queues[job.platform] = (queues[job.platform] || Promise.resolve()).then(() => runJob(job));
-    if (job.type === "logins") logins().then((r) => reply({ type: "result", id: job.id, ok: true, ...r }), (e) => reply({ type: "result", id: job.id, ok: false, error: String(e.message || e) }));
+    if (job.type === "generate") queue = queue.then(() => runJob(job));
+    if (job.type === "session") queue = queue.then(() => answer(job.id, newSession()));
+    if (job.type === "open") answer(job.id, openPage(job.url).then(() => ({})));
+    if (job.type === "logins") answer(job.id, logins());
     // After an update the app asks for this, so the new files load without a click in chrome://extensions.
     if (job.type === "reload") chrome.runtime.reload();
   };
@@ -53,35 +70,73 @@ async function remember(platform, tab, account) {
   return tab;
 }
 
+// The site's tab for this job: the one its jobs used last, else a new one. Another account's tab is closed, so each
+// site keeps one tab.
 async function findTab(platform, account) {
   const site = SITES[platform];
   if (!site) throw new Error(`Nền tảng không hỗ trợ: ${platform}`);
   const known = await remembered(platform);
-  if (known && known.account === account) {
-    const tab = await chrome.tabs.get(known.id).catch(() => null);
-    if (tab && site.page.test(tab.url || "")) return tab;
-  }
-  if (platform === "flow") return remember(platform, await newFlowProject(account), account);
+  const tab = known ? await chrome.tabs.get(known.id).catch(() => null) : null;
+  if (tab && known.account === account && site.page.test(tab.url || "")) return tab;
+  if (tab) await tabsCall(() => chrome.tabs.remove(tab.id)).catch(() => {});
+  if (platform === "flow") return remember(platform, await flowProject(account), account);
   reply({ type: "progress", id: "tab", stage: `opening ${platform}` });
-  const tab = await toolsTab(startUrl(platform, account));
-  await waitForLoad(tab.id);
-  return remember(platform, tab, account);
+  const opened = await toolsTab(startUrl(platform, account));
+  await waitForLoad(opened.id);
+  return remember(platform, opened, account);
+}
+
+// A run starts with only its own tabs: the Tools Hub group's tabs, in every window, are closed (Cấu hình's sign-in
+// pages too); the user's other tabs stay. The bridge asks only while no job is waiting.
+async function newSession() {
+  const groups = await chrome.tabGroups.query({ title: GROUP });
+  const tabs = (await Promise.all(groups.map((g) => chrome.tabs.query({ groupId: g.id })))).flat().map((t) => t.id);
+  if (tabs.length) await tabsCall(() => chrome.tabs.remove(tabs));
+  await chrome.storage.session.remove(["tabs", "flowHome"]);
+  return { closed: tabs.length };
 }
 
 // A tab of the tools: in the Chrome window open now (a new window only when there is none), not brought to the front,
 // in that window's Tools Hub group.
 async function toolsTab(url) {
   const window = await chrome.windows.getLastFocused({ windowTypes: ["normal"] }).catch(() => null);
-  const tab = window ? await chrome.tabs.create({ url, windowId: window.id, active: false }) : (await chrome.windows.create({ url })).tabs[0];
+  const tab = window ? await tabsCall(() => chrome.tabs.create({ url, windowId: window.id, active: false })) : (await chrome.windows.create({ url })).tabs[0];
   await group(tab);
   return tab;
 }
+// A page a tool opens for the user (Cấu hình: sign-in, Flow, Gemini): in front, in the Tools Hub group, with Chrome's
+// window brought forward.
+async function openPage(url) {
+  const tab = await toolsTab(url);
+  await tabsCall(() => chrome.tabs.update(tab.id, { active: true }));
+  await chrome.windows.update(tab.windowId, { focused: true });
+}
 async function group(tab) {
   try {
-    const [existing] = await chrome.tabGroups.query({ windowId: tab.windowId, title: "Tools Hub" });
-    const groupId = tab.groupId > -1 ? tab.groupId : await chrome.tabs.group({ tabIds: tab.id, ...(existing ? { groupId: existing.id } : { createProperties: { windowId: tab.windowId } }) });
-    await chrome.tabGroups.update(groupId, { title: "Tools Hub", color: "blue", collapsed: false });
+    const [existing] = await chrome.tabGroups.query({ windowId: tab.windowId, title: GROUP });
+    const groupId = tab.groupId > -1 ? tab.groupId : await tabsCall(() => chrome.tabs.group({ tabIds: tab.id, ...(existing ? { groupId: existing.id } : { createProperties: { windowId: tab.windowId } }) }));
+    await tabsCall(() => chrome.tabGroups.update(groupId, { title: GROUP, color: "blue", collapsed: false }));
   } catch {}
+}
+
+// Flow keeps one project per account for every run (its address in chrome.storage.local), so runs leave no new
+// projects behind; a project that no longer opens (deleted in Flow) is replaced by a new one.
+async function flowProject(account) {
+  const { flowProjects = {} } = await chrome.storage.local.get("flowProjects");
+  const saved = flowProjects[account];
+  if (saved) {
+    reply({ type: "progress", id: "tab", stage: "opening the run's Flow project" });
+    const tab = await toolsTab(saved);
+    await waitForLoad(tab.id);
+    await sleep(1500);
+    const now = await chrome.tabs.get(tab.id);
+    if (SITES.flow.page.test(now.url || "") && now.url.split("?")[0] === saved) return now;
+    await tabsCall(() => chrome.tabs.remove(tab.id)).catch(() => {});
+  }
+  const tab = await newFlowProject(account);
+  flowProjects[account] = tab.url.split("?")[0];
+  await chrome.storage.local.set({ flowProjects });
+  return tab;
 }
 
 // No Flow project open: open Flow's home (as the chosen account) and press its new-project button, then use that project.
@@ -126,10 +181,9 @@ async function runJob(job) {
     const [back] = await chrome.tabs.query({ windowId: tab.windowId, active: true });
     restore = back && back.id !== tab.id ? back.id : null;
     await group(tab);
-    await chrome.tabs.update(tab.id, { active: true });
-    if (job.platform === "chatgpt" || job.platform === "gemini") {
-      // Every job starts in a fresh conversation so earlier images and answers are never reused.
-      await chrome.tabs.update(tab.id, { url: startUrl(job.platform, account) });
+    await tabsCall(() => chrome.tabs.update(tab.id, { active: true }));
+    if (SITES[job.platform].fresh) {
+      await tabsCall(() => chrome.tabs.update(tab.id, { url: startUrl(job.platform, account) }));
       await waitForLoad(tab.id);
     }
     progress("submitting");
@@ -158,7 +212,7 @@ async function runJob(job) {
     if (restore) {
       const [now] = await chrome.tabs.query({ active: true, lastFocusedWindow: true }).catch(() => []);
       const tools = Object.values((await chrome.storage.session.get("tabs")).tabs || {}).map((t) => t.id);
-      if (!now || tools.includes(now.id)) await chrome.tabs.update(restore, { active: true }).catch(() => {});
+      if (!now || tools.includes(now.id)) await tabsCall(() => chrome.tabs.update(restore, { active: true })).catch(() => {});
     }
   }
 }
@@ -197,7 +251,7 @@ chrome.runtime.onInstalled.addListener(connect);
 // A real left click at (x, y) in the tab's viewport, sent through the debugger so the page sees a trusted event.
 // Chrome shows its "debugging this browser" bar while attached, for this moment only. The window is left where it is.
 async function trustedClick(tab, x, y) {
-  await chrome.tabs.update(tab.id, { active: true });
+  await tabsCall(() => chrome.tabs.update(tab.id, { active: true }));
   const target = { tabId: tab.id };
   await chrome.debugger.attach(target, "1.3");
   try {

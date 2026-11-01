@@ -6,7 +6,7 @@ $root = Split-Path $PSScriptRoot -Parent
 $tempHub = Join-Path $TestWorkspaceRoot ('review-pipeline-test-' + [Guid]::NewGuid().ToString('N'))
 $tempRoot = Join-Path $tempHub 'apps/product-review'
 New-Item -ItemType Directory -Path $tempRoot, (Join-Path $tempHub 'hub') | Out-Null
-Copy-Item -LiteralPath (Join-Path $root '../../hub/setup') -Destination (Join-Path $tempHub 'hub') -Recurse
+foreach ($shared in @('setup', 'ai')) { Copy-Item -LiteralPath (Join-Path $root "../../hub/$shared") -Destination (Join-Path $tempHub 'hub') -Recurse }
 function Assert($Condition, [string]$Message) { if (-not $Condition) { throw $Message } }
 try {
     Copy-Item -LiteralPath (Join-Path $root 'src') -Destination $tempRoot -Recurse
@@ -79,7 +79,7 @@ function Invoke-AI($PromptText, $Images, $ResultFile, $Sandbox) {
     'image call' | Set-Content -LiteralPath $ResultFile
     return 'BRAND: Demo'
 }
-'@ | Set-Content (Join-Path $lib 'infrastructure/codex.ps1')
+'@ | Set-Content (Join-Path $lib 'infrastructure/ai.ps1')
     $queue = Join-Path $tempRoot 'workspace/urls.txt'
     New-Item -ItemType Directory -Force (Split-Path $queue -Parent) | Out-Null
     @('https://example.test/products/one', 'https://example.test/products/two', 'https://example.test/products/fail') | Set-Content $queue

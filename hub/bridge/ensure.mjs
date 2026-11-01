@@ -1,6 +1,8 @@
 // Gets the bridge (server.mjs) and the Tools Hub extension ready for a tool, and prints one JSON line:
-//   node hub/bridge/ensure.mjs [--logins] [--no-open]
-//   { ok, extension, version[, logins: { google, accounts, chatgpt }] } or { error }
+//   node hub/bridge/ensure.mjs [--logins] [--no-open] [--open <url>] [--session]
+//   { ok, extension, version[, logins: { google, accounts, chatgpt }][, opened][, closed] } or { error }
+// --session: a run starts; the tabs of the Tools Hub group are closed first (not while another tool's job runs).
+// --open: that page in Chrome, in the Tools Hub tab group (by the extension); without the extension, a plain new tab.
 // The bridge is installed (npm, its one package ws) and started when missing, started again after Cập nhật changed
 // server.mjs, and runs detached with no output of its own (a pipe of whoever started it would close: EPIPE). Without
 // the extension connected, the user's Chrome is started (--no-open: not; Cấu hình only checks) and waited for; an
@@ -16,7 +18,7 @@ const server = join(here, "server.mjs");
 const BRIDGE = `http://127.0.0.1:${Number(process.env.BRIDGE_PORT || 8765)}`;
 const NO_EXTENSION = `Chưa thấy extension Tools Hub trong Chrome. Cài một lần: mở chrome://extensions, bật Chế độ nhà phát triển, bấm Tải tiện ích đã giải nén, chọn thư mục ${join(here, "..", "extension")}.`;
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
-const get = (path, method = "GET") => fetch(BRIDGE + path, { method, signal: AbortSignal.timeout(path === "/logins" ? 25000 : 3000) }).then((r) => r.json()).catch(() => null);
+const get = (path, method = "GET", body) => fetch(BRIDGE + path, { method, body: body && JSON.stringify(body), signal: AbortSignal.timeout(["/logins", "/open", "/session"].includes(path) ? 25000 : 3000) }).then((r) => r.json()).catch(() => null);
 const until = async (test, ms) => { for (const end = Date.now() + ms; Date.now() < end; await sleep(500)) { const s = await get("/status"); if (test(s)) return s; } return get("/status"); };
 
 async function main(args) {
@@ -48,7 +50,11 @@ async function main(args) {
       if (error) return { error };
       status = await until((s) => s?.extension, 45000);
     }
-    if (!status?.extension) return { ok: false, extension: false, error: NO_EXTENSION };
+    if (!status?.extension) {
+      const page = args[args.indexOf("--open") + 1];
+      if (args.includes("--open") && page) { const error = await openChrome(page); return error ? { error } : { ok: false, extension: false, opened: true, error: NO_EXTENSION }; }
+      return { ok: false, extension: false, error: NO_EXTENSION };
+    }
   }
   const version = String(JSON.parse(readFileSync(join(here, "..", "extension", "manifest.json"), "utf8")).version);
   if (status.extensionVersion && status.extensionVersion !== version) {
@@ -56,6 +62,16 @@ async function main(args) {
     status = await until((s) => s?.extension && s.extensionVersion === version, 20000);
   }
   const answer = { ok: true, extension: !!status?.extension, version: status?.extensionVersion || "" };
+  if (args.includes("--open")) {
+    const page = args[args.indexOf("--open") + 1];
+    const opened = await get("/open", "POST", { url: page });
+    if (opened?.ok) answer.opened = true;
+    else { const error = await openChrome(page); if (error) return { error }; answer.opened = true; }
+  }
+  if (args.includes("--session")) {
+    const session = await get("/session", "POST");
+    if (session?.ok) answer.closed = session.closed || 0;
+  }
   if (args.includes("--logins")) {
     const logins = await get("/logins");
     if (logins && !logins.error) answer.logins = logins;

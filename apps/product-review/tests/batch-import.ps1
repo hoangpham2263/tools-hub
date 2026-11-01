@@ -67,7 +67,9 @@ try{
     # The background script writes its result to the status file.
     $file="$temp/batch.csv";$status="$temp/status.json"
     [IO.File]::WriteAllText($file,"product_url,product_image,review_images`nhttps://shop.test/e,p2.jpg,r3.jpg")
-    $copy="$temp/app";New-Item -ItemType Directory -Force -Path "$copy/workspace"|Out-Null;Copy-Item -Recurse (Join-Path $root 'src') "$copy/src"
+    # Laid out like an install (apps/<tool> beside hub/), so the script finds the hub's shared helpers.
+    $copy="$temp/install/apps/product-review";New-Item -ItemType Directory -Force -Path "$copy/workspace","$temp/install/hub"|Out-Null;Copy-Item -Recurse (Join-Path $root 'src') "$copy/src"
+    Copy-Item -Recurse (Join-Path $root '../../hub/ai') "$temp/install/hub/ai"
     $shell=(Get-Command powershell.exe,pwsh -ErrorAction SilentlyContinue|Select-Object -First 1).Source
     & $shell -NoProfile -File "$copy/src/import-batch.ps1" -File $file -Folder $img -StatusFile $status 2>&1 | Write-Host
     $s=Get-Content $status -Raw -Encoding UTF8|ConvertFrom-Json

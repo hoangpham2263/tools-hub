@@ -1,4 +1,4 @@
-// Helpers shared by the ChatGPT and Flow content scripts.
+// Helpers every site script (sites/<site>.js) shares; loaded first in each of their pages.
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 // A step of the job, for the bridge's log (<hub>/workspace/logs/bridge.log).
 const note = (stage) => chrome.runtime.sendMessage({ type: "progress", stage: `${location.host}: ${stage}` }).catch(() => {});

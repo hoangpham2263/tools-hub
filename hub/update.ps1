@@ -108,6 +108,7 @@ function Update-App([string]$Root) {
         foreach ($tool in @(Get-ChildItem -LiteralPath (Join-Path $source 'apps') -Directory)) { Merge-AgentInstructions $tool.FullName (Join-Path $Root "apps/$($tool.Name)") }
         Move-LegacyLayout $Root
         Move-SharedBrowserParts $Root
+        Remove-MovedFiles $Root
         New-Item -ItemType Directory -Force -Path (Split-Path $versionFile -Parent) | Out-Null
         Set-Content -LiteralPath $versionFile -Value $latest -Encoding ASCII
     } finally { Remove-Item -LiteralPath $temp -Recurse -Force -ErrorAction SilentlyContinue }

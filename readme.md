@@ -74,7 +74,8 @@ start-app.cmd / start-app.command   mở Tools Hub
 hub/                launcher (chọn tool), cập nhật, dọn cấu trúc cũ
 apps/<tool>/        một tool: tool.json, src/, data/, tests/, docs/, AGENTS.md, workspace/ (không lên Git)
 hub/extension       extension Tools Hub, cài vào Chrome của máy: làm việc trong tab Google Flow, Gemini, ChatGPT
-hub/bridge          cầu nối local giữa các tool và extension (ensure.mjs bật nó)
+hub/bridge          cầu nối local giữa các tool và extension (ensure.mjs bật nó), gửi từng việc một
+hub/ai              lõi gọi AI chung (Invoke-HubAI): Codex, Gemini, Flow, ChatGPT, Antigravity
 hub/browser.mjs     Chrome for Testing cho cửa sổ app trên macOS
 worker/             Cloudflare Worker tools-hub-api (Drive); legacy-redirect/ giữ địa chỉ cũ
 docs/               trang quản lý (GitHub Pages) và tài liệu API

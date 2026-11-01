@@ -1,6 +1,7 @@
 ﻿. (Join-Path $PSScriptRoot 'helpers.ps1')
 $ErrorActionPreference = 'Stop'
-. (Join-Path (Split-Path $PSScriptRoot -Parent) 'src/infrastructure/codex.ps1')
+. (Join-Path (Split-Path $PSScriptRoot -Parent) '../../hub/ai/ai.ps1')
+. (Join-Path (Split-Path $PSScriptRoot -Parent) 'src/infrastructure/ai.ps1')
 $testDir = Join-Path $TestWorkspaceRoot ('ai-retry-test-' + [Guid]::NewGuid().ToString('N'))
 New-Item -ItemType Directory -Path $testDir | Out-Null
 $script:Config = @{ Model = 'test-model'; AiRetryDelaySeconds = 0 }

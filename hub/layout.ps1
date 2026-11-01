@@ -78,3 +78,20 @@ function Move-SharedBrowserParts([string]$Root) {
         if (Test-Path -LiteralPath (Join-Path $Root 'hub/extension/manifest.json')) { Remove-Item -LiteralPath (Join-Path $tool.FullName 'extension') -Recurse -Force -ErrorAction SilentlyContinue }
     }
 }
+
+# Files of an older layout that Cập nhật does not bring any more (it only adds and replaces): the AI calls moved from
+# Product Review to hub/ai, the extension's site scripts to hub/extension/sites. A git checkout is never touched.
+$script:MovedFiles = @(
+    'apps/product-review/src/infrastructure/codex.ps1'
+    'apps/product-review/src/infrastructure/browser-bridge.ps1'
+    'apps/product-review/src/infrastructure/antigravity.ps1'
+    'apps/product-review/src/infrastructure/platform.ps1'
+    'hub/extension/content-common.js'
+    'hub/extension/content-chatgpt.js'
+    'hub/extension/content-flow.js'
+    'hub/extension/content-gemini.js'
+)
+function Remove-MovedFiles([string]$Root) {
+    if ((Test-Path -LiteralPath (Join-Path $Root '.git')) -or -not (Test-Path -LiteralPath (Join-Path $Root 'hub/ai/ai.ps1'))) { return }
+    foreach ($file in $script:MovedFiles) { Remove-Item -LiteralPath (Join-Path $Root $file) -Force -ErrorAction SilentlyContinue }
+}

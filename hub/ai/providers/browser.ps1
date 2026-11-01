@@ -1,19 +1,22 @@
-﻿# Image generation and Gemini text through the signed-in ChatGPT / Google Flow / Gemini tab of the user's own Chrome
-# (hub/bridge + hub/extension).
+﻿# The web AIs (Gemini, Google Flow, ChatGPT) in the signed-in tabs of the user's own Chrome: hub/bridge (local server)
+# and hub/extension (Tools Hub). The bridge hands the extension one job at a time, since a page only works while its
+# tab is shown, so a call also waits its turn there: up to $script:BridgeQueueSec more than its own time.
 $script:BridgeUrl = 'http://127.0.0.1:8765'
-$script:BridgeProjectRoot = Split-Path (Split-Path $PSScriptRoot -Parent) -Parent
+$script:BridgeQueueSec = 1800
+$script:BridgeHubRoot = Split-Path (Split-Path (Split-Path $PSScriptRoot -Parent) -Parent) -Parent
 
 function Get-ImageBridgeStatus {
     try { return Invoke-RestMethod -Uri "$script:BridgeUrl/status" -TimeoutSec 3 } catch { return $null }
 }
 
-# The shared bridge (hub/bridge) and the Tools Hub extension in the user's own Chrome: hub/bridge/ensure.mjs installs
-# and starts the bridge (again after Cập nhật), starts Chrome when the extension is not connected and reloads an
-# extension of another version.
-function Start-ImageBridge([string]$ProjectRoot) {
-    $ensure = Join-Path (Get-HubRoot $ProjectRoot) 'hub/bridge/ensure.mjs'
+# The bridge and the extension, ready: hub/bridge/ensure.mjs installs and starts the bridge (again after Cập nhật),
+# starts Chrome when the extension is not connected and reloads an extension of another version. -NewSession: a run
+# starts here, so the tabs of the Tools Hub group are closed first (none while another tool's job runs).
+function Start-ImageBridge([string]$ProjectRoot, [switch]$NewSession) {
+    $ensure = Join-Path $script:BridgeHubRoot 'hub/bridge/ensure.mjs'
+    $flags = @(if ($NewSession) { '--session' })
     $answer = $null
-    try { $answer = (& node $ensure | Select-Object -Last 1) | ConvertFrom-Json } catch {}
+    try { $answer = (& node $ensure @flags | Select-Object -Last 1) | ConvertFrom-Json } catch {}
     if (-not $answer) { throw '[CAUSE:BRIDGE] Không bật được bridge (hub/bridge). Mở Cấu hình xem Node.js đã cài chưa rồi chạy lại.' }
     if (-not $answer.ok) { throw "[CAUSE:BRIDGE] $($answer.error)" }
 }
@@ -22,7 +25,7 @@ function Start-ImageBridge([string]$ProjectRoot) {
 # next try reaches one.
 function Restore-ImageBridge {
     if ($null -ne (Get-ImageBridgeStatus)) { return }
-    try { Start-ImageBridge $script:BridgeProjectRoot } catch {}
+    try { Start-ImageBridge $script:BridgeHubRoot } catch {}
 }
 
 # The bridge answers {"error": "..."} with escaped characters; the message itself is what the cause is read from.
@@ -32,35 +35,41 @@ function Get-BridgeError($ErrorRecord) {
     return $text
 }
 
+function Send-BridgeJob([string]$Platform, [string]$Prompt, [string[]]$Images, [string]$Output, [int]$TimeoutSec) {
+    $body = @{ platform = $Platform; prompt = $Prompt; images = @($Images | Where-Object { $_ }); output = $Output; timeoutSec = $TimeoutSec } | ConvertTo-Json -Depth 4
+    return Invoke-RestMethod -Uri "$script:BridgeUrl/generate" -Method Post -ContentType 'application/json; charset=utf-8' -Body ([Text.Encoding]::UTF8.GetBytes($body)) -TimeoutSec ($TimeoutSec + 120 + $script:BridgeQueueSec)
+}
+
 # Browser backends cannot write files themselves; drop the file-delivery lines meant for Codex.
 function ConvertTo-BrowserPrompt([string]$Prompt) {
     $lines = $Prompt -split "`r?`n" | Where-Object { $_ -notmatch '^(Save a new PNG at this exact path|Do not modify any input file|End your reply with a line: BRAND)' }
     return ($lines -join "`n").Trim()
 }
 
-# Text steps through Gemini web (Viết review: Gemini web): the reply is written to $ResultFile and returned. One
-# retry for a busy page; a timeout or a missing sign-in stops there.
-function Invoke-BrowserText([string]$Prompt, [string[]]$Images, [string]$ResultFile, [int]$TimeoutSec = 300) {
-    $body = @{ platform = 'gemini'; prompt = $Prompt; images = @($Images | Where-Object { $_ }); output = $ResultFile; timeoutSec = $TimeoutSec } | ConvertTo-Json -Depth 4
+# A text reply from a web AI (Gemini, in a temporary chat that leaves nothing in its history): written to $ResultFile
+# and returned. One retry for a busy page; a timeout or a missing sign-in stops there.
+function Invoke-BrowserText([string]$Platform, [string]$Prompt, [string[]]$Images, [string]$ResultFile, [int]$TimeoutSec = 300) {
+    $name = (Get-HubAIProvider $Platform).Name
     for ($attempt = 1; $attempt -le 2; $attempt++) {
         try {
-            Invoke-RestMethod -Uri "$script:BridgeUrl/generate" -Method Post -ContentType 'application/json; charset=utf-8' -Body ([Text.Encoding]::UTF8.GetBytes($body)) -TimeoutSec ($TimeoutSec + 120) | Out-Null
+            Send-BridgeJob $Platform $Prompt $Images $ResultFile $TimeoutSec | Out-Null
             $text = [IO.File]::ReadAllText($ResultFile, [Text.Encoding]::UTF8).Trim()
             # One finished call, counted in the app's usage line (web AIs report no tokens).
-            if ($text) { Write-Host '  [AI-CALL] gemini'; return $text }
-            $detail = 'Gemini trả lời trống.'
+            if ($text) { Write-Host "  [AI-CALL] $Platform"; return $text }
+            $detail = "$name trả lời trống."
         } catch { $detail = Get-BridgeError $_; Restore-ImageBridge }
         if ($attempt -eq 2 -or $detail -match 'Hết thời gian|timeout|đăng nhập|Extension') { break }
-        Write-Host "  [RETRY] Gemini; attempt $($attempt + 1)/2..." -ForegroundColor Yellow
+        Write-Host "  [RETRY] $name; attempt $($attempt + 1)/2..." -ForegroundColor Yellow
     }
     $cause = if ($detail -match 'Hết thời gian|timeout') { 'AI_TIMEOUT' } elseif ($detail -match 'đăng nhập|Extension') { 'BRIDGE' } else { 'BUSY' }
-    throw "AI failed. Gemini web: $detail [CAUSE:$cause]"
+    throw "AI failed. ${name}: $detail [CAUSE:$cause]"
 }
 
+# One image from a web AI (Google Flow, ChatGPT), saved as PNG at $Output. Not retried here: the workflow first looks
+# for an image that arrived anyway.
 function Invoke-BrowserImage([string]$Platform, [string]$Prompt, [string[]]$Images, [string]$Output, [int]$TimeoutSec = 600) {
-    $body = @{ platform = $Platform; prompt = (ConvertTo-BrowserPrompt $Prompt); images = @($Images); output = $Output; timeoutSec = $TimeoutSec } | ConvertTo-Json -Depth 4
     try {
-        $result = Invoke-RestMethod -Uri "$script:BridgeUrl/generate" -Method Post -ContentType 'application/json; charset=utf-8' -Body ([Text.Encoding]::UTF8.GetBytes($body)) -TimeoutSec ($TimeoutSec + 120)
+        $result = Send-BridgeJob $Platform (ConvertTo-BrowserPrompt $Prompt) $Images $Output $TimeoutSec
     } catch {
         $detail = Get-BridgeError $_
         Restore-ImageBridge
