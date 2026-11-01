@@ -2,7 +2,7 @@
 // user's own Chrome) receives it over WebSocket. ensure.mjs starts it and waits for the extension.
 // Listens on 127.0.0.1 only; nothing is exposed to the network.
 import { createServer } from "node:http";
-import { appendFileSync, mkdirSync, readFileSync, statSync } from "node:fs";
+import { appendFileSync, existsSync, mkdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import { readFile, writeFile } from "node:fs/promises";
 import { dirname, extname, join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -21,10 +21,16 @@ const chosenGoogleAccount = () => { try { return String(JSON.parse(readFileSync(
 // restarts it (POST /quit; browser-bridge.ps1).
 const code = Math.floor(statSync(fileURLToPath(import.meta.url)).mtimeMs);
 
-// What the extension reports while it works, with the time: <hub>/workspace/logs/bridge.log (started anew with the
-// bridge), as the bridge runs detached with no output of its own.
+// What the extension reports while it works, with the time: <hub>/workspace/logs/bridge.log (started again once over
+// 1 MB), as the bridge runs detached with no output of its own.
 const logFile = join(dirname(fileURLToPath(import.meta.url)), "..", "..", "workspace", "logs", "bridge.log");
-function log(line) { try { mkdirSync(dirname(logFile), { recursive: true }); appendFileSync(logFile, `${new Date().toISOString()} ${line}\n`); } catch {} }
+function log(line) {
+  try {
+    mkdirSync(dirname(logFile), { recursive: true });
+    const text = `${new Date().toISOString()} ${line}\n`;
+    if (existsSync(logFile) && statSync(logFile).size > 1 << 20) writeFileSync(logFile, text); else appendFileSync(logFile, text);
+  } catch {}
+}
 
 export function createBridge({ fetchImpl = fetch, googleAccount = chosenGoogleAccount, quit = () => process.exit(0) } = {}) {
   let extension = null, extensionVersion = "";
