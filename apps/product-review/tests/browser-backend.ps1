@@ -14,6 +14,9 @@ try{
     # Codex file-delivery lines never reach the browser tab.
     $clean=ConvertTo-BrowserPrompt "Create one photo.`nSave a new PNG at this exact path: C:\x.png`nDo not modify any input file.`nEnd your reply with a line: BRAND: <name>"
     Assert ($clean -eq 'Create one photo.') 'Browser prompt kept Codex delivery lines.'
+    # Flow refuses watermark removal and brand swapping: that block becomes one neutral line.
+    $branded=ConvertTo-BrowserPrompt "Edit the room.`nBranding: Replace only a brand...`nRemove all photographic watermarks.`nIf it has no logo or brand mark, add none.`nThe BRAND: line is reply metadata only.`nKeep the light."
+    Assert ($branded -eq "Edit the room.`n$script:BrowserBrandingLine`nKeep the light.") "Branding block was not replaced: $branded"
 
     $script:Batch=@{Logs=$temp;Images=$temp}
     $script:Config=@{ImageBackend='flow'}

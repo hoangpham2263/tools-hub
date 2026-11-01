@@ -13,6 +13,11 @@ const tileName = (el) => el.closest("flow-grid-tile-container")?.getAttribute("a
 const named = (name) => tiles().filter((t) => t.getAttribute("aria-label") === name);
 const freshImage = (tile, before) => [...tile.querySelectorAll("img")].some((img) => isFlowImage(img) && !before.has(img.src.split("?")[0]) && img.complete && img.naturalWidth > 0);
 
+// A generation Flow refuses shows a card (Không thành công: "Lượt tạo này có thể vi phạm các chính sách…", not charged)
+// in place of an image, and is gone after a reload: its title is the sign, its text the reason the run reports.
+const failCards = () => [...document.querySelectorAll("body *")].filter((e) => e.children.length === 0 && /^(Không thành công|Failed|Generation failed|Unsuccessful)$/i.test(e.textContent.trim()) && e.getBoundingClientRect().width > 0);
+const failReason = (card) => (card.parentElement?.innerText || card.textContent).replace(/\s+/g, " ").trim();
+
 async function generateFlow(job) {
   const composer = () => document.querySelector('.ProseMirror[contenteditable="true"]');
   let editor = await waitFor(composer, 30000, "ô nhập Flow");
@@ -58,6 +63,7 @@ async function generateFlow(job) {
     editor = await waitFor(composer, 30000, "ô nhập Flow");
   }
   typePrompt(editor, job.prompt);
+  const failsBefore = failCards().length;
   const button = await waitFor(() => document.querySelector("button.generate-icon-button:not([disabled])"), 30000, "nút tạo của Flow");
   button.scrollIntoView({ block: "center" });
   await sleep(300);
@@ -73,12 +79,20 @@ async function generateFlow(job) {
     chrome.runtime.sendMessage({ type: "needs-click", platform: "flow" });
   }
 
+  // Flow makes more than one image per generation (x2): once a refusal card comes, the other images get 20 s more.
+  let refusedAt = 0;
   const src = await waitFor(() => {
     // Never one of the references (even one that finished uploading after the generation started), nor an item of an
     // earlier job that came into view later: only the first few tiles are this job's.
     const recent = new Set(tiles().slice(0, files.length + 4));
     const fresh = [...document.images].find((img) => isFlowImage(img) && recent.has(img.closest("flow-grid-tile-container")) && !before.has(img.src.split("?")[0]) && !names.has(tileName(img)) && img.complete && img.naturalWidth > 0);
-    return fresh?.src;
+    if (fresh) return fresh.src;
+    const fails = failCards();
+    if (fails.length > failsBefore) {
+      if (!refusedAt) { refusedAt = Date.now(); note(`generation refused: ${failReason(fails[0])}`); }
+      if (Date.now() - refusedAt > 20000) throw new Error(`Google Flow từ chối tạo ảnh: ${failReason(fails[0])}`);
+    }
+    return null;
   }, (job.timeoutSec || 600) * 1000, "Flow tạo ảnh (bấm Bắt đầu tạo trong tab Flow)");
   button.style.outline = "";
   return { url: src, source: location.href };

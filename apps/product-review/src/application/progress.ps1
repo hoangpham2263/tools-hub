@@ -97,6 +97,8 @@ function ConvertTo-UiEvent([string]$Line, [int]$CurrentIndex = 0) {
             $event.Text = "Sản phẩm $($event.Index): $($Matches[1])"
         } elseif ($line -match '\[CAUSE:BRIDGE\]') {
             $event.Text = "Sản phẩm $($event.Index): chưa nối được ChatGPT/Flow, mở Chrome có extension."
+        } elseif ($line -match '\[CAUSE:POLICY\]') {
+            $event.Text = "Sản phẩm $($event.Index): AI từ chối tạo ảnh này (có thể vi phạm chính sách, không bị tính lượt). Đổi ảnh tham khảo, ví dụ ảnh có logo hay chữ thương hiệu thật, rồi chạy lại hoặc dùng Codex."
         } elseif ($line -match '\[CAUSE:STORE_LOCKED\]') {
             $event.Text = "Sản phẩm $($event.Index): cửa hàng có mật khẩu, hãy gắn ảnh sản phẩm."
         } elseif ($line -match '\[CAUSE:AUTH\]') {

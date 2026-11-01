@@ -129,5 +129,6 @@ test("every job is counted with its account, and a failure with its cause", asyn
   assert.deepEqual(lines.map((l) => [l.ai, l.kind, l.account, l.ok, l.cause]), [["gemini", "text", "second@gmail.com", true, undefined], ["flow", "image", "second@gmail.com", false, "QUOTA"]]);
   assert.equal(causeOf("Hết thời gian chờ: Flow tạo ảnh"), "AI_TIMEOUT");
   assert.equal(causeOf("ChatGPT chưa đăng nhập."), "AUTH");
+  assert.equal(causeOf("Google Flow từ chối tạo ảnh: Không thành công Lượt tạo này có thể vi phạm các chính sách của chúng tôi."), "POLICY");
   socket.close(); server.close();
 });

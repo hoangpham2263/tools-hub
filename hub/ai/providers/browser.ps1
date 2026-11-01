@@ -40,9 +40,15 @@ function Send-BridgeJob([string]$Platform, [string]$Prompt, [string[]]$Images, [
     return Invoke-RestMethod -Uri "$script:BridgeUrl/generate" -Method Post -ContentType 'application/json; charset=utf-8' -Body ([Text.Encoding]::UTF8.GetBytes($body)) -TimeoutSec ($TimeoutSec + 120 + $script:BridgeQueueSec)
 }
 
-# Browser backends cannot write files themselves; drop the file-delivery lines meant for Codex.
+# Browser backends cannot write files themselves; drop the file-delivery lines meant for Codex. Google Flow refuses
+# ("may violate our policies") a prompt asking to remove watermarks or swap a real brand for a made-up one, so that
+# block (from "Branding:" to "The BRAND: line") becomes one neutral line: no brand, logo or text added.
+$script:BrowserBrandingLine = 'Show the product as an unbranded item: no brand names, logos, labels or text anywhere in the image.'
 function ConvertTo-BrowserPrompt([string]$Prompt) {
-    $lines = $Prompt -split "`r?`n" | Where-Object { $_ -notmatch '^(Save a new PNG at this exact path|Do not modify any input file|End your reply with a line: BRAND)' }
+    $lines = @($Prompt -split "`r?`n" | Where-Object { $_ -notmatch '^(Save a new PNG at this exact path|Do not modify any input file|End your reply with a line: BRAND)' })
+    $from = [Array]::FindIndex([string[]]$lines, [Predicate[string]] { param($l) $l -match '^Branding:' })
+    $to = [Array]::FindIndex([string[]]$lines, [Predicate[string]] { param($l) $l -match '^The BRAND: line' })
+    if ($from -ge 0 -and $to -ge $from) { $lines = @($lines[0..($from - 1)]) + @($script:BrowserBrandingLine) + @(if ($to + 1 -lt $lines.Count) { $lines[($to + 1)..($lines.Count - 1)] }) }
     return ($lines -join "`n").Trim()
 }
 
@@ -75,7 +81,8 @@ function Invoke-BrowserImage([string]$Platform, [string]$Prompt, [string[]]$Imag
         Restore-ImageBridge
         # A sign-in or a Flow account not set up for images (its first-visit screen, Tác nhân on) needs the user, so it is
         # not retried (BRIDGE).
-        $cause = if ($detail -match 'Hết thời gian|timeout') { 'AI_TIMEOUT' } elseif ($detail -match 'đăng nhập|Extension|Google Flow của tài khoản đang chọn') { 'BRIDGE' } else { 'BUSY' }
+        # A refusal (Flow: may violate its policies) comes back the same for the same images and prompt: not retried.
+        $cause = if ($detail -match 'chính sách|polic(y|ies)|từ chối tạo') { 'POLICY' } elseif ($detail -match 'Hết thời gian|timeout') { 'AI_TIMEOUT' } elseif ($detail -match 'đăng nhập|Extension|Google Flow của tài khoản đang chọn') { 'BRIDGE' } else { 'BUSY' }
         throw "[CAUSE:$cause] $Platform không tạo được ảnh. $detail"
     }
     ConvertTo-PngFile $Output

@@ -42,6 +42,7 @@ const usageFile = join(dirname(fileURLToPath(import.meta.url)), "..", "..", "wor
 const KIND = { gemini: "text", flow: "image", chatgpt: "image" };
 export function causeOf(error) {
   const text = String(error || "");
+  if (/chính sách|polic(y|ies)|từ chối tạo/i.test(text)) return "POLICY";
   if (/quota|limit|hết lượt|giới hạn|429|too many/i.test(text)) return "QUOTA";
   if (/Hết thời gian|timeout/i.test(text)) return "AI_TIMEOUT";
   if (/đăng nhập|sign.?in|log.?in/i.test(text)) return "AUTH";
