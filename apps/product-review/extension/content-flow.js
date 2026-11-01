@@ -14,13 +14,14 @@ async function generateFlow(job) {
   }
   const before = flowImages();
   const files = filesFromJob(job);
+  consentClicks = 0;
   // Uploaded references appear in the project grid as well; record them so they are not mistaken for results.
   // A new project sometimes drops the first paste (nothing ever uploads): paste again into the composer it has now.
   for (let paste = 1; paste <= 3; paste++) {
     await pasteFiles(editor, files);
     if (!files.length) break;
     const uploaded = () => {
-      if (flowConsent()) throw new Error(FLOW_CONSENT);
+      if (agreeToConsent()) return false;
       return flowImages().size >= before.size + files.length;
     };
     try { await waitFor(uploaded, paste === 3 ? 120000 : 45000, "tải ảnh tham khảo lên Flow"); break; }
@@ -62,13 +63,28 @@ const FLOW_WELCOME = "Google Flow của tài khoản đang chọn đang hiện m
 // each project with it on. The run turns it off (a real click, like the generate button), and Flow's image model (Nano
 // Banana) is then the one in the composer. Only when that does not work does the run stop and say so.
 const FLOW_AGENT = "Google Flow của tài khoản đang chọn đang bật Tác nhân và app chưa tắt được, nên không tạo ảnh. Mở Cấu hình, bấm Mở Flow, vào một dự án, tắt Tác nhân và chọn mô hình ảnh Nano Banana rồi chạy lại.";
-// The first upload of an account asks to agree to Google's terms for uploaded images (Tôi đồng ý / Huỷ). That is the
-// user's own agreement, so the run never clicks it: it stops and says so, instead of pasting again under it.
-const FLOW_CONSENT = "Google Flow của tài khoản đang chọn cần bạn đồng ý quyền sử dụng hình ảnh (lần đầu tải ảnh lên). Mở Cấu hình, bấm Mở Flow, vào một dự án, tải một ảnh lên và bấm Tôi đồng ý rồi chạy lại.";
-const flowConsent = () => [...document.querySelectorAll("[role=dialog]")].some((d) => {
-  const texts = [...d.querySelectorAll("button")].map((b) => b.innerText.trim());
-  return d.getBoundingClientRect().width > 0 && texts.some((t) => /^(Tôi đồng ý|I agree|Agree)$/i.test(t)) && texts.some((t) => /^(Huỷ|Hủy|Cancel)$/i.test(t));
+// Some accounts are asked, at every upload, to confirm they have the rights to the image (Quyền sử dụng hình ảnh này:
+// Tôi đồng ý / Huỷ). The user chose to have the run agree for them (a real click, one dialog at a time); when the
+// dialogs keep coming back the run stops and says so.
+const FLOW_CONSENT = "Google Flow của tài khoản đang chọn cứ hỏi đồng ý quyền sử dụng hình ảnh và app bấm Tôi đồng ý không qua được. Mở Cấu hình, bấm Mở Flow, vào một dự án, tải một ảnh lên và bấm Tôi đồng ý rồi chạy lại.";
+const consentAgreeButtons = () => [...document.querySelectorAll("[role=dialog]")].flatMap((d) => {
+  const buttons = [...d.querySelectorAll("button")];
+  const texts = buttons.map((b) => b.innerText.trim());
+  if (!(d.getBoundingClientRect().width > 0 && texts.some((t) => /^(Huỷ|Hủy|Cancel)$/i.test(t)))) return [];
+  return buttons.filter((b) => /^(Tôi đồng ý|I agree|Agree)$/i.test(b.innerText.trim()));
 });
+let consentClicks = 0, lastConsentClick = 0;
+// True while a consent dialog is up: clicks the top one's Tôi đồng ý (at most once a second).
+function agreeToConsent() {
+  const buttons = consentAgreeButtons();
+  if (!buttons.length) return false;
+  if (Date.now() - lastConsentClick < 1000) return true;
+  if (++consentClicks > 20) throw new Error(FLOW_CONSENT);
+  lastConsentClick = Date.now();
+  const box = buttons.at(-1).getBoundingClientRect();
+  chrome.runtime.sendMessage({ type: "click", x: box.left + box.width / 2, y: box.top + box.height / 2 }).catch(() => null);
+  return true;
+}
 const agentChip = () => [...document.querySelectorAll("button")].find((b) => b.getAttribute("aria-pressed") === "true" && (b.classList.contains("agent-mode-chip") || /^(Tác nhân|Agent)$/i.test(b.innerText.trim())));
 const flowAgentOn = () => !!agentChip();
 async function turnAgentOff() {

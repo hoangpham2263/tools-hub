@@ -1,7 +1,7 @@
 // Local bridge: the PowerShell workflow POSTs a job over HTTP, the extension receives it over WebSocket.
 // Listens on 127.0.0.1 only; nothing is exposed to the network.
 import { createServer } from "node:http";
-import { readFileSync, statSync } from "node:fs";
+import { appendFileSync, mkdirSync, readFileSync, statSync } from "node:fs";
 import { readFile, writeFile } from "node:fs/promises";
 import { dirname, extname, join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -40,7 +40,7 @@ export function createBridge({ fetchImpl = fetch, googleAccount = chosenGoogleAc
       const job = JSON.parse(raw);
       if (!["chatgpt", "flow", "gemini"].includes(job.platform)) return send(400, { error: "platform must be chatgpt, flow or gemini" });
       if (!job.prompt || !job.output) return send(400, { error: "prompt and output are required" });
-      if (!extension) return send(503, { error: "Extension chưa kết nối. Mở Chrome có cài product-review-bridge." });
+      if (!extension) return send(503, { error: "Extension chưa kết nối. Mở Chrome có cài extension Tools Hub." });
       const images = await Promise.all((job.images || []).map(async (path, index) => ({
         name: `ref-${index + 1}${extname(path).toLowerCase()}`,
         mime: MIME[extname(path).toLowerCase()] || "application/octet-stream",
@@ -97,5 +97,13 @@ export function createBridge({ fetchImpl = fetch, googleAccount = chosenGoogleAc
 }
 
 if (import.meta.url === `file://${process.argv[1]}` || process.argv[1]?.endsWith("server.mjs")) {
+  // Why a bridge stopped mid-run, kept across restarts: <tool>/workspace/logs/bridge-exit.log.
+  const exitLog = join(dirname(fileURLToPath(import.meta.url)), "..", "workspace", "logs", "bridge-exit.log");
+  const note = (text) => { try { mkdirSync(dirname(exitLog), { recursive: true }); appendFileSync(exitLog, `${new Date().toISOString()} pid ${process.pid} ${text}\n`); } catch {} };
+  // Started by a run, its output is that run's pipe, closed once the run ends: a later line must not stop it (EPIPE).
+  for (const stream of [process.stdout, process.stderr]) stream.on("error", () => {});
+  process.on("uncaughtException", (error) => { note(`crash: ${error?.stack || error}`); process.exit(1); });
+  process.on("unhandledRejection", (error) => note(`unhandled rejection: ${error?.stack || error}`));
+  for (const signal of ["SIGTERM", "SIGHUP", "SIGINT"]) process.on(signal, () => { note(`stopped by ${signal}`); process.exit(0); });
   createBridge().listen(PORT, "127.0.0.1", () => console.log(`Bridge ready on http://127.0.0.1:${PORT}`));
 }

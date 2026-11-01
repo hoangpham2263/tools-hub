@@ -174,3 +174,4 @@ Bài học được đúc kết thành nguyên tắc ngắn để áp dụng l�
 - Không phóng bàn quá lớn để lấp chỗ hoặc làm bàn ngắn, bè hơn mẫu; không suy ra kích thước thực khi nguồn không cho biết.
 
 <!-- app-lessons:end -->
+- Bridge do một lần chạy bật (`Start-Process node`) có stdout là ống của lần chạy đó; lần chạy xong ống đóng, dòng in tiếp theo làm bridge chết (EPIPE) và lần chạy sau bị "Response ended" rồi "Connection refused". Bridge bỏ qua lỗi ghi stdout/stderr, ghi lý do dừng vào `workspace/logs/bridge-exit.log`; gọi bridge lỗi mà bridge không trả lời thì `Restore-ImageBridge` bật lại trước lần thử sau.

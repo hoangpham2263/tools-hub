@@ -1,5 +1,6 @@
 ﻿# Image generation through the signed-in ChatGPT / Google Flow tab (bridge/ + extension/).
 $script:BridgeUrl = 'http://127.0.0.1:8765'
+$script:BridgeProjectRoot = Split-Path (Split-Path $PSScriptRoot -Parent) -Parent
 
 function Get-ImageBridgeStatus {
     try { return Invoke-RestMethod -Uri "$script:BridgeUrl/status" -TimeoutSec 3 } catch { return $null }
@@ -53,6 +54,7 @@ function Start-ImageBridge([string]$ProjectRoot) {
             try { & npm install --silent --no-audit --no-fund 2>&1 | Out-Null } finally { Pop-Location }
             if (-not (Test-Path -LiteralPath (Join-Path $ProjectRoot 'bridge/node_modules/ws'))) { throw '[CAUSE:BRIDGE] Chưa cài được bridge (npm install trong bridge/). Kiểm tra mạng rồi chạy lại.' }
         }
+        # It notes why it stopped in workspace/logs/bridge-exit.log.
         if ($script:OnWindows) { Start-Process node -ArgumentList ('"' + $server + '"') -WindowStyle Hidden | Out-Null }
         else { Start-Process node -ArgumentList $server | Out-Null }
     }
@@ -66,7 +68,14 @@ function Start-ImageBridge([string]$ProjectRoot) {
         if (Test-ImageBridge) { Update-ImageBridgeExtension $ProjectRoot; return }
         Start-Sleep -Milliseconds 750
     }
-    throw '[CAUSE:BRIDGE] Extension product-review-bridge chưa kết nối. Mở Cấu hình, bấm Mở ở dòng Chrome của tool rồi đăng nhập Google (Flow, Gemini), ChatGPT.'
+    throw '[CAUSE:BRIDGE] Extension Tools Hub chưa kết nối. Mở Cấu hình, bấm Mở ở dòng Chrome của tool rồi đăng nhập Google (Flow, Gemini), ChatGPT.'
+}
+
+# A bridge that stopped mid-run (the call ends with no answer, then Connection refused) is started again, so the
+# next try reaches one.
+function Restore-ImageBridge {
+    if ($null -ne (Get-ImageBridgeStatus)) { return }
+    try { Start-ImageBridge $script:BridgeProjectRoot } catch {}
 }
 
 # The bridge answers {"error": "..."} with escaped characters; the message itself is what the cause is read from.
@@ -93,7 +102,7 @@ function Invoke-BrowserText([string]$Prompt, [string[]]$Images, [string]$ResultF
             # One finished call, counted in the app's usage line (web AIs report no tokens).
             if ($text) { Write-Host '  [AI-CALL] gemini'; return $text }
             $detail = 'Gemini trả lời trống.'
-        } catch { $detail = Get-BridgeError $_ }
+        } catch { $detail = Get-BridgeError $_; Restore-ImageBridge }
         if ($attempt -eq 2 -or $detail -match 'Hết thời gian|timeout|đăng nhập|Extension') { break }
         Write-Host "  [RETRY] Gemini; attempt $($attempt + 1)/2..." -ForegroundColor Yellow
     }
@@ -107,6 +116,7 @@ function Invoke-BrowserImage([string]$Platform, [string]$Prompt, [string[]]$Imag
         $result = Invoke-RestMethod -Uri "$script:BridgeUrl/generate" -Method Post -ContentType 'application/json; charset=utf-8' -Body ([Text.Encoding]::UTF8.GetBytes($body)) -TimeoutSec ($TimeoutSec + 120)
     } catch {
         $detail = Get-BridgeError $_
+        Restore-ImageBridge
         # A sign-in or a Flow account not set up for images (its first-visit screen, Tác nhân on) needs the user, so it is
         # not retried (BRIDGE).
         $cause = if ($detail -match 'Hết thời gian|timeout') { 'AI_TIMEOUT' } elseif ($detail -match 'đăng nhập|Extension|Google Flow của tài khoản đang chọn') { 'BRIDGE' } else { 'BUSY' }

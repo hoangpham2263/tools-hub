@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
-  "name": "product-review-bridge",
-  "version": "0.4.5",
-  "description": "Cầu nối local: nhận lệnh tạo ảnh từ Product Review (Tools Hub), gửi trong tab ChatGPT/Google Flow đang đăng nhập và trả ảnh về máy.",
+  "name": "Tools Hub",
+  "version": "0.4.6",
+  "description": "Cầu nối local của Tools Hub: nhận việc từ các tool (tạo ảnh, viết chữ), làm trong tab Google Flow, Gemini, ChatGPT đang đăng nhập và trả kết quả về máy.",
   "background": { "service_worker": "background.js" },
   "permissions": ["tabs", "storage", "alarms", "debugger"],
   "host_permissions": [
@@ -15,5 +15,5 @@
     { "matches": ["https://flow.google.com/*"], "js": ["content-common.js", "content-flow.js"], "run_at": "document_idle" },
     { "matches": ["https://gemini.google.com/*"], "js": ["content-common.js", "content-gemini.js"], "run_at": "document_idle" }
   ],
-  "action": { "default_title": "product-review-bridge", "default_popup": "popup.html" }
+  "action": { "default_title": "Tools Hub", "default_popup": "popup.html" }
 }
