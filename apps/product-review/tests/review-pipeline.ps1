@@ -63,13 +63,10 @@ function Invoke-AI($PromptText, $Images, $ResultFile, $Sandbox) {
     if ($Images.Count -ne 2 -or $Images[0] -eq $Images[1]) { throw 'Expected one review image and one separate product image.' }
     if ($Images[1] -notlike '*-product.png') { throw 'Separate product reference order is incorrect.' }
     if ($PromptText -notmatch 'one continuous camera frame' -or $PromptText -notmatch 'Image 1 is the REVIEW reference' -or $PromptText -notmatch 'Image 2 is the PRODUCT reference') { throw 'Missing review/product reference roles.' }
-    if ($PromptText -notmatch 'If it has one, replace it at the same position' -or $PromptText -notmatch 'If it has no logo or brand mark, add none' -or $PromptText -notmatch 'Choose a name that fits this product') { throw 'Logo must be replaced only when the product has one.' }
-    if ($PromptText -notmatch 'Remove all template or customization text' -or $PromptText -notmatch 'put your brand on it' -or $PromptText -notmatch 'never retain it as product artwork' -or $PromptText -notmatch 'Do not add slogans, taglines' -or $PromptText -notmatch 'reply metadata only') { throw 'Generated branding must be a finished mark without template text or instructions.' }
-    if ($PromptText -notmatch 'A photo watermark is not a product logo' -or $PromptText -notmatch 'Do not replace them with fictional branding' -or $PromptText -notmatch 'wall logo' -or $PromptText -notmatch 'return BRAND: none') { throw 'Generation must remove photo watermarks instead of inventing a replacement logo.' }
-    if ($PromptText -notmatch '(?m)^Save a new PNG at this exact path: (.+)$') { throw 'Missing image output path.' }
-    $imagePath=$Matches[1].Trim();[IO.File]::WriteAllBytes($imagePath,[Convert]::FromBase64String('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg=='))
+    if ($PromptText -notmatch 'Show the product without any brand name or logo' -or $PromptText -match 'BRAND:|fictional brand|exact path') { throw 'Every image AI gets the same neutral branding rule and no Codex-only lines.' }
+    $imagePath=Join-Path $script:Batch.Images (((Split-Path $ResultFile -Leaf) -replace '-image(-retry-\d+)?\.txt$','') + '.png');[IO.File]::WriteAllBytes($imagePath,[Convert]::FromBase64String('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg=='))
     'image call' | Set-Content -LiteralPath $ResultFile
-    return 'BRAND: Demo'
+    return 'done'
 }
 '@ | Set-Content (Join-Path $lib 'infrastructure/ai.ps1')
     $queue = Join-Path $tempRoot 'workspace/urls.txt'

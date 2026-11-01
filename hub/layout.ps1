@@ -82,6 +82,7 @@ function Move-SharedBrowserParts([string]$Root) {
 # Files of an older layout that Cập nhật does not bring any more (it only adds and replaces): the AI calls moved from
 # Product Review to hub/ai, the extension's site scripts to hub/extension/sites. A git checkout is never touched.
 $script:MovedFiles = @(
+    'hub/extension/popup.js'
     'apps/product-review/src/infrastructure/codex.ps1'
     'apps/product-review/src/infrastructure/browser-bridge.ps1'
     'apps/product-review/src/infrastructure/antigravity.ps1'

@@ -11,25 +11,24 @@ try{
     Assert (@(Get-HubAIChoices image | ForEach-Object id) -join ',' -eq 'codex,flow') 'Image AIs are listed from the registry.'
     $unsupported = try { Invoke-HubAI -Kind image -Ai gemini -Prompt 'x' -Output (Join-Path $temp 'x.png'); '' } catch { $_.Exception.Message }
     Assert ($unsupported -match '\[CAUSE:UNSUPPORTED\]') 'An AI is only asked for work it can do.'
-    # Codex file-delivery lines never reach the browser tab.
-    $clean=ConvertTo-BrowserPrompt "Create one photo.`nSave a new PNG at this exact path: C:\x.png`nDo not modify any input file.`nEnd your reply with a line: BRAND: <name>"
-    Assert ($clean -eq 'Create one photo.') 'Browser prompt kept Codex delivery lines.'
-    # Flow refuses watermark removal and brand swapping: that block becomes one neutral line.
-    $branded=ConvertTo-BrowserPrompt "Edit the room.`nBranding: Replace only a brand...`nRemove all photographic watermarks.`nIf it has no logo or brand mark, add none.`nThe BRAND: line is reply metadata only.`nKeep the light."
-    Assert ($branded -eq "Edit the room.`n$script:BrowserBrandingLine`nKeep the light.") "Branding block was not replaced: $branded"
+    # Every image AI gets the same request: Codex alone is also told where to save the file (hub/ai).
+    $request=[pscustomobject]@{Images=@('ref.png','product.png');Prompt='Create one photo.';Output=(Join-Path $temp 'shared.png')}
+    function Invoke-CodexExec($PromptText){ $script:CodexPrompt=$PromptText; 'done' }
+    Invoke-HubAI -Kind image -Ai codex -Prompt $request.Prompt -Images $request.Images -Output $request.Output -Options @{WorkDir=$temp}|Out-Null
+    Assert ($script:CodexPrompt.StartsWith('Create one photo.') -and $script:CodexPrompt -match [regex]::Escape("Save a new PNG at this exact path: $($request.Output)")) 'Codex did not get the shared request plus its delivery lines.'
 
     $script:Batch=@{Logs=$temp;Images=$temp}
     $script:Config=@{ImageBackend='flow'}
     $output=Join-Path $temp '001-tee.png'
     $request=[pscustomobject]@{Images=@('ref.png','product.png');Prompt='Create one photo.';Output=$output}
-    function Invoke-AI{throw 'Codex must not run for a browser backend.'}
+    function Invoke-CodexExec{throw 'Codex must not run for a browser backend.'}
     function Invoke-BrowserImage($Platform,$Prompt,$Images,$Output){
-        Assert ($Platform -eq 'flow' -and $Images.Count -eq 2) 'Backend or reference images were not forwarded.'
+        Assert ($Platform -eq 'flow' -and $Images.Count -eq 2 -and $Prompt -eq 'Create one photo.') 'The web AI did not get the shared request as it is.'
         [IO.File]::WriteAllBytes($Output,[Convert]::FromBase64String('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg=='))
         [pscustomobject]@{source='https://flow.google.com/project/x';bytes=1}
     }
-    $reply=Invoke-ImageGeneration $request '001-tee' 1 ''
-    Assert ($reply -eq 'BRAND: none' -and (Test-Path $output)) 'Browser backend did not deliver the image.'
+    Invoke-ImageGeneration $request '001-tee' 1|Out-Null
+    Assert (Test-Path $output) 'Browser backend did not deliver the image.'
     Assert ((Get-Content (Join-Path $temp '001-tee-image.txt') -Raw) -match 'backend: flow') 'Backend log is missing.'
 
     # PNG output is kept byte-for-byte; JPEG/WebP conversion needs Windows GDI+ and is covered there.

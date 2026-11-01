@@ -49,7 +49,8 @@ function Get-HubAIChoices([ValidateSet('text', 'image')][string]$Kind) {
 
 # Text: the reply, also written to $Output. Image: the image saved at $Output (PNG); Codex saves it where the prompt
 # says and returns its reply, a web AI returns the bridge's answer (source, bytes).
-# Options, all optional: TimeoutSec; Codex: WorkDir (required), Model, Effort, ReconnectSec, Attempts, RetryDelaySec.
+# Options, all optional: TimeoutSec; Codex: WorkDir (required), Model, Effort, ReconnectSec, Attempts, RetryDelaySec,
+# ReplyFile (an image's reply).
 function Invoke-HubAI {
     param(
         [Parameter(Mandatory)][ValidateSet('text', 'image')][string]$Kind,
@@ -78,6 +79,15 @@ function Invoke-HubAI {
     return Invoke-HubAIProvider $Kind $Ai $Prompt $Images $Output $Options $timeout
 }
 
+# What Codex alone needs to deliver an image: one pass with its image tool, saved as a PNG at $Output.
+function Get-CodexImageDelivery([string]$Output) {
+    @"
+SINGLE-PASS DELIVERY: create ONE image with your image tool from the attached images, then save the complete image it returns, unprocessed. The user reviews it: do not run visual QA, compare or score variants, or regenerate to satisfy your own critique.
+Save a new PNG at this exact path: $Output
+Do not modify any input file. Reply briefly in English.
+"@
+}
+
 function Invoke-HubAIProvider([string]$Kind, [string]$Ai, [string]$Prompt, [string[]]$Images, [string]$Output, [hashtable]$Options, [int]$timeout) {
     switch ($Ai) {
         'codex' {
@@ -87,7 +97,14 @@ function Invoke-HubAIProvider([string]$Kind, [string]$Ai, [string]$Prompt, [stri
             }
             foreach ($key in @('ReconnectSec', 'Attempts', 'RetryDelaySec')) { if ($Options.ContainsKey($key)) { $codex[$key] = [int]$Options[$key] } }
             if (-not $codex.WorkDir) { throw 'Invoke-HubAI codex: Options.WorkDir is required.' }
-            return Invoke-CodexExec -PromptText $Prompt -Images $Images -ResultFile $Output @codex
+            # Every image AI gets the same request; Codex, an agent that saves files, is also told where and how. Its
+            # reply then goes to Options.ReplyFile (beside the image when not given).
+            $reply = $Output
+            if ($Kind -eq 'image') {
+                $Prompt += "`n" + (Get-CodexImageDelivery $Output)
+                $reply = if ($Options.ReplyFile) { [string]$Options.ReplyFile } else { "$Output.reply.txt" }
+            }
+            return Invoke-CodexExec -PromptText $Prompt -Images $Images -ResultFile $reply @codex
         }
         'antigravity' { return Invoke-AntigravityText $Prompt $Images $Output $(if ($timeout) { $timeout } else { 300 }) }
         default {

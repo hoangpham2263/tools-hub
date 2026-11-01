@@ -11,33 +11,34 @@ try{
     $script:Batch=@{Logs=$temp;Images=$temp}
     $script:Config=@{ActiveProductUrl='https://example.test/table';FeedbackRoot=''}
     $context=[pscustomobject]@{product='table';presentation='placed';setting='bare room';details='solid slab legs';reject='new props';branding='none';source_categories=@('dining-tables')}
-    $request=New-ProductImageRequest $raw '001-table' $context @($room) ([Collections.ArrayList]::new())
-    Assert ($request.Prompt -match 'SINGLE-PASS DELIVERY' -and $request.Prompt -match 'DIRECT IMAGE DELIVERY') 'Direct image delivery instructions are missing.'
+    $request=New-ProductImageRequest $raw '001-table' $context @($room)
+    Assert ($request.Prompt -notmatch 'SINGLE-PASS DELIVERY|exact path|BRAND:') 'The shared request must hold nothing only Codex needs.'
+    Assert ((Get-CodexImageDelivery $request.Output) -match 'SINGLE-PASS DELIVERY' -and (Get-CodexImageDelivery $request.Output) -match [regex]::Escape("Save a new PNG at this exact path: $($request.Output)")) 'Codex delivery instructions are missing.'
     Assert (($request.PSObject.Properties.Name -join ',') -eq 'Images,Prompt,Output') 'Unexpected delivery request fields.'
     Copy-Item -LiteralPath $raw -Destination (Join-Path $temp '001-table-attempt-1-generated.png')
     Copy-Item -LiteralPath $raw -Destination $request.Output
     'FAIL: old bench foot must be removed'|Set-Content (Join-Path $temp '001-table-quality-1.txt') -Encoding UTF8
     function Invoke-AI($PromptText,$Images,$ResultFile,$Sandbox){
-        Assert ($Images.Count -eq 3 -and $Images[0] -eq $room -and $Images[1] -eq $raw) 'Retry lost original image roles or failed evidence.'
-        Assert ($Images[2] -like '*attempt-1-generated.png') 'Retry did not receive the saved image.'
-        Assert ($PromptText -match 'transport retry, not a visual rejection' -and $PromptText -notmatch 'Earlier QA 1') 'Transport retry must not become a visual repair.'
+        Assert ($Images.Count -eq 2 -and $Images[0] -eq $room -and $Images[1] -eq $raw) 'Retry lost original image roles.'
+        Assert ($PromptText -eq $request.Prompt) 'A retry must send the same request, for every AI.'
         Assert (-not (Test-Path $request.Output)) 'A stale output can masquerade as a fresh delivery.'
         Copy-Item -LiteralPath $raw -Destination $request.Output
-        return 'BRAND: none'
+        return 'done'
     }
-    [void](Invoke-ImageGeneration $request '001-table' 2 'FAIL: restored bench fragments')
+    [void](Invoke-ImageGeneration $request '001-table' 2)
     Assert ($request.Images.Count -eq 2 -and (Get-BytesHash ([IO.File]::ReadAllBytes($request.Output))) -eq (Get-BytesHash ([IO.File]::ReadAllBytes($raw)))) 'Direct image delivery mutated reference roles or could not reuse good raw bytes.'
     function Invoke-AI{return 'No output written'}
-    $blocked=$false;try{Invoke-ImageGeneration $request '001-table' 2 'Connection interrupted'|Out-Null}catch{$blocked=$_.Exception.Message -like 'Output image not found*'}
+    $blocked=$false;try{Invoke-ImageGeneration $request '001-table' 2|Out-Null}catch{$blocked=$_.Exception.Message -like 'Output image not found*'}
     Assert $blocked 'No-op retry accepted a stale output.'
     # Recover delivered files on timeout without making a duplicate generation request.
     function Invoke-AI{
         Copy-Item -LiteralPath $raw -Destination $request.Output
         throw 'AI failed [CAUSE:AI_TIMEOUT]'
     }
-    Assert ((Invoke-ImageGeneration $request '001-table' 1 '') -eq 'BRAND: none') 'A completed image was discarded just because the final CLI reply timed out.'
+    Invoke-ImageGeneration $request '001-table' 1|Out-Null
+    Assert (Test-Path $request.Output) 'A completed image was discarded just because the final CLI reply timed out.'
     function Invoke-AI{throw 'AI failed [CAUSE:PROCESS_ACTIVE]'}
-    $blocked=$false;try{Invoke-ImageGeneration $request '001-table' 1 ''|Out-Null}catch{$blocked=$_.Exception.Message -match 'PROCESS_ACTIVE'}
+    $blocked=$false;try{Invoke-ImageGeneration $request '001-table' 1|Out-Null}catch{$blocked=$_.Exception.Message -match 'PROCESS_ACTIVE'}
     Assert $blocked 'Recovery concealed an unconfirmed running process.'
     $script:Config.AiRetryDelaySeconds=0;$script:Calls=0;$script:Mode='recover'
     function Invoke-ImageGeneration{
@@ -45,9 +46,9 @@ try{
         if($script:Mode -eq 'auth'){throw 'AI failed [CAUSE:AUTH]'}
         if($script:Mode -eq 'timeout' -or $script:Calls -lt 3){throw 'AI failed [CAUSE:AI_TIMEOUT]'}
         Copy-Item -LiteralPath $raw -Destination $request.Output
-        return 'BRAND: none'
+        return 'done'
     }
-    Assert ((Complete-ProductImage $request $context '002-table') -eq 'BRAND: none' -and $script:Calls -eq 3) 'Two interrupted generations were not retried to success.'
+    Assert ((Complete-ProductImage $request $context '002-table') -eq 'done' -and $script:Calls -eq 3) 'Two interrupted generations were not retried to success.'
     Assert ((Get-BytesHash ([IO.File]::ReadAllBytes($request.Output))) -eq (Get-BytesHash ([IO.File]::ReadAllBytes($raw)))) 'Export changed the image tool output bytes.'
     foreach($mode in @('timeout','auth')){
         $script:Mode=$mode;$script:Calls=0;$blocked=$false

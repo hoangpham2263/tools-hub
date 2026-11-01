@@ -252,25 +252,28 @@ chrome.alarms.create("bridge", { periodInMinutes: 0.5 });
 chrome.alarms.onAlarm.addListener(connect);
 chrome.runtime.onStartup.addListener(connect);
 chrome.runtime.onInstalled.addListener(connect);
-// The tabs the debugger is attached to now (keepShown), so a click goes through the same session.
-const shown = new Set();
+// The tabs the debugger keeps shown now (keepShown), each with how to attach again; a click goes through the same session.
+const shown = new Map();
 // Keeps a background tab working as if shown, until the returned stop(): a screencast of it makes Chrome render it as a
 // visible page (timers run at full speed, answers keep coming), and focus emulation makes it act as the focused page.
-// The frames are tiny, rare and dropped.
+// The frames are tiny, rare and dropped. On battery Chrome may still freeze a background page, so it is woken every
+// 15 s; and when the debugger is taken off mid-job (the "debugging" bar cancelled), it is attached again.
 async function keepShown(tab) {
   const target = { tabId: tab.id };
-  await chrome.debugger.attach(target, "1.3");
-  shown.add(tab.id);
-  try {
+  const start = async () => {
+    await chrome.debugger.attach(target, "1.3");
     await chrome.debugger.sendCommand(target, "Page.enable");
     await chrome.debugger.sendCommand(target, "Emulation.setFocusEmulationEnabled", { enabled: true });
     await chrome.debugger.sendCommand(target, "Page.startScreencast", { format: "jpeg", quality: 1, maxWidth: 32, maxHeight: 32, everyNthFrame: 60 });
-  } catch (error) {
-    shown.delete(tab.id);
+  };
+  try { await start(); } catch (error) {
     await chrome.debugger.detach(target).catch(() => {});
     throw error;
   }
+  shown.set(tab.id, start);
+  const wake = setInterval(() => chrome.debugger.sendCommand(target, "Page.setWebLifecycleState", { state: "active" }).catch(() => {}), 15000);
   return async () => {
+    clearInterval(wake);
     if (!shown.delete(tab.id)) return;
     await chrome.debugger.detach(target).catch(() => {});
   };
@@ -278,7 +281,12 @@ async function keepShown(tab) {
 chrome.debugger.onEvent.addListener((source, method, params) => {
   if (method === "Page.screencastFrame") chrome.debugger.sendCommand(source, "Page.screencastFrameAck", { sessionId: params.sessionId }).catch(() => {});
 });
-chrome.debugger.onDetach.addListener((source) => shown.delete(source.tabId));
+chrome.debugger.onDetach.addListener((source, reason) => {
+  const start = shown.get(source.tabId);
+  if (!start) return;
+  reply({ type: "progress", id: tabJobs.get(source.tabId) || "tab", stage: `debugger detached (${reason}), attaching again` });
+  start().catch((error) => reply({ type: "progress", id: tabJobs.get(source.tabId) || "tab", stage: `debugger not attached again: ${error.message || error}` }));
+});
 
 // A real left click at (x, y) in the tab's viewport, sent through the debugger so the page sees a trusted event. The tab
 // stays where it is, in the background.
@@ -311,10 +319,6 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
     chrome.windows.update(_sender.tab.windowId, { focused: true });
     reply({ type: "progress", id: "flow", stage: "waiting for the Flow click" });
     return;
-  }
-  if (message?.type === "status") {
-    connect();
-    sendResponse({ connected: !!socket && socket.readyState === WebSocket.OPEN });
   }
 });
 connect();

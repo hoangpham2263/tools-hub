@@ -19,7 +19,7 @@ Per-product steps, in execution order (src/workflow/steps/)
      Product image: the one attached to the link (file/hash checked, no web request),
      else the product page's og:image. The text AI classifies it from the image:
      product, presentation (worn/held/placed/vehicle), visible details, category key.
-     Known apparel profiles (data/product-contexts.json) add their branding rule.
+     Known apparel profiles (data/product-contexts.json) set product and details.
      Review photo: the one the user attached (computer, Drive library or clipboard),
      used as it is after file/hash checks; none stops the link with PRODUCT_INPUT.
 
@@ -31,7 +31,8 @@ Per-product steps, in execution order (src/workflow/steps/)
      sources, SHA256) and the generator uses those copies.
      The first readable PNG is delivered byte-for-byte; the user reviews it.
      Up to 3 submissions, only on a lost connection, a timeout or a busy service.
-     Web AIs get the prompt without file-saving lines and a neutral branding line.
+     Every AI gets the same request through Invoke-AI; hub/ai adds what one AI alone
+     needs (Codex: where to save the PNG). Image 2 outranks the text details.
 
   03 WriteReview                                           text AI: 1 call (+1 repair)
      Input: the finished image, the product and details, one random review sample

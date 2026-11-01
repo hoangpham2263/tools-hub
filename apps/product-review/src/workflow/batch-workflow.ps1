@@ -21,12 +21,12 @@ function Invoke-BatchWorkflow([string]$ProjectRoot, [string]$List, [string]$OutD
     $configSnapshot = [Management.Automation.PSSerializer]::Serialize($script:Config, 20)
     # Worker body, run in its own runspace: load the libraries, then build one product image.
     $workerScript = {
-        param($ModuleFiles, $ConfigSnapshot, $Batch, $Brands, $Item, $ItemId)
+        param($ModuleFiles, $ConfigSnapshot, $Batch, $Item, $ItemId)
         $ErrorActionPreference = 'Stop'
         foreach ($moduleFile in $ModuleFiles) { . $moduleFile }
         $script:Config = [Management.Automation.PSSerializer]::Deserialize($ConfigSnapshot)
         $script:Batch = $Batch
-        $rows = @(Invoke-ProductItem $Item $ItemId $Brands)
+        $rows = @(Invoke-ProductItem $Item $ItemId)
         # Upload right after this image is done, in parallel with other threads.
         # A failed upload leaves photo_url empty; the coordinator then retries it.
         $row = @($rows | Where-Object { $_ -and $_.PSObject.Properties['photo_path'] })[-1]
@@ -54,7 +54,6 @@ function Invoke-BatchWorkflow([string]$ProjectRoot, [string]$List, [string]$OutD
         Write-Lines $script:Batch.InputUrls $queue.Lines
         $completed = New-Object System.Collections.Generic.List[string]
         $results = New-Object System.Collections.Generic.List[object]
-        $brands = [Collections.ArrayList]::Synchronized((New-Object Collections.ArrayList))
         Save-BatchResults $results.ToArray() $script:Batch.Dir
         $threads = [Math]::Min($ThrottleLimit, $urls.Count)
         Write-Host "Starting: $($urls.Count) URLs" -ForegroundColor Cyan
@@ -72,7 +71,7 @@ function Invoke-BatchWorkflow([string]$ProjectRoot, [string]$List, [string]$OutD
             $index++
             $ps = [PowerShell]::Create()
             $ps.RunspacePool = $pool
-            [void]$ps.AddScript($workerScript).AddArgument($ModuleFiles).AddArgument($configSnapshot).AddArgument($script:Batch).AddArgument($brands).AddArgument($item).AddArgument(('{0:D3}-{1}' -f $index, $item.Handle))
+            [void]$ps.AddScript($workerScript).AddArgument($ModuleFiles).AddArgument($configSnapshot).AddArgument($script:Batch).AddArgument($item).AddArgument(('{0:D3}-{1}' -f $index, $item.Handle))
             $jobs.Add([pscustomobject]@{ Index = $index; Item = $item; PS = $ps; Async = $ps.BeginInvoke(); Seen = 0; SeenWarnings = 0; Announced = $false; Done = $false })
         }
 

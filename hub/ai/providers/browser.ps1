@@ -40,18 +40,6 @@ function Send-BridgeJob([string]$Platform, [string]$Prompt, [string[]]$Images, [
     return Invoke-RestMethod -Uri "$script:BridgeUrl/generate" -Method Post -ContentType 'application/json; charset=utf-8' -Body ([Text.Encoding]::UTF8.GetBytes($body)) -TimeoutSec ($TimeoutSec + 120 + $script:BridgeQueueSec)
 }
 
-# Browser backends cannot write files themselves; drop the file-delivery lines meant for Codex. Google Flow refuses
-# ("may violate our policies") a prompt asking to remove watermarks or swap a real brand for a made-up one, so that
-# block (from "Branding:" to "The BRAND: line") becomes one neutral line: no brand, logo or text added.
-$script:BrowserBrandingLine = 'Show the product as an unbranded item: no brand names, logos, labels or text anywhere in the image.'
-function ConvertTo-BrowserPrompt([string]$Prompt) {
-    $lines = @($Prompt -split "`r?`n" | Where-Object { $_ -notmatch '^(Save a new PNG at this exact path|Do not modify any input file|End your reply with a line: BRAND)' })
-    $from = [Array]::FindIndex([string[]]$lines, [Predicate[string]] { param($l) $l -match '^Branding:' })
-    $to = [Array]::FindIndex([string[]]$lines, [Predicate[string]] { param($l) $l -match '^The BRAND: line' })
-    if ($from -ge 0 -and $to -ge $from) { $lines = @($lines[0..($from - 1)]) + @($script:BrowserBrandingLine) + @(if ($to + 1 -lt $lines.Count) { $lines[($to + 1)..($lines.Count - 1)] }) }
-    return ($lines -join "`n").Trim()
-}
-
 # A text reply from a web AI (Gemini, in a temporary chat that leaves nothing in its history): written to $ResultFile
 # and returned. One retry for a busy page; a timeout or a missing sign-in stops there.
 function Invoke-BrowserText([string]$Platform, [string]$Prompt, [string[]]$Images, [string]$ResultFile, [int]$TimeoutSec = 300) {
@@ -76,7 +64,7 @@ function Invoke-BrowserText([string]$Platform, [string]$Prompt, [string[]]$Image
 # for an image that arrived anyway.
 function Invoke-BrowserImage([string]$Platform, [string]$Prompt, [string[]]$Images, [string]$Output, [int]$TimeoutSec = 600) {
     try {
-        $result = Send-BridgeJob $Platform (ConvertTo-BrowserPrompt $Prompt) $Images $Output $TimeoutSec
+        $result = Send-BridgeJob $Platform $Prompt $Images $Output $TimeoutSec
     } catch {
         $detail = Get-BridgeError $_
         Restore-ImageBridge

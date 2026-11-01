@@ -35,9 +35,8 @@ CLI exit 0 không xác nhận công cụ tạo ảnh thành công. Giữ console
 
 ## 4. Logo và chữ
 
-- Chỉ thay thương hiệu khi logo thực sự in, khắc, thêu hoặc gắn trên sản phẩm; giữ vị trí và cách thể hiện vật lý đó. Không có logo vật lý thì không thêm logo, chữ góc ảnh hoặc biển tên trên tường.
-- Watermark, logo cửa hàng góc ảnh và địa chỉ web là lớp phủ, không phải logo sản phẩm. Không biến chúng thành thương hiệu giả hoặc đồ vật trong cảnh; tránh chọn ảnh nền có watermark.
-- Thương hiệu giả phải hoàn chỉnh, không giữ chữ hướng dẫn như “put your brand on it”, “your logo”, “your brand” hoặc lời nhắc điền tên.
+- Mọi AI tạo ảnh (Codex, Flow) cùng một quy tắc: sản phẩm hiện không tên thương hiệu, không logo; không thêm nhãn, watermark hay chữ vào ảnh; giữ hình in, hoa văn và màu của chính sản phẩm. Không thay logo bằng tên giả (Flow từ chối prompt xoá watermark hay đổi thương hiệu).
+- Ảnh sản phẩm là căn cứ duy nhất cho màu, dáng và cấu tạo; mô tả chữ của bước nhận diện chỉ là ghi chú, khác ảnh thì theo ảnh.
 
 ## 5. Giao diện và kho ảnh
 

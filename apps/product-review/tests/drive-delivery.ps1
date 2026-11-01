@@ -27,7 +27,7 @@ try{
     $script:Batch=New-Batch (Join-Path $temp 'outputs')
     function Read-ProductInput {throw 'AI/product loading must not run during upload recovery.'}
     function New-Review {throw 'Review text must not be regenerated.'}
-    $resumed=Invoke-ProductItem $item '002-table' ([Collections.ArrayList]::new())
+    $resumed=Invoke-ProductItem $item '002-table'
     Assert ($resumed.body -eq 'Saved review text' -and (Test-Path $resumed.photo_path)) 'Saved image or review was lost.'
     Assert ((Get-BytesHash ([IO.File]::ReadAllBytes($resumed.photo_path))) -eq (Get-BytesHash ([IO.File]::ReadAllBytes($image)))) 'Recovery changed image bytes.'
     function Publish-ImageToDrive {return 'https://api.test/img/final.png'}
@@ -37,7 +37,7 @@ try{
     # Reopening this success must reuse its URL without uploading again.
     $script:Batch=New-Batch (Join-Path $temp 'outputs')
     function Publish-ImageToDrive {throw 'Already uploaded images must not be uploaded again.'}
-    $again=Complete-DriveDelivery (Invoke-ProductItem $item '003-table' ([Collections.ArrayList]::new()))
+    $again=Complete-DriveDelivery (Invoke-ProductItem $item '003-table')
     Save-ProductCheckpoint $results $again $done $item $list $true
     Assert (@(Get-ChildItem $script:Config.DeliveryRoot -Filter '*.json').Count -eq 0 -and -not (Get-Content $list)) 'Finished URL did not clear its delivery cache and queue.'
     $csv=@(Import-BatchRows $script:Batch.Dir)
@@ -54,7 +54,7 @@ try{
     $script:Config=@{Drive=@{ApiUrl='https://api.test';AdminKey='test'};DriveRequired=$true;DeliveryRoot=(Join-Path $integration 'pending');ManualReferences=@{entries=@([pscustomobject]@{product_url=$url;scenes=$scenes})}}
     $fixture=Join-Path $integration 'worker.ps1'
     $code=@'
-function Invoke-ProductItem($Item,[string]$ItemId,$Brands){
+function Invoke-ProductItem($Item,[string]$ItemId){
     $saved=Read-DeliveryCache $Item
     if($saved){$row=Restore-DeliveryCache $saved $ItemId;Save-DeliveryCache $Item $ItemId $row;return $row}
     $image=Join-Path $script:Batch.Images "$ItemId.png"

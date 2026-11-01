@@ -19,8 +19,7 @@ function Invoke-CodexProcess($PromptText,$CommandArgs,$Trace){
     Add-Content -LiteralPath $script:Config.TestCalls -Value 'call'
     if('--json' -notin $CommandArgs){throw 'Structured CLI events were not requested.'}
     $reply=$CommandArgs[([Array]::IndexOf($CommandArgs,'-o')+1)]
-    if($script:Config.TestCase -eq 'empty-reply'){[IO.File]::WriteAllText($reply,'')}
-    else{'BRAND: none'|Set-Content -LiteralPath $reply -Encoding UTF8}
+    [IO.File]::WriteAllText($reply,$(if($script:Config.TestCase -eq 'valid'){'Image saved.'}else{''}))
     $errorText='HTTP 429 Too Many Requests'+"`n"+'{"error":{"type":"usage_limit_reached","message":"The usage limit has been reached","resets_at":1793241250,"resets_in_seconds":67531}}'
     $traceText=if($script:Config.TestCase -in @('quota','corrupt')){
         @{type='item.completed';item=@{type='mcp_tool_call';status='completed';result=@{isError=$true;content=@(@{type='text';text=$errorText})}}}|ConvertTo-Json -Depth 12 -Compress

@@ -1,5 +1,5 @@
 ﻿# One product: steps 1-5. BatchWorkflow runs steps 6-7 after workers finish.
-function Invoke-ProductItem($Item, [string]$ItemId, $Brands) {
+function Invoke-ProductItem($Item, [string]$ItemId) {
     $script:Config.ActiveProductUrl = $Item.Url
     $script:Config.ActiveScene = if ($Item.PSObject.Properties['Scene']) { $Item.Scene } else { $null }
     $cached=Read-DeliveryCache $Item
@@ -13,15 +13,14 @@ function Invoke-ProductItem($Item, [string]$ItemId, $Brands) {
     $download = $product.Reference
     try {
         $reviewPhoto = Get-ReviewPhoto $ItemId $product.Context
-        $request = New-ProductImageRequest $product.Reference $ItemId $product.Context $reviewPhoto $Brands
+        $request = New-ProductImageRequest $product.Reference $ItemId $product.Context $reviewPhoto
         $bundle = Save-ProductReferenceBundle $Item $ItemId $product.Context $request
         $product.Reference = $bundle.ProductPath
-        $reply = Complete-ProductImage $request $product.Context $ItemId
+        Complete-ProductImage $request $product.Context $ItemId | Out-Null
     } finally {
         # The downloaded original is archived as refs/<item>/NN-product; drop the loose copy.
         if ((Split-Path $download -Parent) -eq $script:Batch.Refs -and (Test-Path -LiteralPath $download)) { Remove-Item -LiteralPath $download -Force }
     }
-    if ($reply -match '(?im)^BRAND:\s*(.+)$' -and $Matches[1].Trim() -notmatch '^(?i)none$') { [void]$Brands.Add($Matches[1].Trim()) }
     $body = New-Review $request.Output $ItemId $product.Context
     # Local paths never stand in for failed uploads.
     $row=[pscustomobject][ordered]@{

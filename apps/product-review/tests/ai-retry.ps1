@@ -61,10 +61,10 @@ try {
         if(-not $failed -or $script:Calls -ne 3){throw 'Text timeout/network retries were not bounded to three.'}
     }
     $script:Scenario='always-busy'; $script:Calls=0; $failed=$false
-    try { Invoke-AI 'Generate' @() (Join-Path $testDir 'image.txt') 'workspace-write' | Out-Null } catch { $failed=$true }
+    try { Invoke-AI 'Generate' @() (Join-Path $testDir 'image.txt') 'image' (Join-Path $testDir 'image.png') | Out-Null } catch { $failed=$true }
     if(-not $failed -or $script:Calls -ne 1){throw 'Image request must not be submitted repeatedly.'}
     $script:Scenario='active';$script:Calls=0;$failed=$false
-    try{Invoke-AI 'Generate' @() (Join-Path $testDir 'active.txt') 'workspace-write'|Out-Null}catch{$failed=$_.Exception.Message -match '\[CAUSE:PROCESS_ACTIVE\]'}
+    try{Invoke-AI 'Generate' @() (Join-Path $testDir 'active.txt') 'image' (Join-Path $testDir 'active.png')|Out-Null}catch{$failed=$_.Exception.Message -match '\[CAUSE:PROCESS_ACTIVE\]'}
     if(-not $failed -or $script:Calls -ne 1){throw 'Unconfirmed process termination allowed a duplicate request.'}
     # Lượt dùng AI: each call is one line, failures with their cause, Codex with its tokens.
     $script:HubAIUsageFile = Join-Path $testDir 'ai-usage.jsonl'

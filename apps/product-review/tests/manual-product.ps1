@@ -25,7 +25,7 @@ try{
     Assert ((Test-Path $product.Reference) -and $product.Reference -ne $photo) 'Manual product was not snapshotted.'
     $scene=@(Get-ReviewPhoto '001-draft' $product.Context)
     Assert ($scene.Count -eq 1 -and $scene[0] -eq $script:Config.ManualReferences.entries[0].file) 'Product and scene roles were confused.'
-    $request=New-ProductImageRequest $product.Reference '001-draft' $product.Context $scene ([Collections.ArrayList]::new())
+    $request=New-ProductImageRequest $product.Reference '001-draft' $product.Context $scene
     Assert ($request.Images.Count -eq 2 -and $request.Images[0] -eq $scene[0] -and $request.Images[1] -eq $product.Reference) 'Review, product and style inputs were mixed.'
     Assert ($request.Prompt -match 'If no person is visible' -and $request.Prompt -match 'Image 2 is the PRODUCT reference') 'Flat review photos must not require another person reference.'
     Assert ($request.Prompt -match 'REPLACE THE EXISTING GARMENT' -and $request.Prompt -match 'EVERY such subject' -and $request.Prompt -match 'Never paste a product cutout' -and $request.Prompt -notmatch 'background may change') 'Garment editing can still leave the old shirts and add a separate product prop.'
@@ -46,7 +46,7 @@ try{
         $index++;$script:Config.ActiveScene=$job.Scene
         $loaded=Read-ProductInput $job ('multi-'+$index)
         $picked=@(Get-ReviewPhoto ('multi-'+$index) $loaded.Context)
-        $pair=New-ProductImageRequest $loaded.Reference ('multi-'+$index) $loaded.Context $picked ([Collections.ArrayList]::new())
+        $pair=New-ProductImageRequest $loaded.Reference ('multi-'+$index) $loaded.Context $picked
         Assert ($pair.Images.Count -eq 2 -and (Get-BytesHash ([IO.File]::ReadAllBytes($pair.Images[0]))) -eq $job.Scene.sha256 -and (Get-BytesHash ([IO.File]::ReadAllBytes($pair.Images[1]))) -eq $map.entries[0].product_sha256) 'A job mixed review photos or replaced the actual product.'
     }
     $saved=$script:Config.ManualReferences.entries[0].product_file

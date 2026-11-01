@@ -28,7 +28,7 @@ Có bản mới thì nút **Cập nhật** chuyển xanh; app chỉ cập nhật
 
 - **Thêm sản phẩm:** dán link, gắn ảnh sản phẩm gốc và ảnh review (từ máy, kho Drive hoặc dán Ctrl/Cmd+V). Một link có thể có nhiều ảnh gốc, mỗi ảnh gốc nhiều ảnh review.
 - **Nhập hàng loạt:** chọn `products.csv` (ảnh để trong thư mục `images/` cạnh nó); app gắn đúng ảnh cho từng sản phẩm ([chuẩn thư mục](docs/import.md)).
-- **Tạo ảnh:** mỗi cặp ảnh gốc + ảnh review cho một ảnh kết quả, giữ đúng sản phẩm; logo thật được thay bằng brand giả, watermark bị xoá.
+- **Tạo ảnh:** mỗi cặp ảnh gốc + ảnh review cho một ảnh kết quả, giữ đúng sản phẩm; sản phẩm hiện không thương hiệu, không thêm chữ; mọi AI dùng chung một prompt.
 - **Viết review:** nội dung dựa trên ảnh, học cách viết từ kho review mẫu cùng danh mục; tên, sao, email và ngày được tạo ngẫu nhiên.
 - **Duyệt & xuất file:** Giữ/Bỏ từng ảnh, xong thì tạo `loox_import.csv` (chọn **Custom File** khi import vào Loox).
 - **Theo dõi:** số token đã dùng và hạn mức ChatGPT hiện trực tiếp khi chạy; chọn model AI và mức suy nghĩ trong Cấu hình.

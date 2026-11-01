@@ -26,23 +26,21 @@ function Invoke-AI($PromptText, $Images, $ResultFile, $Sandbox) {
     $script:ImageCalls++
     if ($PromptText -notmatch 'Keep image 1.s framing, moment and camera character' -or $PromptText -match 'Scene guidance|natural portrait composition') { throw 'Garment edits must keep the review photo framing without restaging guidance.' }
     if ($Images.Count -ne 2 -or $PromptText -notmatch 'Image 1 also supplies the real setting' -or $PromptText -notmatch 'Image 2 is the PRODUCT reference') { throw 'Scene fallback changed reference roles incorrectly.' }
-    if ($PromptText -notmatch 'Never add GOLF' -or $PromptText -match 'cafe service counter|Product use context|Reject these context') { throw 'Apron branding rules missing, or old scene-picking context leaked into the prompt.' }
-    if ($PromptText -notmatch 'SINGLE-PASS DELIVERY') { throw 'Single-pass generation contract is missing.' }
-    if ($PromptText -notmatch '(?m)^Save a new PNG at this exact path: (.+)$') { throw 'Missing output path.' }
-    $imagePath=$Matches[1].Trim();New-TestPng $imagePath
-    return 'BRAND: Cedar Kitchen'
+    if ($PromptText -notmatch 'Show the product without any brand name or logo' -or $PromptText -match 'cafe service counter|Product use context|Reject these context') { throw 'Branding rule missing, or old scene-picking context leaked into the prompt.' }
+    if ($PromptText -match 'SINGLE-PASS DELIVERY|exact path') { throw 'Codex-only delivery lines reached the shared request.' }
+    New-TestPng (Join-Path $script:Batch.Images (((Split-Path $ResultFile -Leaf) -replace '-image(-retry-\d+)?\.txt$','') + '.png'))
+    return 'done'
 }
 try {
     $item = [pscustomobject]@{ Handle = 'custom-bib-apron'; Url = 'https://example.test/apron' }
-    $brands = [Collections.ArrayList]::Synchronized((New-Object Collections.ArrayList))
     $script:QualityCalls = 0; $script:ImageCalls = 0; $script:AlwaysFail = $false
-    $result = Invoke-ProductItem $item '001-apron' $brands
+    $result = Invoke-ProductItem $item '001-apron'
     if ($script:ImageCalls -ne 1 -or $script:QualityCalls -ne 0 -or $result.body -notmatch 'front pockets') { throw 'Single-pass image delivery or product review failed.' }
     $status=Get-Content (Join-Path $tempDir '001-apron-review-status.json') -Raw|ConvertFrom-Json
     if($status.status -ne 'awaiting_user_review' -or $status.ai_image_qa_performed){throw 'User review was misrepresented as AI approval.'}
     $script:Classification='{"category_key":"polo-shirts","existing_profile":"polo","product":"Striped polo shirt","presentation":"placed","setting":"Laid flat on a wooden table","details":"Back print and stripes visible; front fastening not visible","reject":"Do not introduce a wearer"}'
     $polo=Resolve-ProductContext 'polo' (Join-Path $tempDir 'actual-product.png') 'flat-polo'
-    $request=New-ProductImageRequest (Join-Path $tempDir 'actual-product.png') 'flat-polo' $polo @((Join-Path $tempDir 'person.png')) $brands
+    $request=New-ProductImageRequest (Join-Path $tempDir 'actual-product.png') 'flat-polo' $polo @((Join-Path $tempDir 'person.png'))
     if($polo.presentation -ne 'worn' -or $request.Prompt -match 'IMMUTABLE BASE|wooden table|Do not introduce a wearer' -or $request.Prompt -notmatch 'REPLACE THE EXISTING GARMENT' -or $polo.details -notmatch 'front fastening not visible'){throw 'Flat apparel source still routes into a furniture scene or loses limits of visible design.'}
     $script:Classification='{"category_key":"coffee-table","existing_profile":"custom","product":"Low wooden table","presentation":"placed","setting":"Living room","details":"Low wood slab and legs","reject":"High dining chairs"}'
     $table=Resolve-ProductContext 'table' (Join-Path $tempDir 'actual-product.png') 'real-table'
