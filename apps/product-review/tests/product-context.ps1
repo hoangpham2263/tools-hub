@@ -26,7 +26,7 @@ function Invoke-AI($PromptText, $Images, $ResultFile, $Sandbox) {
     $script:ImageCalls++
     if ($PromptText -notmatch 'Scene guidance: Show one ordinary moment') { throw 'Missing natural scene guidance.' }
     if ($Images.Count -ne 2 -or $PromptText -notmatch 'Image 1 also supplies the real setting' -or $PromptText -notmatch 'Image 2 is the PRODUCT reference') { throw 'Scene fallback changed reference roles incorrectly.' }
-    if ($PromptText -notmatch 'Never add GOLF' -or $PromptText -notmatch 'cafe service counter') { throw 'Apron context rules were not included.' }
+    if ($PromptText -notmatch 'Never add GOLF' -or $PromptText -match 'cafe service counter|Product use context|Reject these context') { throw 'Apron branding rules missing, or old scene-picking context leaked into the prompt.' }
     if ($PromptText -notmatch 'SINGLE-PASS DELIVERY') { throw 'Single-pass generation contract is missing.' }
     if ($PromptText -notmatch '(?m)^Save a new PNG at this exact path: (.+)$') { throw 'Missing output path.' }
     $imagePath=$Matches[1].Trim();New-TestPng $imagePath

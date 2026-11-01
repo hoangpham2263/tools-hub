@@ -15,7 +15,7 @@ Distinguish physical product branding from a photo watermark, corner logo, websi
 Remove all photographic watermarks and seller overlays from every reference. Do not replace them with fictional branding, relocate them onto a wall, or turn them into objects in the scene.
 If it has one, replace it at the same position, size, color and technique (print, embroidery, patch, engraving)
 with a new fictional brand name for this image only, short and plausible, not an existing company.
-Choose a name that fits this product and this scene ($($context.product); $($context.setting)), the way a real brand in that niche would be named, in the same style as the original mark.
+Choose a name that fits this product ($($context.product)) and the review photo's scene, the way a real brand in that niche would be named, in the same style as the original mark.
 Make the replacement look like a finished, professionally manufactured brand mark: only the fictional brand name and, if appropriate, a simple emblem.
 Remove all template or customization text in and around the branding area, including "put your brand on it", "your logo here", "your brand", "brand name", "logo here", "sample text" and similar placeholder wording in any language, even when present in the reference.
 Replace that placeholder branding with the finished fictional mark; never retain it as product artwork or turn it into a tagline. Do not add slogans, taglines, instructions or extra text around the logo. Preserve unrelated product artwork and decorative text.
@@ -35,8 +35,6 @@ Target product: $($context.product).
 Image 1 is the REVIEW reference, supplying the existing presentation, people (if any) and surroundings. It does not define the target product's design.
 If people are visible, keep their identity, face and build recognizable. If no person is visible (for example, a folded shirt on a table), preserve that product presentation and visible surroundings; do not require or invent a model, and do not ask for another review photo.
 Keep the existing number of people, faces, bodies, poses, hands, held objects, supporting clothing, camera framing and background. Limit edits to the target garment and its local fabric lighting/occlusion; do not restage the scene.
-Product use context (compatibility guidance only, never permission to replace the review setting): $($context.setting)
-Reject these context mismatches: $($context.reject)
 $sceneInstruction
 Image $productIndex is the PRODUCT reference. It is separate from the review photo and exclusively controls the target item's design. Put this actual item on the existing person, or replace the reviewed item in its existing presentation when no person is shown.
 REPLACE THE EXISTING GARMENT, DO NOT ADD A PRODUCT PROP: when the review photo shows the target garment being worn, replace that garment in place with the product from image $productIndex. If several foreground subjects wear the same target garment type, replace it on EVERY such subject, not only one person. Leave unrelated background people and other garment types alone.
@@ -87,8 +85,6 @@ Keep the actual geometry, dimensions relative to surroundings, proportions, mate
 colors and design. Do not invent specifications, ports, buttons,
 screens, wheels, accessories or functionality absent from the actual reference.
 $brandInstruction
-Appropriate context: $($context.setting)
-Reject: $($context.reject)
 Replace only the old item occupying the placement area, if any, with the actual linked product.
 Preserve the product's design, grain, proportions and finish. Adapt only its
 placement, perspective and local lighting to fit the existing camera and scene of image 1.

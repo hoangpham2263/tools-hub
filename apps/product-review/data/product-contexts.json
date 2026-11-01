@@ -5,9 +5,6 @@
       "id": "apron",
       "pattern": "(?i)apron",
       "product": "bib apron",
-      "subject": "An adult with the torso and waist visible; an apron can be worn naturally over simple work clothes. The hands must be available for a plausible light task.",
-      "setting": "A cafe service counter, home kitchen, bakery prep area, or craft workshop with visible work surfaces and relevant objects. Show a relaxed, plausible activity such as arranging cups, preparing ingredients, or working at a bench.",
-      "reject": "Decorative gates, arbitrary doorways, bedrooms, golf courses, sports props, and a person merely posing with hands hidden in apron pockets and no work context.",
       "details": "The apron itself: bib shape, neck strap, waist ties, front pockets, fabric color and embroidery. The white shirt underneath is not the product.",
       "branding": "Only if the product shows a logo: replace every real brand name, logo, wordmark, store mark and label from the product reference and source photos with one small fictional brand. Keep the product's own artwork, print, text design and colors; only the brand identity changes. Never add GOLF or unrelated sports branding.",
       "source_categories": [
@@ -20,9 +17,6 @@
       "id": "hat",
       "pattern": "(?i)hat|cap|beanie|visor",
       "product": "headwear",
-      "subject": "An adult with head and face clearly visible, without competing headwear or objects obscuring the target item.",
-      "setting": "A park path, casual outdoor gathering or everyday daylight activity appropriate to the actual headwear.",
-      "reject": "Unrelated work uniforms, private bedrooms, multiple hats, obscured headwear or sports props unrelated to the product.",
       "details": "The actual hat crown, brim, panels, color and embroidery. The shirt is not the product.",
       "branding": "Only if the product shows a logo: replace every real brand name, logo, wordmark, store mark and label from the product reference and source photos with one small fictional brand. Keep the product's own artwork, print, text design and colors; only the brand identity changes.",
       "source_categories": [
@@ -33,9 +27,6 @@
       "id": "hoodie",
       "pattern": "(?i)hoodie|sweatshirt|t-shirt|tshirt|tee-shirt",
       "product": "casual top",
-      "subject": "An adult with the target top clearly visible, without an outer layer hiding its design.",
-      "setting": "An ordinary park path, cafe patio or relaxed everyday setting with weather appropriate to the garment.",
-      "reject": "Unrelated occupational uniforms, private bedrooms, hot-weather activity in heavy layers or forced golf imagery.",
       "details": "The actual top neckline, hood if present, sleeves, color, print and embroidery.",
       "branding": "Only if the product shows a logo: replace every real brand name, logo, wordmark, store mark and label from the product reference and source photos with one small fictional brand. Keep the product's own artwork, print, text design and colors; only the brand identity changes.",
       "source_categories": [
@@ -46,9 +37,6 @@
       "id": "golf",
       "pattern": "(?i)golf",
       "product": "golf apparel",
-      "subject": "An adult whose target garment is clearly visible, with a natural standing, walking, or between-shots pose.",
-      "setting": "A golf course, practice area, clubhouse patio, or a casual outdoor setting connected to a round of golf. Use restrained, plausible golf props only when the pose supports them.",
-      "reject": "Bedrooms, bathrooms, arbitrary decorative backdrops, mismatched sports equipment, or sunglasses worn in a dim indoor room.",
       "details": "The target golf garment's actual colors, panels, collar, trim and visible pattern.",
       "branding": "Only if the product shows a logo: replace every real brand name, logo, wordmark, store mark and label from the product reference and source photos with one small fictional brand. Keep the product's own artwork, print, text design and colors; only the brand identity changes.",
       "source_categories": [
@@ -60,9 +48,6 @@
       "id": "polo",
       "pattern": "(?i)polo",
       "product": "polo shirt",
-      "subject": "An adult with the shirt clearly visible. Match the person's accessories and posture to the setting; sunglasses require a plausible outdoor daylight scene.",
-      "setting": "A casual outdoor patio, park path, club courtyard, or an appropriate everyday workplace. Choose a relaxed candid moment with believable body language.",
-      "reject": "Bedrooms, bathrooms, dressing rooms, mirror selfies, curtained private rooms, arbitrary ornate gates, or indoor sunglasses. Do not turn an ordinary uniform polo into a golf advertisement.",
       "details": "The polo's color blocks, collar, placket, sleeve trim, piping and embroidery.",
       "branding": "Only if the product shows a logo: replace every real brand name, logo, wordmark, store mark and label from the product reference and source photos with one small fictional brand. Keep the product's own artwork, print, text design and colors; only the brand identity changes.",
       "source_categories": [
@@ -73,9 +58,6 @@
       "id": "scrubs",
       "pattern": "(?i)scrub|medical|nurs",
       "product": "medical workwear",
-      "subject": "An adult whose workwear is clearly visible, in a relaxed professional pose.",
-      "setting": "A clean clinic corridor, staff desk, or break area. Show an ordinary staff moment without performing a medical procedure.",
-      "reject": "Golf courses, kitchen work, bedrooms, arbitrary fashion backdrops, or staged medical procedures.",
       "details": "The workwear's visible neckline, pockets, color and embroidery.",
       "branding": "Only if the product shows a logo: replace every real brand name, logo, wordmark, store mark and label from the product reference and source photos with one small fictional brand. Keep the product's own artwork, print, text design and colors; only the brand identity changes.",
       "source_categories": [
@@ -86,9 +68,6 @@
       "id": "sport",
       "pattern": "(?i)jersey|teamwear|athletic",
       "product": "sports jersey",
-      "subject": "An adult with the jersey visible in a relaxed sports-related pose.",
-      "setting": "A relevant sports ground, training area or sideline; match the sport to visible cues in the product reference.",
-      "reject": "Unrelated sports equipment, kitchen or office work, private bedrooms, and unrelated golf branding.",
       "details": "The jersey's actual colors, panels, numbering, neckline and trim.",
       "branding": "Only if the product shows a logo: replace every real brand name, logo, wordmark, store mark and label from the product reference and source photos with one small fictional brand. Keep the product's own artwork, print, text design and colors; only the brand identity changes.",
       "source_categories": [
@@ -100,9 +79,6 @@
       "id": "generic",
       "pattern": ".*",
       "product": "unclassified product",
-      "subject": "Resolve the actual product and its presentation from the product image before selecting references.",
-      "setting": "Infer a credible everyday use context from the actual product image and handle. Do not assume apparel or require a person.",
-      "reject": "An unrelated occupation or sport, private bedrooms, arbitrary decorative backdrops, and accessories inconsistent with the setting.",
       "details": "Only the target product's visible design details, not an unrelated underlayer or accessory.",
       "branding": "Only if the product shows a logo: replace every real brand name, logo, wordmark, store mark and label from the product reference and source photos with one small fictional brand. Keep the product's own artwork, print, text design and colors; only the brand identity changes.",
       "source_categories": []

@@ -54,6 +54,7 @@ CLI exit 0 không xác nhận công cụ tạo ảnh thành công. Giữ console
 - Chuyển kho phải cập nhật đường dẫn, giữ nguồn, hash và lịch sử sử dụng. Kiểm tra inventory thực tế trong catalog, không coi số đếm trong tài liệu là luôn cập nhật.
 - App không tự chọn hay chấm ảnh review (đã bỏ chọn ảnh từ kho, kiểm tra FIT/NOFIT và missing-data). Link chưa gắn ảnh review dừng với `[CAUSE:PRODUCT_INPUT]`. Không kéo dài sản phẩm để lấp đồ cũ.
 - Ảnh review có thể chụp bất cứ gì (phòng, bàn, sàn, xe…). Prompt đồ vật gọi ảnh 1 là ảnh gốc, không phải "căn phòng": khi ảnh review không phải phòng mà ảnh sản phẩm là phòng, AI web (Flow) từng trả lại chính phòng của ảnh sản phẩm.
+- Nhận diện sản phẩm chỉ trả tên, cách trưng bày, chi tiết và danh mục; không còn `setting`/`reject`/`subject` (dùng để chọn ảnh kho). Prompt tạo ảnh không mô tả bối cảnh "phù hợp": ảnh review là bối cảnh, mô tả khác dễ mâu thuẫn với nó.
 - Dữ liệu bổ sung cần file thật, nguồn, SHA256, kích thước và ghi nhận kiểm tra. Phân biệt gallery khách hàng, ảnh nhà sản xuất và ảnh review; không gắn nhãn Judge.me cho nguồn khác.
 
 ## 6. Review mẫu và báo cáo
