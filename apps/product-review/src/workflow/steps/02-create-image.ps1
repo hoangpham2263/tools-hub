@@ -1,11 +1,12 @@
-﻿# Build a single-scene request; this step does not call the AI.
-function New-ProductImageRequest([string]$Reference, [string]$ItemId, $Context, [string[]]$Picked, $Brands) {
+﻿# Step 2: create the image. The request (prompt + images) is built here without AI; then one image AI call,
+# retried only for a lost connection, a timeout or a busy service. Visual review belongs to the user.
+
+# Image 1 is the review photo the user attached, image 2 the product.
+function New-ProductImageRequest([string]$Reference, [string]$ItemId, $Context, [string]$ReviewPhoto, $Brands) {
     $output = Join-Path $script:Batch.Images "$ItemId.png"
-    $images = @($picked) + @($reference)
-    $productIndex = $images.Count
+    $images = @($ReviewPhoto, $Reference)
+    $productIndex = 2
     $isObject = $context.presentation -and $context.presentation -ne 'worn'
-    $sceneBase = ''
-    $sceneInstruction = 'Image 1 also supplies the real setting. Preserve its compatible visible surroundings; do not invent a different location.'
     # A real logo is never reused: only where the product shows one, it becomes a fictional brand.
     $avoid = @($Brands.ToArray()) -join ', '
     $brandInstruction = @"
@@ -35,7 +36,7 @@ Target product: $($context.product).
 Image 1 is the REVIEW reference, supplying the existing presentation, people (if any) and surroundings. It does not define the target product's design.
 If people are visible, keep their identity, face and build recognizable. If no person is visible (for example, a folded shirt on a table), preserve that product presentation and visible surroundings; do not require or invent a model, and do not ask for another review photo.
 Keep the existing number of people, faces, bodies, poses, hands, held objects, supporting clothing, camera framing and background. Limit edits to the target garment and its local fabric lighting/occlusion; do not restage the scene.
-$sceneInstruction
+Image 1 also supplies the real setting. Preserve its compatible visible surroundings; do not invent a different location.
 Image $productIndex is the PRODUCT reference. It is separate from the review photo and exclusively controls the target item's design. Put this actual item on the existing person, or replace the reviewed item in its existing presentation when no person is shown.
 REPLACE THE EXISTING GARMENT, DO NOT ADD A PRODUCT PROP: when the review photo shows the target garment being worn, replace that garment in place with the product from image $productIndex. If several foreground subjects wear the same target garment type, replace it on EVERY such subject, not only one person. Leave unrelated background people and other garment types alone.
 The product reference may be flat, folded, isolated or a cutout; that is design evidence only. It must still be worn naturally by the existing wearers in image 1. Do not leave the old garment unchanged and place a separate copy beside the people.
@@ -52,8 +53,6 @@ Save a new PNG at this exact path: $output
 Do not modify any input file. Reply briefly in English.
 "@
     if ($isObject) {
-        if (-not $picked.Count) { throw 'A real-life reference is required for this product.' }
-        $sceneBase = $picked[0]
         $diningSeating = ''
         if ('dining-tables' -in @($context.source_categories)) {
             $diningSeating = @"
@@ -107,7 +106,7 @@ Do not modify any input file. Reply briefly in English.
     }
     $promptText += "`n" + (Get-ImageFeedbackGuidance $Context $script:Config.ActiveProductUrl)
     $promptText += "`nSINGLE-PASS DELIVERY: read the input references and applicable user feedback once, create ONE image, then return the PNG. The user performs visual review. Do not run visual QA, compare and score variants, invoke a reviewer, or regenerate an image to satisfy your own critique. The application handles file validation and direct export. Only an explicit user correction authorizes changing an already delivered result."
-    return [pscustomobject]@{ Images = $images; Prompt = $promptText; Output = $output; SceneBase = $sceneBase }
+    return [pscustomobject]@{ Images = $images; Prompt = $promptText; Output = $output }
 }
 
 function Invoke-ImageGeneration($Request, [string]$ItemId, [int]$Attempt, [string]$InterruptionReason) {
@@ -162,4 +161,37 @@ function Invoke-ImageGeneration($Request, [string]$ItemId, [int]$Attempt, [strin
         throw "$validationError Nguyên nhân chưa rõ, không có bằng chứng lỗi công cụ. [CAUSE:OUTPUT_INVALID] Details: $trace"
     }
     return $reply
+}
+
+# Deliver the first technically valid result.
+function Complete-ProductImage($Request, $Context, [string]$ItemId) {
+    $output = $Request.Output
+    Write-Host '  [IMAGE] Creating one complete scene...' -ForegroundColor Cyan
+    $interruption = ''
+    $maxAttempts=3
+    if($script:Config -and $script:Config.ContainsKey('ImageSubmissionAttempts')){$maxAttempts=[Math]::Max(1,[Math]::Min(5,[int]$script:Config.ImageSubmissionAttempts))}
+    for ($attempt = 1; $attempt -le $maxAttempts; $attempt++) {
+        Write-Host "  [IMAGE-ATTEMPT] $attempt/$maxAttempts" -ForegroundColor Cyan
+        try{$reply = Invoke-ImageGeneration $Request $ItemId $attempt $interruption}
+        catch{
+            if($_.Exception.Message -notmatch '\[CAUSE:(AI_TIMEOUT|NETWORK|BUSY)\]' -or $attempt -eq $maxAttempts){throw}
+            $cause=$Matches[1]
+            # Kept so a retried failure can still be looked into.
+            [IO.File]::WriteAllText((Join-Path $script:Batch.Logs "$ItemId-attempt-$attempt-error.txt"),$_.Exception.Message,[Text.UTF8Encoding]::new($false))
+            if(Test-Path -LiteralPath $Request.Output){Copy-Item -LiteralPath $Request.Output -Destination (Join-Path $script:Batch.Logs "$ItemId-attempt-$attempt-generated.png") -Force}
+            if(-not $interruption){$interruption="Previous generation interrupted ($cause); no complete image files were delivered."}
+            Write-Host "  [IMAGE-RETRY] $cause $($attempt+1)/$maxAttempts" -ForegroundColor Yellow
+            $delay=3;if($script:Config.ContainsKey('AiRetryDelaySeconds')){$delay=[Math]::Max(0,[int]$script:Config.AiRetryDelaySeconds)}
+            if($delay){Start-Sleep -Seconds $delay}
+            continue
+        }
+        Assert-GeneratedImage $output
+        # Only verified PNG delivery permits deleting this attempt's console trace.
+        $logName=if($attempt -eq 1){"$ItemId-image.txt"}else{"$ItemId-image-retry-$attempt.txt"}
+        Remove-Item -LiteralPath (Join-Path $script:Batch.Logs "$logName.console.log") -Force -ErrorAction SilentlyContinue
+        $status=[ordered]@{status='awaiting_user_review';ai_image_qa_performed=$false;generation_attempt=$attempt;output=$output}
+        [IO.File]::WriteAllText((Join-Path $script:Batch.Logs "$ItemId-review-status.json"),($status|ConvertTo-Json),[Text.UTF8Encoding]::new($false))
+        Write-Host '  [AWAITING-REVIEW] Image ready for user review.' -ForegroundColor Cyan
+        return $reply
+    }
 }

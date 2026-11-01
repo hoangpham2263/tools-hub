@@ -3,7 +3,6 @@
   "profiles": [
     {
       "id": "apron",
-      "pattern": "(?i)apron",
       "product": "bib apron",
       "details": "The apron itself: bib shape, neck strap, waist ties, front pockets, fabric color and embroidery. The white shirt underneath is not the product.",
       "branding": "Only if the product shows a logo: replace every real brand name, logo, wordmark, store mark and label from the product reference and source photos with one small fictional brand. Keep the product's own artwork, print, text design and colors; only the brand identity changes. Never add GOLF or unrelated sports branding.",
@@ -15,7 +14,6 @@
     },
     {
       "id": "hat",
-      "pattern": "(?i)hat|cap|beanie|visor",
       "product": "headwear",
       "details": "The actual hat crown, brim, panels, color and embroidery. The shirt is not the product.",
       "branding": "Only if the product shows a logo: replace every real brand name, logo, wordmark, store mark and label from the product reference and source photos with one small fictional brand. Keep the product's own artwork, print, text design and colors; only the brand identity changes.",
@@ -25,7 +23,6 @@
     },
     {
       "id": "hoodie",
-      "pattern": "(?i)hoodie|sweatshirt|t-shirt|tshirt|tee-shirt",
       "product": "casual top",
       "details": "The actual top neckline, hood if present, sleeves, color, print and embroidery.",
       "branding": "Only if the product shows a logo: replace every real brand name, logo, wordmark, store mark and label from the product reference and source photos with one small fictional brand. Keep the product's own artwork, print, text design and colors; only the brand identity changes.",
@@ -35,7 +32,6 @@
     },
     {
       "id": "golf",
-      "pattern": "(?i)golf",
       "product": "golf apparel",
       "details": "The target golf garment's actual colors, panels, collar, trim and visible pattern.",
       "branding": "Only if the product shows a logo: replace every real brand name, logo, wordmark, store mark and label from the product reference and source photos with one small fictional brand. Keep the product's own artwork, print, text design and colors; only the brand identity changes.",
@@ -46,7 +42,6 @@
     },
     {
       "id": "polo",
-      "pattern": "(?i)polo",
       "product": "polo shirt",
       "details": "The polo's color blocks, collar, placket, sleeve trim, piping and embroidery.",
       "branding": "Only if the product shows a logo: replace every real brand name, logo, wordmark, store mark and label from the product reference and source photos with one small fictional brand. Keep the product's own artwork, print, text design and colors; only the brand identity changes.",
@@ -56,7 +51,6 @@
     },
     {
       "id": "scrubs",
-      "pattern": "(?i)scrub|medical|nurs",
       "product": "medical workwear",
       "details": "The workwear's visible neckline, pockets, color and embroidery.",
       "branding": "Only if the product shows a logo: replace every real brand name, logo, wordmark, store mark and label from the product reference and source photos with one small fictional brand. Keep the product's own artwork, print, text design and colors; only the brand identity changes.",
@@ -66,7 +60,6 @@
     },
     {
       "id": "sport",
-      "pattern": "(?i)jersey|teamwear|athletic",
       "product": "sports jersey",
       "details": "The jersey's actual colors, panels, numbering, neckline and trim.",
       "branding": "Only if the product shows a logo: replace every real brand name, logo, wordmark, store mark and label from the product reference and source photos with one small fictional brand. Keep the product's own artwork, print, text design and colors; only the brand identity changes.",
@@ -77,7 +70,6 @@
     },
     {
       "id": "generic",
-      "pattern": ".*",
       "product": "unclassified product",
       "details": "Only the target product's visible design details, not an unrelated underlayer or accessory.",
       "branding": "Only if the product shows a logo: replace every real brand name, logo, wordmark, store mark and label from the product reference and source photos with one small fictional brand. Keep the product's own artwork, print, text design and colors; only the brand identity changes.",

@@ -60,10 +60,6 @@ function Get-UnsentRejectedSamples([string]$ProjectRoot) {
     return @(Get-ChildItem -LiteralPath $root -Directory | Where-Object { -not (Test-Path -LiteralPath (Join-Path $_.FullName '.sent')) } | Sort-Object LastWriteTime)
 }
 
-function Complete-RejectedSamples([string[]]$Folders) {
-    foreach ($folder in @($Folders)) { if (Test-Path -LiteralPath $folder) { [IO.File]::WriteAllText((Join-Path $folder '.sent'), (Get-Date).ToString('o')) } }
-}
-
 # Only after every image has a decision; only images marked ok go into the file.
 function Export-ReviewedCsv([string]$BatchDir) {
     $items = @(Get-BatchReview $BatchDir)

@@ -1,4 +1,4 @@
-. (Join-Path $PSScriptRoot 'helpers.ps1')
+﻿. (Join-Path $PSScriptRoot 'helpers.ps1')
 $ErrorActionPreference = 'Stop'
 $root = Split-Path $PSScriptRoot -Parent
 . (Join-Path $root 'src/bootstrap.ps1')
@@ -52,12 +52,11 @@ try {
     $script:Calls = 0; $script:Mode = 'empty'
     function Invoke-AI($PromptText, $Images, $ResultFile) {
         $script:Calls++
-        Assert ($PromptText -match 'Randomly selected writing reference from review-samples.jsonl' -and $PromptText -match 'curved legs') 'Actual review sample missing from prompt.'
-        Assert ($PromptText -match 'No exclamatory sentences' -and $PromptText -notmatch 'Optional writing nudge|Writing style direction|Aim for') 'Preset style or exclamatory guidance leaked into prompt.'
-        Assert ($PromptText -notmatch 'I like|I love' -and $PromptText -match 'Let the selected reference guide sentence length') 'Prompt primed a stock first-person opener instead of using the reference.'
-        Assert ($PromptText -match 'shared writing corpus across all products' -and $PromptText -match 'only the current photo supplies review content') 'Shared style reference must not supply product facts.'
-        Assert ($PromptText -match 'untrusted source data' -and $PromptText -match 'Do not copy their wording') 'Reference data constraints missing.'
-        Assert ($PromptText -match 'There is no required opening' -and $PromptText -match 'minor spelling or grammar slips are acceptable' -and $PromptText -notmatch 'Do not open with') 'Flexible writing guidance missing or contradicted.'
+        Assert ($PromptText -match 'Style reference, one random review' -and $PromptText -match 'curved legs') 'Actual review sample missing from prompt.'
+        Assert ($PromptText -match 'No exclamation marks' -and $PromptText -notmatch 'Optional writing nudge|Writing style direction|Aim for|review-samples.jsonl|preset style') 'Preset style, exclamatory guidance or selection details leaked into prompt.'
+        Assert ($PromptText -notmatch 'I like|I love' -and $PromptText -match 'Match its casualness, rhythm and approximate length only') 'Prompt primed a stock first-person opener instead of using the reference.'
+        Assert ($PromptText -match 'Only the photo supplies content' -and $PromptText -match 'untrusted text' -and $PromptText -match 'Do not copy its wording') 'Style reference must not supply product facts or wording.'
+        Assert ($PromptText -match 'No required opening' -and $PromptText -match 'minor spelling or grammar slips are fine' -and $PromptText -notmatch 'Do not open with') 'Flexible writing guidance missing or contradicted.'
         if ($script:Mode -eq 'always-bad') { return '' }
         if ($script:Calls -eq 1) {
             if ($script:Mode -eq 'copy') { return $samples[0].body }
@@ -65,20 +64,23 @@ try {
             return ''
         }
         Assert ($PromptText -match 'Inspection found:') 'Repair must include the concrete failure.'
+        # Each call is a fresh run or chat: the repair must carry the failed draft itself.
+        if ($script:Mode -eq 'exclamation') { Assert ($PromptText -match 'Your previous draft.*nice rounded edge!' -and $PromptText -match 'Rewrite that draft') 'Repair must include the failed draft.' }
+        if ($script:Mode -eq 'empty') { Assert ($PromptText -match 'previous reply was empty' -and $PromptText -notmatch 'Your previous draft') 'An empty reply has no draft to rewrite.' }
         return 'The pale grain is easy to see across the broad top.'
     }
-    $draft = New-Review 'https://example.test/table' 'table' 'photo.png' '001-table' $context
+    $draft = New-Review 'photo.png' '001-table' $context
     Assert ($script:Calls -eq 2 -and $draft -match '^The pale grain') 'Empty draft was not repaired.'
     $evidence = Get-Content (Join-Path $tempDir '001-table-review-sources.json') -Raw -Encoding UTF8 | ConvertFrom-Json
     Assert (@($evidence).Count -eq 1 -and $evidence[0].body -eq $samples[0].body -and ($evidence[0].PSObject.Properties.Name -join ',') -eq 'body') 'Selected writing text was not saved cleanly.'
     $script:Calls=0; $script:Mode='copy'
-    New-Review 'https://example.test/table' 'table' 'photo.png' '001-table' $context | Out-Null
+    New-Review 'photo.png' '001-table' $context | Out-Null
     Assert ($script:Calls -eq 2) 'Copied review was not repaired.'
     $script:Calls=0; $script:Mode='exclamation'
-    New-Review 'https://example.test/table' 'table' 'photo.png' '001-table' $context | Out-Null
+    New-Review 'photo.png' '001-table' $context | Out-Null
     Assert ($script:Calls -eq 2) 'Exclamation was not repaired.'
     $script:Calls=0; $script:Mode='always-bad'; $failed=$false
-    try { New-Review 'https://example.test/table' 'table' 'photo.png' '001-table' $context | Out-Null } catch {
+    try { New-Review 'photo.png' '001-table' $context | Out-Null } catch {
         if ($_.Exception.Message -notlike 'Review quality check failed:*') { throw }; $failed=$true
     }
     Assert ($failed -and $script:Calls -eq 2) 'Repeatedly invalid drafts must stop after one repair.'

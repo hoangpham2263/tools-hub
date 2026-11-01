@@ -2,19 +2,11 @@
     $data = Get-Content -LiteralPath $Path -Raw -Encoding UTF8 | ConvertFrom-Json
     if ($data.schema_version -ne 1 -or -not $data.profiles) { throw 'Invalid product context data.' }
     foreach ($profile in $data.profiles) {
-        foreach ($field in @('id', 'pattern', 'product', 'details', 'branding')) {
+        foreach ($field in @('id', 'product', 'details', 'branding')) {
             if (-not $profile.$field) { throw "Missing product context field: $field" }
         }
-        [void][regex]::new($profile.pattern)
     }
     return $data.profiles
-}
-
-function Get-ProductContext([string]$Handle) {
-    foreach ($profile in $script:Config.ProductContexts) {
-        if ($Handle -match $profile.pattern) { return $profile }
-    }
-    throw "No product context found: $Handle"
 }
 
 # Classify the actual image, not just keywords: a golf cart is not golf clothing.

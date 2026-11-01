@@ -1,4 +1,5 @@
-﻿# Checkpoint successful work before removing its URL from the queue.
+﻿# Step 5: results.json, the URL queue and the Loox file. Local only.
+# Checkpoint successful work before removing its URL from the queue.
 function Save-ProductCheckpoint($Results, $Result, $Completed, $Item, [string]$List, [bool]$UrlDone = $true) {
     Assert-PublicPhotoDelivery $Result
     $Results.Add($Result)

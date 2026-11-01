@@ -21,13 +21,13 @@ try{
     $script:Batch=@{Logs=$temp}
     $context=[pscustomobject]@{product='table';presentation='placed';source_categories=@('dining-tables')}
     function Invoke-AI {throw 'Attached photos must be used as they are, without AI checks.'}
-    $picked=@(Select-ProductReferences 'product.jpg' 'table' 'manual' $context)
+    $picked=@(Get-ReviewPhoto 'manual' $context)
     Assert ($picked.Count -eq 1 -and $picked[0] -eq $first.file) 'User-selected photo was not used directly.'
     $script:Config.ActiveProductUrl='https://example.test/p/unattached'
-    $rejected=$false;try{Select-ProductReferences 'product.jpg' 'table' 'missing-manual' $context|Out-Null}catch{$rejected=$true}
+    $rejected=$false;try{Get-ReviewPhoto 'missing-manual' $context|Out-Null}catch{$rejected=$true}
     Assert $rejected 'A product image without a review must stop.'
     [IO.File]::WriteAllText($first.file,'tampered snapshot');$script:Config.ActiveProductUrl=$url
-    $rejected=$false;try{Select-ProductReferences 'product.jpg' 'table' 'changed-manual' $context|Out-Null}catch{$rejected=$true}
+    $rejected=$false;try{Get-ReviewPhoto 'changed-manual' $context|Out-Null}catch{$rejected=$true}
     Assert $rejected 'Changed manual snapshot was used without verification.'
     Write-Host 'PASS: per-URL image snapshots, serialized worker inputs, strict explicit selection, and rejection without substitution.' -ForegroundColor Green
 }finally{

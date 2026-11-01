@@ -13,7 +13,7 @@ try{
     $context=[pscustomobject]@{product='table';presentation='placed';setting='bare room';details='solid slab legs';reject='new props';branding='none';source_categories=@('dining-tables')}
     $request=New-ProductImageRequest $raw '001-table' $context @($room) ([Collections.ArrayList]::new())
     Assert ($request.Prompt -match 'SINGLE-PASS DELIVERY' -and $request.Prompt -match 'DIRECT IMAGE DELIVERY') 'Direct image delivery instructions are missing.'
-    Assert (($request.PSObject.Properties.Name -join ',') -eq 'Images,Prompt,Output,SceneBase') 'Unexpected delivery request fields.'
+    Assert (($request.PSObject.Properties.Name -join ',') -eq 'Images,Prompt,Output') 'Unexpected delivery request fields.'
     Copy-Item -LiteralPath $raw -Destination (Join-Path $temp '001-table-attempt-1-generated.png')
     Copy-Item -LiteralPath $raw -Destination $request.Output
     'FAIL: old bench foot must be removed'|Set-Content (Join-Path $temp '001-table-quality-1.txt') -Encoding UTF8

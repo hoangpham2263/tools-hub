@@ -31,7 +31,8 @@ try{
     Assert ($unsent.Count -eq 1) 'Only unsent rejected samples belong to a report.'
     $note=Get-Content -LiteralPath (Join-Path $unsent[0].FullName 'sample.json') -Raw -Encoding UTF8 | ConvertFrom-Json
     Assert ($note.id -eq '002-tee' -and $note.reason -eq 'sai màu áo') 'The AI must be able to read the saved rejection reason.'
-    Complete-RejectedSamples @($unsent[0].FullName)
+    # support-report.mjs marks a sent sample with .sent.
+    [IO.File]::WriteAllText((Join-Path $unsent[0].FullName '.sent'), (Get-Date).ToString('o'))
     Assert (-not @(Get-UnsentRejectedSamples $project).Count) 'Samples sent once must not be sent again.'
     Set-BatchReviewDecision $temp '002-tee' bad $rejected
     Assert (-not (Test-Path (Join-Path $temp 'loox_import.csv'))) 'No Loox file may exist before the review is done.'

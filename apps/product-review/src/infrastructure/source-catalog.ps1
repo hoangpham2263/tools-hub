@@ -33,3 +33,24 @@ function Get-SourcePhotoDirectory([string]$SourceDir,[string]$Group) {
     New-Item -ItemType Directory -Path $path -Force|Out-Null
     return $path
 }
+
+# The Drive library on this machine (for the library picker and the reference archive).
+function Get-SourceCatalog([string]$SourceDir) {
+    $catalog = @{}
+    $hashes = @{}
+    foreach ($entry in @(Get-SampleCatalogEntries $SourceDir)) {
+        $root = [IO.Path]::GetFullPath($entry._root).TrimEnd('\', '/') + [IO.Path]::DirectorySeparatorChar
+
+        $full = [IO.Path]::GetFullPath((Join-Path $entry._root $entry.file))
+        if (-not $full.StartsWith($root, [StringComparison]::OrdinalIgnoreCase)) { throw 'Invalid source catalog path.' }
+        if ($catalog.ContainsKey($full)) {
+            throw 'Conflicting source catalog path.'
+        }
+        # Only the groups downloaded from Drive are on this machine.
+        if (-not (Test-Path -LiteralPath $full -PathType Leaf)) { continue }
+        if ($entry.sha256 -and $hashes.ContainsKey($entry.sha256)) { continue }
+        if ($entry.sha256) { $hashes[$entry.sha256] = $true }
+        $catalog[$full] = $entry
+    }
+    return $catalog
+}

@@ -1,6 +1,6 @@
 ﻿# The workflow's AI calls, through the hub's shared AI core (hub/ai/ai.ps1, loaded first by bootstrap.ps1).
 # Reads: $script:Config (TextBackend, Model, ReasoningEffort, timeouts), $script:Batch.Dir. Images from a web AI go
-# straight to Invoke-BrowserImage (workflow/steps/03-create-image.ps1); Codex makes the rest.
+# straight to Invoke-BrowserImage (workflow/steps/02-create-image.ps1); Codex makes the rest.
 
 # A text step (Sandbox read-only: the reply) or a Codex image (workspace-write: Codex saves the PNG the prompt names).
 function Invoke-AI([string]$PromptText, [string[]]$Images, [string]$ResultFile, [string]$Sandbox = 'read-only') {

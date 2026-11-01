@@ -12,9 +12,9 @@ function Invoke-ProductItem($Item, [string]$ItemId, $Brands) {
     $product = Read-ProductInput $Item $ItemId
     $download = $product.Reference
     try {
-        $picked = @(Select-ProductReferences $product.Reference $Item.Handle $ItemId $product.Context)
-        $request = New-ProductImageRequest $product.Reference $ItemId $product.Context $picked $Brands
-        $bundle = Save-ProductReferenceBundle $Item $ItemId $product.Context $request $picked.Count
+        $reviewPhoto = Get-ReviewPhoto $ItemId $product.Context
+        $request = New-ProductImageRequest $product.Reference $ItemId $product.Context $reviewPhoto $Brands
+        $bundle = Save-ProductReferenceBundle $Item $ItemId $product.Context $request
         $product.Reference = $bundle.ProductPath
         $reply = Complete-ProductImage $request $product.Context $ItemId
     } finally {
@@ -22,7 +22,7 @@ function Invoke-ProductItem($Item, [string]$ItemId, $Brands) {
         if ((Split-Path $download -Parent) -eq $script:Batch.Refs -and (Test-Path -LiteralPath $download)) { Remove-Item -LiteralPath $download -Force }
     }
     if ($reply -match '(?im)^BRAND:\s*(.+)$' -and $Matches[1].Trim() -notmatch '^(?i)none$') { [void]$Brands.Add($Matches[1].Trim()) }
-    $body = New-Review $Item.Url $Item.Handle $request.Output $ItemId $product.Context
+    $body = New-Review $request.Output $ItemId $product.Context
     # Local paths never stand in for failed uploads.
     $row=[pscustomobject][ordered]@{
         product_handle = $Item.Handle

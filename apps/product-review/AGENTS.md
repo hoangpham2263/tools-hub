@@ -84,9 +84,10 @@ CLI exit 0 không xác nhận công cụ tạo ảnh thành công. Giữ console
 
 - `src/application/agent-lessons.ps1`: đọc khối bài học trong file này.
 - `src/application/image-feedback.ps1`: lọc bài học theo URL/danh mục để đưa vào prompt.
-- `src/workflow/steps/02-select-references.ps1`: lấy ảnh review người dùng gắn (kiểm tra file/hash); danh mục kho ảnh trên máy.
-- `src/workflow/steps/03-create-image.ps1`: vai trò ảnh đầu vào và yêu cầu tạo ảnh.
-- `src/workflow/steps/04-complete-image.ps1`, `src/infrastructure/image-output.ps1`: xuất PNG và phục hồi lỗi kết nối.
+- `src/workflow/steps/01-load-inputs.ps1`: ảnh sản phẩm (gắn hoặc tải từ link), nhận diện bằng AI chữ, ảnh review người dùng gắn (kiểm tra file/hash).
+- `src/workflow/steps/02-create-image.ps1`, `src/infrastructure/image-output.ps1`: prompt và vai trò ảnh (ảnh 1 review, ảnh 2 sản phẩm), gọi AI ảnh, thử lại khi mất kết nối.
+- `src/workflow/steps/03-write-review.ps1`, `data/writing-style.json`: prompt viết review, câu mẫu ngẫu nhiên, kiểm tra và một lần sửa.
+- `src/workflow/steps/04-complete-metadata.ps1`, `05-export-results.ps1`: sao, tên, email, ngày; lưu kết quả và hàng đợi URL.
 - `src/application/reference-archive.ps1`: snapshot, nguồn và hash đầu vào.
 - `data/source-photos/catalog.json`: inventory và thông tin nguồn ảnh. Ảnh nằm trên Drive (tab Nguồn ảnh của trang quản lý), app tải theo nhóm về `data/source-photos/<nhóm>/`; không commit ảnh kho vào Git.
 - `src/infrastructure/ai.ps1` (`Invoke-AI`, nối cấu hình của tool với lõi chung `hub/ai`), `hub/ai/providers/browser.ps1`, `hub/extension/`, `hub/bridge/`: tạo ảnh qua tab Google Flow / ChatGPT, viết chữ qua Gemini web (ô Viết review / Tạo ảnh cạnh Bắt đầu → `-TextBackend` / `-ImageBackend`; Gemini thay Codex ở mọi bước chữ trong `Invoke-AI`). Không dùng API key; Gemini CLI không còn đăng nhập Google được. CLI dùng Antigravity (`agy`, `hub/ai/providers/antigravity.ps1`): prompt và ảnh vào một thư mục riêng vì agy chỉ nhận prompt qua `-p`. Không tự đổi AI: chạy lỗi với AI khác thì hỏi người dùng có chạy lại bằng Codex không. Chạy trong Chrome chính của máy (tab riêng, nhóm Tools Hub). Tab nền hay cửa sổ bị che thì trang không chạy: mỗi việc đưa tab của nó lên trước. Flow chỉ nhận cú bấm thật (`chrome.debugger`); sau khi tải ảnh tham khảo Flow vẽ lại ô nhập, phải tìm lại.

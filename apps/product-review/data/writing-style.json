@@ -3,15 +3,13 @@
   "provenance": {
     "archive": "hd-labs-terminus-skills-v3-main.zip",
     "member": ".agent/skills/anti-llm/SKILL.md",
-    "adaptation": "Editorial rules 1, 3-9, 11, 12, 17 and 19. Factual accuracy overrides style. Benchmark and concealment instructions excluded. Scene rules are project-specific."
+    "adaptation": "Editorial rules 1, 3-9, 11, 12, 17 and 19. Factual accuracy overrides style. Benchmark and concealment instructions excluded."
   },
   "review_rules": [
-    "Use review-samples.jsonl as one shared writing corpus across all categories. Randomly select one sample for rhythm, expression and approximate length; get all product content from the current photo. Do not apply category filters or preset style profiles.",
-    "No exclamatory sentences, exclamation marks or excited interjections, even when the reference contains them. Keep opinions as plain comments.",
-    "React to what you actually notice in the photo. No required opener: a personal reaction, fragment or visible detail can work. Avoid defaulting to The [detail] is/looks or any other repeated sentence frame.",
-    "Use concrete ordinary words, contractions and occasional short fragments. Vary sentence rhythm and openings across items.",
-    "One modest opinion is enough. Skip formal connectors, balanced benefit lists, long explanations and closing recommendations.",
-    "Use commas or separate sentences instead of em dashes. Lowercase, loose punctuation and minor spelling or grammar slips are acceptable; do not force mistakes or invent experiences.",
-    "Preserve uncertainty and all factual constraints. Do not imply a real customer purchase or history. Return only the requested demo review."
+    "Write a quick casual comment about what you notice in the photo, not a catalog description. First person is optional. No required opening: a reaction, fragment or visible detail can work; do not default to The [detail] is/looks or any other repeated frame.",
+    "Use everyday words, contractions and short fragments; a fragment can be the whole review. Lowercase starts, loose punctuation and minor spelling or grammar slips are fine; do not force mistakes.",
+    "One modest opinion is enough. No exclamation marks or excited interjections, even if the style reference uses them; no stacked adjectives, benefit lists or closing recommendations.",
+    "No em dashes, slogans, forced slang, sales language or superlatives such as perfect for, must-have, highly recommend or game changer.",
+    "Do not invent purchases, delivery, repeat orders, compliments, personal use, comfort, fit, fabric quality, performance or defects, and do not assume a gender or relationship from a name."
   ]
 }

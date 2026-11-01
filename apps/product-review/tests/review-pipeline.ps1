@@ -11,13 +11,12 @@ function Assert($Condition, [string]$Message) { if (-not $Condition) { throw $Me
 try {
     Copy-Item -LiteralPath (Join-Path $root 'src') -Destination $tempRoot -Recurse
     $lib = Join-Path $tempRoot 'src'
-    'function Get-Reference($Url, $ItemId) { $path = Join-Path $script:Batch.Refs "$ItemId.png"; "product" | Set-Content $path; return $path }' | Add-Content (Join-Path $lib 'workflow/steps/01-load-product.ps1')
+    'function Get-Reference($Url, $ItemId) { $path = Join-Path $script:Batch.Refs "$ItemId.png"; "product" | Set-Content $path; return $path }' | Add-Content (Join-Path $lib 'workflow/steps/01-load-inputs.ps1')
     $sources = Join-Path $tempRoot 'data/source-photos/polo-shirts'
     New-Item -ItemType Directory -Path $sources -Force | Out-Null
     $stock = Join-Path $tempRoot 'data/source-photos/outdoor-sports'
     $mixed = Join-Path $tempRoot 'data/source-photos/mixed'
     New-Item -ItemType Directory -Path $stock, $mixed -Force | Out-Null
-    Copy-Item -LiteralPath (Join-Path $root 'data/review-style.json') -Destination (Join-Path $tempRoot 'data/review-style.json')
     Copy-Item -LiteralPath (Join-Path $root 'data/product-contexts.json') -Destination (Join-Path $tempRoot 'data/product-contexts.json')
     Copy-Item -LiteralPath (Join-Path $root 'data/writing-style.json') -Destination (Join-Path $tempRoot 'data/writing-style.json')
     @(
@@ -26,7 +25,7 @@ try {
     ) | Set-Content (Join-Path $tempRoot 'data/review-samples.jsonl') -Encoding UTF8
     $fixtureContexts = Get-Content (Join-Path $tempRoot 'data/product-contexts.json') -Raw -Encoding UTF8 | ConvertFrom-Json
     $fixture = $fixtureContexts.profiles | Where-Object id -eq polo | ConvertTo-Json -Depth 8 | ConvertFrom-Json
-    $fixture.id = 'fixture'; $fixture.pattern = '^(one|two|fail)$'
+    $fixture.id = 'fixture'
     $fixture.source_categories = @('polo-shirts', 'outdoor-sports')
     $fixtureContexts.profiles = @($fixture) + @($fixtureContexts.profiles)
     $fixtureContexts | ConvertTo-Json -Depth 8 | Set-Content (Join-Path $tempRoot 'data/product-contexts.json') -Encoding UTF8
@@ -53,9 +52,9 @@ function Invoke-AI($PromptText, $Images, $ResultFile, $Sandbox) {
     if ($ResultFile -like '*-quality-*.txt') { throw 'Image QA must not run.' }
     if ($ResultFile -like '*-review.txt') {
         if ($Images.Count -ne 1 -or -not (Test-Path -LiteralPath $Images[0])) { throw 'Review missing finished image.' }
-        if ($PromptText -notmatch 'Randomly selected writing reference from review-samples.jsonl' -or $PromptText -match 'Optional writing nudge|Writing style direction') { throw 'Expected sample-based writing without preset profiles.' }
-        if ($PromptText -notmatch 'No exclamatory sentences' -or $PromptText -notmatch 'Do not invent purchases') { throw 'Missing plain-comment rules or factual constraints.' }
-        if ($PromptText -notmatch 'narrow collar trim|FURNITURE_STYLE_SAMPLE' -or $PromptText -notmatch 'only the current photo supplies review content') { throw 'Shared writing sample or product evidence boundary did not reach the parallel worker.' }
+        if ($PromptText -notmatch 'Style reference, one random review' -or $PromptText -match 'Optional writing nudge|Writing style direction') { throw 'Expected sample-based writing without preset profiles.' }
+        if ($PromptText -notmatch 'No exclamation marks' -or $PromptText -notmatch 'Do not invent purchases') { throw 'Missing plain-comment rules or factual constraints.' }
+        if ($PromptText -notmatch 'narrow collar trim|FURNITURE_STYLE_SAMPLE' -or $PromptText -notmatch 'Only the photo supplies content') { throw 'Shared writing sample or product evidence boundary did not reach the parallel worker.' }
         if ($ResultFile -like '*-fail-review.txt' -and -not (Test-Path (Join-Path $script:Config.SourceDir 'allow-review-success.flag'))) { throw 'Simulated review failure' }
         Start-Sleep -Milliseconds 500
         "The navy pattern is subtle.`nIt looks good with the shorts." | Set-Content -LiteralPath $ResultFile
@@ -133,13 +132,6 @@ function Invoke-AI($PromptText, $Images, $ResultFile, $Sandbox) {
     & (Join-Path $tempRoot 'src/run-images.ps1') -List $queue -LocalOnly -ReferenceMapFile $map
     Assert (@(Get-ChildItem (Join-Path $tempRoot 'workspace/output') -Directory).Count -eq 2) 'Empty queue must not create an extra batch.'
     . (Join-Path $root 'src/bootstrap.ps1')
-    $profiles = @(Get-ReviewStyleProfiles (Join-Path $root 'data/review-style.json'))
-    Assert ($profiles.Count -eq 8) 'Expected eight review style profiles.'
-    $styleData = Get-Content (Join-Path $root 'data/review-style.json') -Raw -Encoding UTF8 | ConvertFrom-Json
-    Assert ($styleData.statistics.reviews -eq $styleData.features.Count) 'Review feature count mismatch.'
-    Assert (@($styleData.features.text_sha256 | Sort-Object -Unique).Count -eq $styleData.features.Count) 'Duplicate review writing records.'
-    Assert (@($styleData.features | Where-Object { $_.source_url -isnot [string] -or $_.source_url -notmatch '^https://' -or -not $_.review_id }).Count -eq 0) 'Review feature provenance is invalid.'
-    Assert (@(Get-ReviewStyleProfiles (Join-Path $tempRoot 'missing-style.json')).Count -eq 0) 'Missing style data should allow fallback.'
     $namesPath = Join-Path $tempRoot 'names.txt'
     @('Example Name', '测试') | Set-Content $namesPath -Encoding UTF8
     Complete-ReviewMetadata $rows $namesPath

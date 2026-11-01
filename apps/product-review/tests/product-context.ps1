@@ -4,7 +4,7 @@ $root = Split-Path $PSScriptRoot -Parent
 . (Join-Path $root 'src/bootstrap.ps1')
 $tempDir = Join-Path $TestWorkspaceRoot ('product-context-test-' + [Guid]::NewGuid().ToString('N'))
 New-Item -ItemType Directory -Path $tempDir | Out-Null
-$script:Config = @{ ProductContexts = @(Get-ProductContexts (Join-Path $root 'data/product-contexts.json')); ReviewStyles = @() }
+$script:Config = @{ ProductContexts = @(Get-ProductContexts (Join-Path $root 'data/product-contexts.json')) }
 $script:Batch = @{ Dir = $tempDir; Images = $tempDir; Logs = $tempDir; Refs = (Join-Path $tempDir "refs") }
 $script:Config.SourceDir = $tempDir
 $script:Config.WritingStyle = Get-WritingStyle (Join-Path $root 'data/writing-style.json')
@@ -12,7 +12,7 @@ $script:Config.WritingStyle = Get-WritingStyle (Join-Path $root 'data/writing-st
 'person' | Set-Content (Join-Path $tempDir 'person.png')
 function Get-Reference($Url, $ItemId) { return (Join-Path $tempDir 'actual-product.png') }
 # The review photo the user attached to this product.
-function Select-ProductReferences($Reference, $Handle, $ItemId, $Context) { return (Join-Path $tempDir 'person.png') }
+function Get-ReviewPhoto($ItemId, $Context) { return (Join-Path $tempDir 'person.png') }
 function Invoke-AI($PromptText, $Images, $ResultFile, $Sandbox) {
     if ($ResultFile -like '*-context.txt') {
         if($script:Classification){return $script:Classification}
@@ -33,7 +33,6 @@ function Invoke-AI($PromptText, $Images, $ResultFile, $Sandbox) {
     return 'BRAND: Cedar Kitchen'
 }
 try {
-    if ((Get-ProductContext 'custom-bib-apron').id -ne 'apron' -or (Get-ProductContext 'bulk-polo-shirt').id -ne 'polo' -or (Get-ProductContext 'golf-polo').id -ne 'golf') { throw 'Incorrect product classification.' }
     $item = [pscustomobject]@{ Handle = 'custom-bib-apron'; Url = 'https://example.test/apron' }
     $brands = [Collections.ArrayList]::Synchronized((New-Object Collections.ArrayList))
     $script:QualityCalls = 0; $script:ImageCalls = 0; $script:AlwaysFail = $false

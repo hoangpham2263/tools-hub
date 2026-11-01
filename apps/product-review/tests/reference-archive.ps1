@@ -13,19 +13,17 @@ try {
     @{ schema_version = 1; photos = @(@{ file = 'aprons/person.png'; category = 'aprons'; source_kind = 'web_listing'; source_page = 'https://example.test/gallery'; sha256 = $hash }) } |
         ConvertTo-Json -Depth 5 | Set-Content (Join-Path $sources 'catalog.json') -Encoding UTF8
     $product = Join-Path $fixture 'product.png'
-    $style = Join-Path $fixture 'style.png'
     [IO.File]::WriteAllBytes($product, [byte[]](4,5,6))
-    [IO.File]::WriteAllBytes($style, [byte[]](7,8,9))
     $script:Config = @{ SourceDir = $sources }
     $script:Batch = New-Batch (Join-Path $fixture 'output')
-    $request = [pscustomobject]@{ Images = @($source, $product, $style); Output = Join-Path $script:Batch.Images '001-apron.png' }
+    $request = [pscustomobject]@{ Images = @($source, $product); Output = Join-Path $script:Batch.Images '001-apron.png' }
     $item = [pscustomobject]@{ Url = 'https://example.test/product' }
     $context = [pscustomobject]@{ product = 'Apron <script>alert(1)</script>'; presentation = 'worn' }
-    $bundle = Save-ProductReferenceBundle $item '001-apron' $context $request 1
+    $bundle = Save-ProductReferenceBundle $item '001-apron' $context $request
     $manifest = Get-Content (Join-Path $bundle.Folder 'manifest.json') -Raw | ConvertFrom-Json
-    Assert (($manifest.images.role -join ',') -eq 'subject,product,style') 'Archived input roles or order changed.'
+    Assert (($manifest.images.role -join ',') -eq 'subject,product') 'Archived input roles or order changed.'
     Assert ($manifest.images[0].source_page -eq 'https://example.test/gallery') 'Source provenance was lost.'
-    Assert ($request.Images.Count -eq 3 -and $request.Images[1] -eq $bundle.ProductPath) 'Generation did not switch to archived inputs.'
+    Assert ($request.Images.Count -eq 2 -and $request.Images[1] -eq $bundle.ProductPath) 'Generation did not switch to archived inputs.'
     foreach ($entry in $manifest.images) {
         $copy = Join-Path $bundle.Folder $entry.file
         Assert ((Get-BytesHash ([IO.File]::ReadAllBytes($copy))) -eq $entry.sha256) 'Archived bytes differ from recorded input.'
@@ -36,7 +34,7 @@ try {
     [IO.File]::WriteAllBytes($request.Output, [byte[]](9,9,9))
     Assert (-not @(Get-ChildItem $script:Batch.Dir -Recurse -Filter '*.html')) 'Batch must not contain HTML galleries.'
     $blocked = $false
-    try { Save-ProductReferenceBundle $item '001-apron' $context $request 1 | Out-Null } catch { $blocked = $true }
+    try { Save-ProductReferenceBundle $item '001-apron' $context $request | Out-Null } catch { $blocked = $true }
     Assert $blocked 'Existing snapshots were overwritten.'
     Write-Host 'PASS: exact archived inputs, input roles, source provenance, immutable copies and no HTML output.'
 } finally {

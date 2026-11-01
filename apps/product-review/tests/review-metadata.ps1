@@ -1,7 +1,7 @@
-. (Join-Path $PSScriptRoot 'helpers.ps1')
+﻿. (Join-Path $PSScriptRoot 'helpers.ps1')
 $ErrorActionPreference = 'Stop'
 $root = Split-Path $PSScriptRoot -Parent
-. (Join-Path $root 'src/workflow/steps/06-complete-metadata.ps1')
+. (Join-Path $root 'src/workflow/steps/04-complete-metadata.ps1')
 function Assert($Condition, [string]$Message) { if (-not $Condition) { throw $Message } }
 $ratings = @(0..99 | ForEach-Object { Get-SampleReviewRating -Draw $_ })
 Assert (@($ratings | Where-Object { $_ -eq 5 }).Count -eq 55) 'Expected 55 draws out of 100 to yield five stars.'

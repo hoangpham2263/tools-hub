@@ -1,6 +1,6 @@
 ﻿$ErrorActionPreference = 'Stop'
 $root = Split-Path $PSScriptRoot -Parent
-. (Join-Path $root 'src/workflow/steps/01-load-product.ps1')
+. (Join-Path $root 'src/workflow/steps/01-load-inputs.ps1')
 function Assert($Condition, [string]$Message) { if (-not $Condition) { throw $Message } }
 $script:Downloads = 0
 $script:TestHtml = '<link href="https://shop.example/password" rel="canonical"><meta property="og:image" content="https://shop.example/logo.jpg">'

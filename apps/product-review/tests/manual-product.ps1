@@ -23,7 +23,7 @@ try{
     $item=[pscustomobject]@{Url=$url;Handle='draft-shirt'}
     $product=Read-ProductInput $item '001-draft'
     Assert ((Test-Path $product.Reference) -and $product.Reference -ne $photo) 'Manual product was not snapshotted.'
-    $scene=@(Select-ProductReferences $product.Reference $item.Handle '001-draft' $product.Context)
+    $scene=@(Get-ReviewPhoto '001-draft' $product.Context)
     Assert ($scene.Count -eq 1 -and $scene[0] -eq $script:Config.ManualReferences.entries[0].file) 'Product and scene roles were confused.'
     $request=New-ProductImageRequest $product.Reference '001-draft' $product.Context $scene ([Collections.ArrayList]::new())
     Assert ($request.Images.Count -eq 2 -and $request.Images[0] -eq $scene[0] -and $request.Images[1] -eq $product.Reference) 'Review, product and style inputs were mixed.'
@@ -32,7 +32,7 @@ try{
     $script:Config.AgentInstructionsPath=Join-Path $root 'AGENTS.md'
     $lesson=Get-ImageFeedbackGuidance ([pscustomobject]@{source_categories=@('polo-shirts')}) $url
     Assert ($lesson -match 'Thay áo đang mặc' -and $lesson -match 'Không giữ áo cũ') 'Scoped polo feedback does not reach image generation.'
-    $bundle=Save-ProductReferenceBundle $item '001-archive' $product.Context $request 1
+    $bundle=Save-ProductReferenceBundle $item '001-archive' $product.Context $request
     $manifest=Get-Content (Join-Path $bundle.Folder 'manifest.json') -Raw -Encoding UTF8|ConvertFrom-Json
     Assert ($manifest.images[1].source_kind -eq 'user_product' -and $manifest.images[1].sha256 -eq $script:Config.ManualReferences.entries[0].product_sha256) 'Manual product provenance or snapshot hash was lost.'
     Assert ($manifest.images[0].sha256 -ne $manifest.images[1].sha256) 'Product and review snapshots must remain separate.'
@@ -45,7 +45,7 @@ try{
     foreach($job in $jobs){
         $index++;$script:Config.ActiveScene=$job.Scene
         $loaded=Read-ProductInput $job ('multi-'+$index)
-        $picked=@(Select-ProductReferences $loaded.Reference $job.Handle ('multi-'+$index) $loaded.Context)
+        $picked=@(Get-ReviewPhoto ('multi-'+$index) $loaded.Context)
         $pair=New-ProductImageRequest $loaded.Reference ('multi-'+$index) $loaded.Context $picked ([Collections.ArrayList]::new())
         Assert ($pair.Images.Count -eq 2 -and (Get-BytesHash ([IO.File]::ReadAllBytes($pair.Images[0]))) -eq $job.Scene.sha256 -and (Get-BytesHash ([IO.File]::ReadAllBytes($pair.Images[1]))) -eq $map.entries[0].product_sha256) 'A job mixed review photos or replaced the actual product.'
     }

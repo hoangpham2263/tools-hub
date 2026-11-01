@@ -12,7 +12,7 @@ function Test-ObjectEdit {
     $selected = @('attached-review.jpg')
     $tableRequest = New-ProductImageRequest 'product.jpg' 'one-room' $object $selected ([Collections.ArrayList]::new())
     Assert ($tableRequest.Prompt -match 'A photo watermark is not a product logo' -and $tableRequest.Prompt -match 'Do not replace them with fictional branding' -and $tableRequest.Prompt -match 'unbranded table.*BRAND: none') 'Object generation must remove watermarks without inventing furniture branding.'
-    Assert ($tableRequest.Prompt -match 'IMMUTABLE BASE PHOTO' -and $tableRequest.Prompt -match 'never return image 2 or its setting' -and $tableRequest.Prompt -match 'DIRECT IMAGE DELIVERY' -and $tableRequest.Prompt -match 'Do not relight, recolor' -and $tableRequest.SceneBase -eq $selected[0]) 'Object generation must directly deliver its edit of the base photo, never the product photo.'
+    Assert ($tableRequest.Prompt -match 'IMMUTABLE BASE PHOTO' -and $tableRequest.Prompt -match 'never return image 2 or its setting' -and $tableRequest.Prompt -match 'DIRECT IMAGE DELIVERY' -and $tableRequest.Prompt -match 'Do not relight, recolor') 'Object generation must directly deliver its edit of the base photo, never the product photo.'
     Assert ($tableRequest.Prompt -notmatch 'Appropriate context:|Reject:') 'Scene-picking context must not reach the prompt; the attached photo is the scene.'
     Assert ($tableRequest.Prompt -notmatch 'standing height|off-center framing|do not inherit its professional lighting') 'Old restyling instructions conflict with the locked room.'
     Assert ($tableRequest.Prompt -match 'Do not bleach, desaturate or restain') 'Direct furniture edits must preserve intrinsic wood color.'
