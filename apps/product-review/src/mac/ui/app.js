@@ -105,7 +105,7 @@ function shortUrl(link) {
   const parts = u.pathname.split("/").filter(Boolean);
   if (!parts.length) return site;
   let name = decodeURIComponent(parts.at(-1)).replace(/\.(html?|php|aspx?)$/, "");
-  if (name.length > 48) name = name.slice(0, 47) + "…";
+  if (name.length > 32) name = name.slice(0, 31) + "…";
   return `${site} › ${name}`;
 }
 
@@ -340,21 +340,26 @@ function rowStatus(row) {
   if (scenes.length) return { text: products.length > 1 ? `● ${products.length} mẫu · ${scenes.length} ảnh` : scenes.length > 1 ? `● ${scenes.length} ảnh` : "● Đã có ảnh", color: "var(--ok)", image };
   return row.url.trim() ? { text: "● Chưa có ảnh", color: "var(--warn)", image: "" } : { text: "Chưa có link", color: "var(--muted)", image: "" };
 }
+// Each row's status label, so a run can update it without rebuilding the row (a rebuild reloads every thumbnail).
+let statusOf = new WeakMap();
 function renderRows() {
+  statusOf = new WeakMap();
   const width = Math.max(700, ui.flow.clientWidth - 40);
   ui.flow.replaceChildren(...state.rows.map((row, i) => {
     const card = el("div", "qrow", { style: { width: width + "px" } });
     const st = row.stage ? { text: row.stage.text, color: row.stage.color } : rowStatus(row);
     const pic = at(picture(), width - 192, 8, 44, 44);
     pic.set(rowStatus(row).image);
-    const status = at(label(st.text), width - 340, 19, 140, 24);
+    // Wide enough for the longest stage ("◔ Đang tạo ảnh, lượt gửi 1/3").
+    const status = at(label(st.text), width - 430, 19, 230, 24);
     status.style.color = st.color;
     status.style.lineHeight = "24px";
+    statusOf.set(row, status);
     const open = at(button("Xem / sửa"), width - 136, 12, 90, 34);
     const remove = at(button("×"), width - 40, 12, 32, 34);
     remove.title = "Xóa sản phẩm";
     // Shown short ("shop.com › product-name"); the full link on hover.
-    const url = at(el("div", "text plain", { text: shortUrl(row.url) }), 52, 20, width - 397, 22);
+    const url = at(el("div", "text plain", { text: shortUrl(row.url) }), 52, 20, width - 487, 22);
     Object.assign(url.style, { lineHeight: "20px", textOverflow: "ellipsis" });
     url.title = row.url.trim();
     card.append(at(label("#" + (i + 1), "muted"), 10, 19, 40, 22), url, status, pic, open, remove);
@@ -1025,7 +1030,13 @@ function updateRunDisplay() {
     const done = value === "Đã xong";
     row.stage = { text: done ? "✔ Đã xong" : `◔ ${value}`, color: done ? "var(--ok)" : "var(--accent)" };
   }
-  renderRows();
+  // Only the status labels change during a run; a row drawn before the run started is rebuilt once.
+  if (state.rows.some((row) => !statusOf.get(row)?.isConnected)) return renderRows();
+  for (const row of state.rows) {
+    const status = statusOf.get(row), st = row.stage || rowStatus(row);
+    if (status.textContent !== st.text) status.textContent = st.text;
+    status.style.color = st.color;
+  }
 }
 const usage = { quota: "Hạn mức: đang lấy…", at: 0, reading: false };
 const formatCount = (n) => Number(n).toLocaleString("vi-VN");
