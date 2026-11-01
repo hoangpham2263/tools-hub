@@ -2,7 +2,7 @@
 
 Đọc trước khi sửa repo. Mỗi tool có hướng dẫn và bài học riêng ở `apps/<tool>/AGENTS.md`; khi sửa một tool, đọc file đó.
 
-- `hub/`: dùng chung cho mọi tool (launcher, cập nhật, dọn cấu trúc cũ). Tool không gọi sang tool khác; phần dùng chung đưa vào `hub/`.
+- `hub/`: dùng chung cho mọi tool (launcher, cập nhật, dọn cấu trúc cũ, extension Chrome `hub/extension` tên Tools Hub). Tool không gọi sang tool khác; phần dùng chung đưa vào `hub/`.
 - Cấu hình dùng chung (mật khẩu app Drive, Model AI, cài Node/Codex, đăng nhập ChatGPT) nằm ở `hub/setup/`, lưu ở `workspace/config/` của hub; nút **Cấu hình** cạnh **Cập nhật** ở menu và mỗi tool. Tool đọc qua `Get-SharedConfigPath`, không tự lưu bản riêng.
 - `apps/<id>/`: một tool tự đủ: `tool.json`, `src/`, `data/`, `tests/`, `docs/`, `AGENTS.md`, `workspace/` (Git bỏ qua). Đường dẫn trong tool tính từ thư mục tool; gốc hub là `../..` (`Get-HubRoot`).
 - `tool.json` khai báo `id`, `name`, `description`, `icon` và trang `web` hoặc máy chủ `mac` (Node). Mỗi tool một icon riêng.

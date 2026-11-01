@@ -1,5 +1,5 @@
-// The tools' own Chrome: Chrome for Testing in <hub>/workspace/browser, its own profile, every tool's extension
-// (apps/*/extension) loaded. Signed in once from Cấu hình (Mở: Google Flow, Gemini, ChatGPT) in a window; runs then start it
+// The tools' own Chrome: Chrome for Testing in <hub>/workspace/browser, its own profile, the Tools Hub extension
+// (hub/extension) loaded. Signed in once from Cấu hình (Mở: Google Flow, Gemini, ChatGPT) in a window; runs then start it
 // with no window at all (headless), so the user's own Chrome is never needed. A minimized window would not do: its
 // pages drop the extension's clicks.
 //   node hub/browser.mjs login   download it the first time, open it in a window with the sites to sign in to
@@ -50,8 +50,8 @@ async function download() {
 
 const devtools = (path, method = "GET") => fetch(`http://127.0.0.1:${PORT}${path}`, { method }).then((r) => r.json());
 const running = () => devtools("/json/version").then(() => true, () => false);
-const extensions = () => readdirSync(join(root, "apps"), { withFileTypes: true })
-  .map((d) => join(root, "apps", d.name, "extension")).filter((e) => existsSync(join(e, "manifest.json")));
+// The Tools Hub extension (hub/extension), shared by every tool.
+const extensions = () => [join(root, "hub", "extension")];
 
 // The cookies of every site in its profile, read through DevTools.
 async function cookies() {

@@ -1,4 +1,4 @@
-﻿# Image generation through the signed-in ChatGPT / Google Flow tab (bridge/ + extension/).
+﻿# Image generation through the signed-in ChatGPT / Google Flow tab (bridge/ + hub/extension/).
 $script:BridgeUrl = 'http://127.0.0.1:8765'
 $script:BridgeProjectRoot = Split-Path (Split-Path $PSScriptRoot -Parent) -Parent
 
@@ -12,7 +12,7 @@ function Test-ImageBridge {
 }
 
 # After Cập nhật the bridge and the extension still run the old files: a bridge started on an older server.mjs is
-# stopped (Start-ImageBridge starts it again), an extension of another version than extension/manifest.json reloads.
+# stopped (Start-ImageBridge starts it again), an extension of another version than hub/extension/manifest.json reloads.
 function Stop-StaleImageBridge([string]$ProjectRoot) {
     $status = Get-ImageBridgeStatus
     if ($null -eq $status) { return }
@@ -31,7 +31,7 @@ function Stop-StaleImageBridge([string]$ProjectRoot) {
 function Update-ImageBridgeExtension([string]$ProjectRoot) {
     $status = Get-ImageBridgeStatus
     if ($null -eq $status) { return }
-    $version = [string](Get-Content -LiteralPath (Join-Path $ProjectRoot 'extension/manifest.json') -Raw -Encoding UTF8 | ConvertFrom-Json).version
+    $version = [string](Get-Content -LiteralPath (Join-Path (Get-HubRoot $ProjectRoot) 'hub/extension/manifest.json') -Raw -Encoding UTF8 | ConvertFrom-Json).version
     if ($status.extension -and $status.extensionVersion -and $status.extensionVersion -ne $version) {
         try { Invoke-RestMethod -Method Post -Uri "$script:BridgeUrl/reload" -TimeoutSec 3 | Out-Null } catch {}
         for ($i = 0; $i -lt 40; $i++) {

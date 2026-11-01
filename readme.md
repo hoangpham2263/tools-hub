@@ -73,7 +73,8 @@ Trên Drive, mỗi tool có một thư mục trong `Tools Hub/`; Product Review 
 start-app.cmd / start-app.command   mở Tools Hub
 hub/                launcher (chọn tool), cập nhật, dọn cấu trúc cũ
 apps/<tool>/        một tool: tool.json, src/, data/, tests/, docs/, AGENTS.md, workspace/ (không lên Git)
-apps/product-review/bridge, extension   tạo ảnh qua tab ChatGPT / Google Flow (tuỳ chọn)
+hub/extension       extension Tools Hub (dùng chung): làm việc trong tab Google Flow, Gemini, ChatGPT
+apps/product-review/bridge   cầu nối local giữa Product Review và extension
 hub/browser.mjs     Chrome riêng của tool (workspace/browser): đăng nhập một lần từ Cấu hình, lúc chạy mở ẩn
 worker/             Cloudflare Worker tools-hub-api (Drive); legacy-redirect/ giữ địa chỉ cũ
 docs/               trang quản lý (GitHub Pages) và tài liệu API
