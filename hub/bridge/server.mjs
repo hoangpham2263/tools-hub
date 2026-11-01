@@ -21,7 +21,9 @@ const chosenGoogleAccount = () => { try { return String(JSON.parse(readFileSync(
 
 // When this file was last changed, as the running bridge loaded it: after an update the app sees an older one and
 // restarts it (POST /quit; ensure.mjs).
-const code = Math.floor(statSync(fileURLToPath(import.meta.url)).mtimeMs);
+// Which file that is: ensure.mjs of another copy of the hub (a git checkout, its tests) leaves it running.
+const serverFile = fileURLToPath(import.meta.url);
+const code = Math.floor(statSync(serverFile).mtimeMs);
 
 // What the extension reports while it works, with the time: <hub>/workspace/logs/bridge.log (started again once over
 // 1 MB), as the bridge runs detached with no output of its own.
@@ -34,7 +36,21 @@ function log(line) {
   } catch {}
 }
 
-export function createBridge({ fetchImpl = fetch, googleAccount = chosenGoogleAccount, quit = () => process.exit(0), queueMs = 30 * 60000 } = {}) {
+// Every job the extension ran, one JSON line in <hub>/workspace/logs/ai-usage.jsonl, beside the CLI calls hub/ai
+// records (Cấu hình → Lượt dùng AI): with the account it ran with and, when it failed, what stopped it.
+const usageFile = join(dirname(fileURLToPath(import.meta.url)), "..", "..", "workspace", "logs", "ai-usage.jsonl");
+const KIND = { gemini: "text", flow: "image", chatgpt: "image" };
+export function causeOf(error) {
+  const text = String(error || "");
+  if (/quota|limit|hết lượt|giới hạn|429|too many/i.test(text)) return "QUOTA";
+  if (/Hết thời gian|timeout/i.test(text)) return "AI_TIMEOUT";
+  if (/đăng nhập|sign.?in|log.?in/i.test(text)) return "AUTH";
+  if (/Extension|Google Flow của tài khoản đang chọn/i.test(text)) return "BRIDGE";
+  return "BUSY";
+}
+
+export function createBridge({ fetchImpl = fetch, googleAccount = chosenGoogleAccount, quit = () => process.exit(0), queueMs = 30 * 60000, usage = usageFile } = {}) {
+  const record = (entry) => { try { mkdirSync(dirname(usage), { recursive: true }); appendFileSync(usage, JSON.stringify({ t: new Date().toISOString(), ...entry }) + "\n"); } catch {} };
   let extension = null, extensionVersion = "";
   const pending = new Map();
   // Jobs waiting to be sent, and whether one is with the extension now.
@@ -66,7 +82,7 @@ export function createBridge({ fetchImpl = fetch, googleAccount = chosenGoogleAc
   const server = createServer(async (req, res) => {
     const send = (status, body) => { res.writeHead(status, { "content-type": "application/json; charset=utf-8" }); res.end(JSON.stringify(body)); };
     try {
-      if (req.method === "GET" && req.url === "/status") return send(200, { extension: !!extension, extensionVersion: extension ? extensionVersion : "", code, pid: process.pid, jobs: jobs() });
+      if (req.method === "GET" && req.url === "/status") return send(200, { extension: !!extension, extensionVersion: extension ? extensionVersion : "", code, server: serverFile, pid: process.pid, jobs: jobs() });
       if (req.method === "POST" && req.url === "/quit") { send(200, { ok: true }); return setTimeout(quit, 100); }
       if (req.method === "POST" && req.url === "/reload") {
         if (!extension) return send(503, { error: "Extension chưa kết nối." });
@@ -113,10 +129,15 @@ export function createBridge({ fetchImpl = fetch, googleAccount = chosenGoogleAc
       const timeoutSec = Number(job.timeoutSec || 600);
       const account = job.platform === "chatgpt" ? "" : googleAccount();
       if (jobs()) log(`${job.platform} job waits for ${jobs()} before it`);
-      const result = await inTurn(() => {
-        if (!extension) return Promise.resolve({ ok: false, error: "Extension chưa kết nối. Mở Chrome có cài extension Tools Hub." });
+      const result = await inTurn(async () => {
+        if (!extension) return { ok: false, error: "Extension chưa kết nối. Mở Chrome có cài extension Tools Hub." };
         log(`${job.platform} job sent`);
-        return ask({ type: "generate", platform: job.platform, prompt: job.prompt, images, timeoutSec, account }, (timeoutSec + 60) * 1000);
+        const started = Date.now();
+        const done = await ask({ type: "generate", platform: job.platform, prompt: job.prompt, images, timeoutSec, account }, (timeoutSec + 60) * 1000)
+          .catch((error) => ({ ok: false, error: error.message === "timeout" ? `Hết thời gian chờ (${timeoutSec + 60}s)` : String(error.message || error), thrown: error }));
+        record({ ai: job.platform, kind: KIND[job.platform], account, ok: !!done.ok, ...(done.ok ? {} : { cause: causeOf(done.error) }), ms: Date.now() - started });
+        if (done.thrown) throw done.thrown;
+        return done;
       });
       if (!result.ok) return send(502, { error: result.error });
       // Text replies (Gemini) are written as UTF-8 text.

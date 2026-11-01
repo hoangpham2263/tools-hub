@@ -4,10 +4,11 @@ import { mkdtemp, writeFile, readFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import WebSocket from "ws";
-import { createBridge } from "./server.mjs";
+import { causeOf, createBridge } from "./server.mjs";
 
+const usage = join(await mkdtemp(join(tmpdir(), "bridge-usage-")), "ai-usage.jsonl");
 async function start(fetchImpl, googleAccount = () => "") {
-  const server = createBridge({ fetchImpl, googleAccount });
+  const server = createBridge({ fetchImpl, googleAccount, usage });
   await new Promise((resolve) => server.listen(0, "127.0.0.1", resolve));
   return { server, base: `http://127.0.0.1:${server.address().port}`, ws: `ws://127.0.0.1:${server.address().port}` };
 }
@@ -103,7 +104,7 @@ test("sends one job at a time and starts a session only when no job waits", asyn
 });
 
 test("a job that waits too long for its turn says so", async () => {
-  const server = createBridge({ queueMs: 50 });
+  const server = createBridge({ queueMs: 50, usage });
   await new Promise((resolve) => server.listen(0, "127.0.0.1", resolve));
   const base = `http://127.0.0.1:${server.address().port}`;
   const socket = new WebSocket(`ws://127.0.0.1:${server.address().port}`, { origin: "chrome-extension://test" });
@@ -116,4 +117,17 @@ test("a job that waits too long for its turn says so", async () => {
   assert.equal(second.status, 504);
   assert.match((await second.json()).error, /chờ đến lượt/);
   first.catch(() => {}); socket.close(); server.closeAllConnections(); server.close();
+});
+
+test("every job is counted with its account, and a failure with its cause", async () => {
+  const { server, base, ws } = await start(undefined, () => "second@gmail.com");
+  const dir = await mkdtemp(join(tmpdir(), "bridge-"));
+  const before = await readFile(usage, "utf8").catch(() => "");
+  const socket = await fakeExtension(ws, (job) => (job.platform === "flow" ? { ok: false, error: "Flow: You've reached your daily limit" } : { ok: true, text: "t" }));
+  for (const platform of ["gemini", "flow"]) await fetch(`${base}/generate`, { method: "POST", body: JSON.stringify({ platform, prompt: "p", output: join(dir, platform) }) });
+  const lines = (await readFile(usage, "utf8")).slice(before.length).trim().split("\n").map((l) => JSON.parse(l));
+  assert.deepEqual(lines.map((l) => [l.ai, l.kind, l.account, l.ok, l.cause]), [["gemini", "text", "second@gmail.com", true, undefined], ["flow", "image", "second@gmail.com", false, "QUOTA"]]);
+  assert.equal(causeOf("Hết thời gian chờ: Flow tạo ảnh"), "AI_TIMEOUT");
+  assert.equal(causeOf("ChatGPT chưa đăng nhập."), "AUTH");
+  socket.close(); server.close();
 });

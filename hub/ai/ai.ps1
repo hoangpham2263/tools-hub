@@ -9,6 +9,23 @@
 . (Join-Path $PSScriptRoot 'providers/antigravity.ps1')
 . (Join-Path $PSScriptRoot 'providers/browser.ps1')
 
+# Every call, one JSON line in <hub>/workspace/logs/ai-usage.jsonl (Cấu hình → Lượt dùng AI): the CLIs here, the web
+# AIs in hub/bridge/server.mjs (which knows the Google account a job ran with). Tests point HUB_AI_USAGE_FILE elsewhere.
+$script:HubAIUsageFile = if ($env:HUB_AI_USAGE_FILE) { $env:HUB_AI_USAGE_FILE } else { Join-Path (Split-Path (Split-Path $PSScriptRoot -Parent) -Parent) 'workspace/logs/ai-usage.jsonl' }
+function Add-HubAIUsage([string]$Ai, [string]$Kind, [string]$Account, [bool]$Ok, [string]$Cause = '', [int]$Ms = 0, $Tokens = $null) {
+    $entry = [ordered]@{ t = [DateTime]::UtcNow.ToString('o'); ai = $Ai; kind = $Kind; account = $Account; ok = $Ok; ms = $Ms }
+    if ($Cause) { $entry.cause = $Cause }
+    if ($Tokens) { $entry.in = [long]$Tokens.Input; $entry.cached = [long]$Tokens.Cached; $entry.out = [long]$Tokens.Output }
+    $line = (ConvertTo-Json -InputObject $entry -Compress) + "`n"
+    # Parallel workers append to the same file: one at a time, and never fail a call over it.
+    for ($i = 0; $i -lt 20; $i++) {
+        try {
+            New-Item -ItemType Directory -Force -Path (Split-Path $script:HubAIUsageFile -Parent) | Out-Null
+            [IO.File]::AppendAllText($script:HubAIUsageFile, $line, [Text.UTF8Encoding]::new($false)); return
+        } catch [IO.IOException] { Start-Sleep -Milliseconds 50 } catch { return }
+    }
+}
+
 $script:HubAIProviders = [ordered]@{
     codex = [pscustomobject]@{ Name = 'Codex CLI'; Via = 'cli'; Kinds = @('text', 'image') }
     gemini = [pscustomobject]@{ Name = 'Gemini web'; Via = 'browser'; Kinds = @('text') }
@@ -46,6 +63,23 @@ function Invoke-HubAI {
     $provider = Get-HubAIProvider $Ai
     if ($provider.Kinds -notcontains $Kind) { throw "AI failed. $($provider.Name) không làm được việc này ($Kind). [CAUSE:UNSUPPORTED]" }
     $timeout = if ($Options.ContainsKey('TimeoutSec')) { [Math]::Max(1, [int]$Options.TimeoutSec) } else { 0 }
+    if ($provider.Via -eq 'cli') {
+        # The bridge counts the web AIs; the CLIs are counted here, failures too, with what stopped them.
+        $watch = [Diagnostics.Stopwatch]::StartNew(); $script:CodexCallTokens = $null
+        $account = if ($Ai -eq 'codex') { Get-CodexAccount } else { '' }
+        try { $result = Invoke-HubAIProvider $Kind $Ai $Prompt $Images $Output $Options $timeout }
+        catch {
+            $cause = if ($_.Exception.Message -match '\[CAUSE:(\w+)\]') { $Matches[1] } else { 'UNKNOWN' }
+            Add-HubAIUsage $Ai $Kind $account $false $cause ([int]$watch.ElapsedMilliseconds) $script:CodexCallTokens
+            throw
+        }
+        Add-HubAIUsage $Ai $Kind $account $true '' ([int]$watch.ElapsedMilliseconds) $script:CodexCallTokens
+        return $result
+    }
+    return Invoke-HubAIProvider $Kind $Ai $Prompt $Images $Output $Options $timeout
+}
+
+function Invoke-HubAIProvider([string]$Kind, [string]$Ai, [string]$Prompt, [string[]]$Images, [string]$Output, [hashtable]$Options, [int]$timeout) {
     switch ($Ai) {
         'codex' {
             $codex = @{

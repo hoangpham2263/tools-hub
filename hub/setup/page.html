@@ -34,6 +34,14 @@ header .again { margin-left: auto; }
 #ai .item .side .btn { min-width: 0; height: 28px; padding: 0 10px; }
 @media (max-width: 860px) { #ai { grid-template-columns: minmax(0, 1fr); } }
 .note-line { color: var(--muted); font-size: 12px; margin-bottom: 8px; }
+/* Lượt dùng AI: one row per AI and account. */
+.usage { width: 100%; border-collapse: collapse; background: var(--surface); border: 1px solid var(--line); }
+.usage th, .usage td { text-align: left; font-weight: 400; padding: 6px 10px; border-bottom: 1px solid #e3e3e3; vertical-align: top; }
+.usage th { color: var(--muted); font-size: 12px; }
+.usage td.num { white-space: nowrap; }
+.usage .sub { color: var(--muted); font-size: 12px; overflow-wrap: anywhere; }
+.usage .warn { color: #b06000; }
+.usage-wrap { overflow-x: auto; }
 @media (max-width: 760px) { .setup-page { grid-template-columns: minmax(0, 1fr); } }
 /* Narrow window: the buttons go under the text, side by side. */
 @media (max-width: 600px) { .item { grid-template-columns: 22px minmax(0, 1fr); } .item .side { grid-column: 2; flex-direction: row; flex-wrap: wrap; margin-top: 6px; } }
@@ -48,6 +56,7 @@ header .again { margin-left: auto; }
     <section class="group"><h2>Model AI của Codex</h2>
       <div class="ai-model"><span class="muted">Model nhẹ, mức thấp tốn ít token hơn.</span><select class="model"></select><select class="effort"></select></div>
     </section>
+    <section class="group wide"><h2>Lượt dùng AI</h2><div class="note-line">Mọi lần gọi AI của các tool trên máy này, theo từng tài khoản. Gemini, Flow, ChatGPT không cho biết hạn mức: lỗi Hết lượt mà sau đó chưa chạy được lần nào thì tài khoản đó đang hết lượt.</div><div class="usage-wrap"><table class="usage"><thead><tr><th>AI · tài khoản</th><th>Hôm nay</th><th>7 ngày</th><th>30 ngày</th><th>Lỗi gần nhất</th></tr></thead><tbody id="usage"><tr><td colspan="5" class="sub">Đang đọc…</td></tr></tbody></table></div></section>
   </div>
 </main>
 </body>

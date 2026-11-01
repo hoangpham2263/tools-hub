@@ -9,7 +9,7 @@
 // extension of another version than hub/extension/manifest.json is reloaded, so the new files load.
 import { execFile, spawn } from "node:child_process";
 import { existsSync, readFileSync, statSync } from "node:fs";
-import { dirname, join } from "node:path";
+import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { findTool, onWindows, openChrome, runTool, toolEnv } from "../platform.mjs";
 
@@ -22,6 +22,8 @@ const get = (path, method = "GET", body) => fetch(BRIDGE + path, { method, body:
 const until = async (test, ms) => { for (const end = Date.now() + ms; Date.now() < end; await sleep(500)) { const s = await get("/status"); if (test(s)) return s; } return get("/status"); };
 
 async function main(args) {
+  // Test suites (TOOLS_HUB_TEST, tests/run.ps1) never start, stop or reload the bridge a run on this machine uses.
+  if (process.env.TOOLS_HUB_TEST) return { ok: false, extension: false, error: "Bỏ qua bridge khi chạy test." };
   if (!existsSync(join(here, "node_modules", "ws"))) {
     const npm = findTool("npm");
     if (!npm) return { error: "Chưa cài Node.js (npm). Mở Cấu hình, bấm Cài." };
@@ -29,8 +31,12 @@ async function main(args) {
     if (!existsSync(join(here, "node_modules", "ws"))) return { error: "Chưa cài được bridge (npm install trong hub/bridge). Kiểm tra mạng rồi chạy lại." };
   }
   let status = await get("/status");
-  // Started on an older server.mjs (or from a tool's own bridge/ before it moved to hub/bridge): stop it first.
-  if (status && Number(status.code) !== Math.floor(statSync(server).mtimeMs)) {
+  // A bridge of another copy of the hub (a git checkout and its tests, beside the install) is left alone, and so is
+  // its extension: replacing it would cut the jobs of a run there.
+  const foreign = !!status?.server && resolve(status.server) !== resolve(server);
+  // Started on an older server.mjs of this copy (or from a tool's own bridge/ before it moved to hub/bridge, which
+  // does not say its file): stop it first.
+  if (status && !foreign && Number(status.code) !== Math.floor(statSync(server).mtimeMs)) {
     await get("/quit", "POST");
     status = await until((s) => !s, 5000);
     if (status && status.pid) { try { process.kill(status.pid); } catch {} status = await until((s) => !s, 5000); }
@@ -57,11 +63,11 @@ async function main(args) {
     }
   }
   const version = String(JSON.parse(readFileSync(join(here, "..", "extension", "manifest.json"), "utf8")).version);
-  if (status.extensionVersion && status.extensionVersion !== version) {
+  if (!foreign && status.extensionVersion && status.extensionVersion !== version) {
     await get("/reload", "POST");
     status = await until((s) => s?.extension && s.extensionVersion === version, 20000);
   }
-  const answer = { ok: true, extension: !!status?.extension, version: status?.extensionVersion || "" };
+  const answer = { ok: true, extension: !!status?.extension, version: status?.extensionVersion || "", ...(foreign ? { foreign: status.server } : {}) };
   if (args.includes("--open")) {
     const page = args[args.indexOf("--open") + 1];
     const opened = await get("/open", "POST", { url: page });

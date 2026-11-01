@@ -11,6 +11,7 @@
 //   GET /api/setup-login            { code } while a sign-in waits for it
 //   GET|POST /api/config/ai         Model AI: { settings, models } / save { model, effort }
 //   GET|POST|DELETE /api/config/drive   the app password: { drive } / log in { password } / log out
+//   GET /api/usage                  Lượt dùng AI: { rows } per AI and account (usage.mjs)
 //   GET|POST /api/config/google     the Google account Flow and Gemini run with: { email } / choose { email } ("" is
 //                                   Google's default, the first one signed in)
 import { execFile, spawn } from "node:child_process";
@@ -20,6 +21,7 @@ import { fileURLToPath } from "node:url";
 import { homedir } from "node:os";
 import { findTool as findIn, runTool, psCommand, psFile, onWindows, killTree, openTerminal, openChrome } from "../platform.mjs";
 import { createSetupReader } from "./setup-report.mjs";
+import { readUsage, summarizeUsage } from "./usage.mjs";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const q = (p) => p.replace(/'/g, "''");
@@ -139,6 +141,10 @@ export function createConfigApi({ hubRoot, pwsh, env = process.env }) {
         // The shared bridge between the tools and the Tools Hub extension (hub/bridge).
         runTool(npm, ["install", "--silent"], { cwd: join(hubRoot, "hub", "bridge"), timeout: 10 * 60000, env, windowsHide: true }, () => json(res, 200, { ok: true }));
       });
+      return true;
+    }
+    if (path === "/api/usage" && req.method === "GET") {
+      json(res, 200, { rows: summarizeUsage(readUsage(join(hubRoot, "workspace", "logs", "ai-usage.jsonl"))) });
       return true;
     }
     if (path === "/api/config/ai") {

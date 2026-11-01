@@ -15,6 +15,10 @@ if ($onWindows) {
     $Name = @($Name | Where-Object { $_ -notin $windowsOnly })
 }
 $project = Split-Path $PSScriptRoot -Parent
+# AI calls the suites make (all mocked) are counted in a file of the tests, not in the install's Lượt dùng AI.
+$env:HUB_AI_USAGE_FILE = Join-Path $project 'workspace/tests/ai-usage.jsonl'
+# Nor do they touch the bridge a run on this machine uses (hub/bridge/ensure.mjs).
+$env:TOOLS_HUB_TEST = '1'
 $failures = New-Object Collections.Generic.List[string]
 foreach ($file in @(Get-ChildItem (Join-Path $project 'src'), $PSScriptRoot, (Join-Path $project '../../hub') -Recurse -File -Filter '*.ps1')) {
     $tokens = $null; $parseErrors = $null

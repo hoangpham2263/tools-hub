@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Tools Hub",
-  "version": "0.6.1",
+  "version": "0.6.2",
   "description": "Cầu nối local của Tools Hub: nhận việc từ các tool (tạo ảnh, viết chữ), làm trong tab Google Flow, Gemini, ChatGPT đang đăng nhập và trả kết quả về máy.",
   "background": {
     "service_worker": "background.js"

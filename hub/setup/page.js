@@ -175,7 +175,43 @@
     await check();
     if (r.error) row.detail.textContent = r.error;
   };
-  $(".again").onclick = check;
+  $(".again").onclick = () => { check(); usage(); };
+
+  // Lượt dùng AI (GET /api/usage): calls, failures and Codex tokens per AI and account; the last failure with its cause.
+  const CAUSES = { QUOTA: "Hết lượt", AUTH: "Chưa đăng nhập", AI_TIMEOUT: "Quá thời gian", NETWORK: "Mất mạng", BUSY: "AI bận hoặc lỗi", BRIDGE: "Extension hoặc Flow cần xử lý", PROCESS_ACTIVE: "Codex chưa dừng hẳn", UNSUPPORTED: "AI không làm được việc này", UNKNOWN: "Lỗi khác" };
+  const when = (t) => { const d = new Date(t); return `${d.toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" })} ${d.toLocaleDateString("vi-VN", { day: "2-digit", month: "2-digit" })}`; };
+  const tokens = (n) => (n >= 1e6 ? `${(n / 1e6).toFixed(1).replace(".", ",")}M` : n >= 1e3 ? `${Math.round(n / 1e3)}K` : String(n));
+  const usage = async () => {
+    const r = await fetch("/api/usage", { cache: "no-store" }).then((x) => x.json()).catch(() => ({ error: "Chưa đọc được lượt dùng." }));
+    const body = $("#usage");
+    const rows = [].concat(r.rows || []);
+    if (!rows.length) {
+      const tr = el("tr");
+      tr.append(Object.assign(el("td", "sub", r.error || "Chưa có lượt gọi AI nào."), { colSpan: 5 }));
+      return body.replaceChildren(tr);
+    }
+    body.replaceChildren(...rows.map((row) => {
+      const tr = el("tr");
+      const who = el("td");
+      who.append(el("div", "", row.name), el("div", "sub", row.account || (row.ai === "chatgpt" ? "tài khoản ChatGPT trong Chrome" : row.ai === "antigravity" ? "tài khoản trong Antigravity" : "tài khoản mặc định")));
+      tr.append(who);
+      for (const w of ["today", "week", "month"]) {
+        const c = row[w], td = el("td", "num");
+        td.append(el("div", "", `${c.calls} lượt`));
+        const sub = [c.fail ? `${c.fail} lỗi` : "", c.tokens ? `${tokens(c.tokens)} token` : ""].filter(Boolean).join(" · ");
+        if (sub) td.append(el("div", "sub", sub));
+        tr.append(td);
+      }
+      const fail = el("td");
+      if (row.lastFail) {
+        fail.append(el("div", row.lastFail.cause === "QUOTA" && !row.okSinceFail ? "warn" : "", `${CAUSES[row.lastFail.cause] || row.lastFail.cause} · ${when(row.lastFail.t)}`));
+        fail.append(el("div", "sub", row.okSinceFail ? "đã chạy được lại sau đó" : "chưa chạy được lần nào sau đó"));
+      } else fail.append(el("div", "sub", "Không có"));
+      tr.append(fail);
+      return tr;
+    }));
+  };
+  usage();
 
   // Model AI: the model and reasoning level Codex uses; empty keeps Codex's own default. Saved for every tool.
   const model = $(".model"), effort = $(".effort");

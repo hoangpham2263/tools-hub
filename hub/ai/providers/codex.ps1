@@ -153,6 +153,16 @@ function Get-CodexToolFailure([string]$Trace) {
     $found|Sort-Object Score -Descending|Select-Object -First 1
 }
 
+# The ChatGPT account Codex is signed in with: the email in its sign-in token (auth.json), never the token itself.
+function Get-CodexAccount {
+    try {
+        $codexHome = if ($env:CODEX_HOME) { $env:CODEX_HOME } else { Join-Path $HOME '.codex' }
+        $part = ((Get-Content -LiteralPath (Join-Path $codexHome 'auth.json') -Raw | ConvertFrom-Json).tokens.id_token -split '\.')[1].Replace('-', '+').Replace('_', '/')
+        $part += '=' * ((4 - $part.Length % 4) % 4)
+        return [string]([Text.Encoding]::UTF8.GetString([Convert]::FromBase64String($part)) | ConvertFrom-Json).email
+    } catch { return '' }
+}
+
 # Tokens one Codex call used, from the usage on its turn.completed events (codex exec --json). $null when absent.
 function Get-CodexTokenUsage([string]$Trace) {
     if (-not (Test-Path -LiteralPath $Trace)) { return $null }
@@ -176,6 +186,7 @@ function Invoke-CodexExec([string]$PromptText, [string[]]$Images, [string]$Resul
     $isImage = $Sandbox -eq 'workspace-write'
     $maxAttempts = if ($Attempts -gt 0) { $Attempts } elseif ($isImage) { 1 } else { 3 }
     if ($TimeoutSec -le 0) { $TimeoutSec = if ($isImage) { 480 } else { 180 } }
+    $script:CodexCallTokens = $null
     for ($attempt = 1; $attempt -le $maxAttempts; $attempt++) {
         $attemptFile = if ($attempt -eq 1) { $ResultFile } else { "$ResultFile.attempt-$attempt.txt" }
         $commandArgs = @('exec', '--json', '--skip-git-repo-check', '-s', $Sandbox, '-C', $WorkDir, '-o', $attemptFile)
@@ -188,7 +199,11 @@ function Invoke-CodexExec([string]$PromptText, [string[]]$Images, [string]$Resul
         $execution = Invoke-CodexProcess $PromptText $commandArgs $trace $TimeoutSec $ReconnectSec
         # Every call's tokens, failed ones too, so the app can add them up for the run.
         $usage = Get-CodexTokenUsage $trace
-        if ($usage) { Write-Host "[TOKENS] in=$($usage.Input) cached=$($usage.Cached) out=$($usage.Output)" }
+        if ($usage) {
+            Write-Host "[TOKENS] in=$($usage.Input) cached=$($usage.Cached) out=$($usage.Output)"
+            if (-not $script:CodexCallTokens) { $script:CodexCallTokens = [pscustomobject]@{ Input = 0L; Cached = 0L; Output = 0L } }
+            $script:CodexCallTokens.Input += $usage.Input; $script:CodexCallTokens.Cached += $usage.Cached; $script:CodexCallTokens.Output += $usage.Output
+        }
         $toolFailure=Get-CodexToolFailure $trace
         if ($execution.Cause -and -not $execution.StopConfirmed) { throw "AI failed; previous process termination is unconfirmed. Details: $trace [CAUSE:PROCESS_ACTIVE]" }
         if ($execution.ExitCode -eq 0) {

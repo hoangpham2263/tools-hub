@@ -66,6 +66,15 @@ try {
     $script:Scenario='active';$script:Calls=0;$failed=$false
     try{Invoke-AI 'Generate' @() (Join-Path $testDir 'active.txt') 'workspace-write'|Out-Null}catch{$failed=$_.Exception.Message -match '\[CAUSE:PROCESS_ACTIVE\]'}
     if(-not $failed -or $script:Calls -ne 1){throw 'Unconfirmed process termination allowed a duplicate request.'}
+    # Lượt dùng AI: each call is one line, failures with their cause, Codex with its tokens.
+    $script:HubAIUsageFile = Join-Path $testDir 'ai-usage.jsonl'
+    function Get-CodexAccount { 'me@example.com' }
+    $script:Scenario = 'recover'; $script:Calls = 1
+    Invoke-AI 'Check' @() (Join-Path $testDir 'counted.txt') | Out-Null
+    $script:Scenario = 'auth'; $script:Calls = 0
+    try { Invoke-AI 'Check' @() (Join-Path $testDir 'counted-auth.txt') | Out-Null } catch {}
+    $lines = @(Get-Content -LiteralPath $script:HubAIUsageFile | ForEach-Object { $_ | ConvertFrom-Json })
+    if ($lines.Count -ne 2 -or -not $lines[0].ok -or $lines[0].account -ne 'me@example.com' -or $lines[0].ai -ne 'codex' -or $lines[1].ok -or $lines[1].cause -ne 'AUTH') { throw "AI calls were not counted: $($lines | ConvertTo-Json -Compress)" }
     Write-Host 'PASS: capacity retry recovers, permanent errors stop, retries are bounded, model is preserved.' -ForegroundColor Green
 } finally {
     $resolved = [IO.Path]::GetFullPath($testDir)

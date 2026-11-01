@@ -45,7 +45,9 @@ function connect() {
   socket.onmessage = (event) => {
     let job;
     try { job = JSON.parse(event.data); } catch { return; }
-    if (job.type === "generate") queue = queue.then(() => runJob(job));
+    // A job of a connection that has since closed (the bridge restarted) is dropped: nobody waits for its answer.
+    const from = socket;
+    if (job.type === "generate") queue = queue.then(() => (from === socket ? runJob(job) : null));
     if (job.type === "session") queue = queue.then(() => answer(job.id, newSession()));
     if (job.type === "open") answer(job.id, openPage(job.url).then(() => ({})));
     if (job.type === "logins") answer(job.id, logins());
