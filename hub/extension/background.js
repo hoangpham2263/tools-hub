@@ -1,10 +1,11 @@
 // Router: keeps a WebSocket to the local bridge (hub/bridge) and forwards each job to the matching tab.
 // The job is submitted inside the signed-in tab, so the page itself handles its own anti-abuse checks.
 // It runs in the user's own Chrome: jobs only use tabs it opened itself, in the Chrome window already open, in a tab
-// group named Tools Hub; the user's own tabs are never touched. One tab per site, reused by every job of a run; a run
+// group named Tools Hub; the user's own tabs are never touched. Jobs run side by side (the bridge sends at most as many
+// as a tool runs threads), each in a tab of its own, opened in the background and closed once the job is done; a run
 // starts by closing the group's tabs (session). A site only works in a tab that is shown (Gemini stops answering behind
-// another tab), so jobs run one at a time (the bridge sends them so, the queue here keeps it), each showing its tab and
-// then going back to the tab the user was on. A site's files are sites/<site>.js; a new AI is one more entry in SITES.
+// another tab): while a job works, the debugger keeps its tab rendering as if shown (keepShown), and Chrome shows its
+// "debugging" bar. A site's files are sites/<site>.js; a new AI is one more entry in SITES.
 const BRIDGE_URL = "ws://127.0.0.1:8765";
 // hosts: the tabs to look through; page: a tab a job can run in (a Flow project, under /u/<n>/ for another account).
 const SITES = {
@@ -15,9 +16,9 @@ const SITES = {
 // Flow and Gemini run with the Google account chosen on Cấu hình (job.account; "" is Google's default, the first one
 // signed in), opened with ?authuser=; Google then shows the page under /u/<n>/.
 const startUrl = (platform, account) => SITES[platform].start + (account ? `?authuser=${encodeURIComponent(account)}` : "");
-// fresh: every job starts on the site's start page, a new chat, so earlier images and answers are never reused.
-// One job at a time over every site: parallel workflow threads, and tools, wait their turn.
-let queue = Promise.resolve();
+// Each job's tab opens on the site's start page, a new chat, so earlier images and answers are never reused.
+// The job each tab works for, so its page's steps are logged under that job.
+const tabJobs = new Map();
 const GROUP = "Tools Hub";
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 // Chrome refuses tab changes while the user drags a tab ("Tabs cannot be edited right now"): try again shortly.
@@ -47,8 +48,8 @@ function connect() {
     try { job = JSON.parse(event.data); } catch { return; }
     // A job of a connection that has since closed (the bridge restarted) is dropped: nobody waits for its answer.
     const from = socket;
-    if (job.type === "generate") queue = queue.then(() => (from === socket ? runJob(job) : null));
-    if (job.type === "session") queue = queue.then(() => answer(job.id, newSession()));
+    if (job.type === "generate" && from === socket) runJob(job);
+    if (job.type === "session") answer(job.id, newSession());
     if (job.type === "open") answer(job.id, openPage(job.url).then(() => ({})));
     if (job.type === "logins") answer(job.id, logins());
     // After an update the app asks for this, so the new files load without a click in chrome://extensions.
@@ -60,32 +61,13 @@ function reply(message) {
   if (socket && socket.readyState === WebSocket.OPEN) socket.send(JSON.stringify(message));
 }
 
-// The tab each site's jobs ran in last and the account it was opened with, so a changed account gets a tab of its own.
-async function remembered(platform) {
-  const { tabs = {} } = await chrome.storage.session.get("tabs");
-  return tabs[platform];
-}
-async function remember(platform, tab, account) {
-  const { tabs = {} } = await chrome.storage.session.get("tabs");
-  tabs[platform] = { id: tab.id, account };
-  await chrome.storage.session.set({ tabs });
+// A tab of the job's own: a new chat, or for Flow a project no other job is using now.
+async function jobTab(platform, account) {
+  if (!SITES[platform]) throw new Error(`Nền tảng không hỗ trợ: ${platform}`);
+  if (platform === "flow") return flowProject(account);
+  const tab = await toolsTab(startUrl(platform, account));
+  await waitForLoad(tab.id);
   return tab;
-}
-
-// The site's tab for this job: the one its jobs used last, else a new one. Another account's tab is closed, so each
-// site keeps one tab.
-async function findTab(platform, account) {
-  const site = SITES[platform];
-  if (!site) throw new Error(`Nền tảng không hỗ trợ: ${platform}`);
-  const known = await remembered(platform);
-  const tab = known ? await chrome.tabs.get(known.id).catch(() => null) : null;
-  if (tab && known.account === account && site.page.test(tab.url || "")) return tab;
-  if (tab) await tabsCall(() => chrome.tabs.remove(tab.id)).catch(() => {});
-  if (platform === "flow") return remember(platform, await flowProject(account), account);
-  reply({ type: "progress", id: "tab", stage: `opening ${platform}` });
-  const opened = await toolsTab(startUrl(platform, account));
-  await waitForLoad(opened.id);
-  return remember(platform, opened, account);
 }
 
 // A run starts with only its own tabs: the Tools Hub group's tabs, in every window, are closed (Cấu hình's sign-in
@@ -95,6 +77,7 @@ async function newSession() {
   const tabs = (await Promise.all(groups.map((g) => chrome.tabs.query({ groupId: g.id })))).flat().map((t) => t.id);
   if (tabs.length) await tabsCall(() => chrome.tabs.remove(tabs));
   await chrome.storage.session.remove(["tabs", "flowHome"]);
+  flowBusy.clear();
   return { closed: tabs.length };
 }
 
@@ -121,47 +104,63 @@ async function group(tab) {
   } catch {}
 }
 
-// Flow keeps one project per account for every run (its address in chrome.storage.local), so runs leave no new
-// projects behind; a project that no longer opens (deleted in Flow) is replaced by a new one.
+// Flow keeps its projects per account for every run (their addresses in chrome.storage.local), so runs leave no new
+// projects behind: one per job running at once, since a job finds its images as the newest in its project's grid. A job
+// takes the first project no other job is using (slot); one that no longer opens (deleted in Flow) is replaced.
+const flowBusy = new Map();
 async function flowProject(account) {
-  const { flowProjects = {} } = await chrome.storage.local.get("flowProjects");
-  const saved = flowProjects[account];
-  if (saved) {
-    reply({ type: "progress", id: "tab", stage: "opening the run's Flow project" });
-    const tab = await toolsTab(saved);
-    await waitForLoad(tab.id);
-    await sleep(1500);
-    const now = await chrome.tabs.get(tab.id);
-    if (SITES.flow.page.test(now.url || "") && now.url.split("?")[0] === saved) return now;
-    await tabsCall(() => chrome.tabs.remove(tab.id)).catch(() => {});
+  const busy = flowBusy.get(account) || new Set();
+  flowBusy.set(account, busy);
+  let slot = 0;
+  while (busy.has(slot)) slot++;
+  busy.add(slot);
+  try {
+    const { flowProjects = {} } = await chrome.storage.local.get("flowProjects");
+    const saved = [].concat(flowProjects[account] || [])[slot];
+    if (saved) {
+      reply({ type: "progress", id: "tab", stage: `opening Flow project ${slot + 1}` });
+      const tab = await toolsTab(saved);
+      await waitForLoad(tab.id);
+      await sleep(1500);
+      const now = await chrome.tabs.get(tab.id);
+      if (SITES.flow.page.test(now.url || "") && now.url.split("?")[0] === saved) return Object.assign(now, { slot });
+      await tabsCall(() => chrome.tabs.remove(tab.id)).catch(() => {});
+    }
+    const tab = await newFlowProject(account);
+    const { flowProjects: latest = {} } = await chrome.storage.local.get("flowProjects");
+    const list = [].concat(latest[account] || []);
+    list[slot] = tab.url.split("?")[0];
+    latest[account] = list;
+    await chrome.storage.local.set({ flowProjects: latest });
+    return Object.assign(tab, { slot });
+  } catch (error) {
+    busy.delete(slot);
+    throw error;
   }
-  const tab = await newFlowProject(account);
-  flowProjects[account] = tab.url.split("?")[0];
-  await chrome.storage.local.set({ flowProjects });
-  return tab;
 }
 
-// No Flow project open: open Flow's home (as the chosen account) and press its new-project button, then use that project.
+// No Flow project for this slot: open Flow's home (as the chosen account) and press its new-project button; that tab
+// then is the project.
 async function newFlowProject(account) {
-  // The chosen account's Flow home from an earlier try (its /u/<n>/ is only known once opened), else a new one.
-  const { flowHome } = await chrome.storage.session.get("flowHome");
-  const kept = flowHome?.account === account ? await chrome.tabs.get(flowHome.id).catch(() => null) : null;
-  const home = kept && /^https:\/\/flow\.google\.com\//.test(kept.url || "") && !SITES.flow.page.test(kept.url) ? kept : null;
-  const tab = home || await toolsTab(startUrl("flow", account));
-  if (!home) await waitForLoad(tab.id);
-  await chrome.storage.session.set({ flowHome: { id: tab.id, account } });
-  const ask = () => chrome.tabs.sendMessage(tab.id, { type: "new-project" });
-  // A tab open from before the extension (re)loaded has no content script: reload it once.
-  const at = await ask().catch(async () => { await chrome.tabs.reload(tab.id); await waitForLoad(tab.id); return ask(); }).catch(() => null);
-  if (!at?.ok) throw new Error(at?.error || "Không mở được Google Flow. Đăng nhập Google trong Chrome rồi chạy lại.");
-  reply({ type: "progress", id: "tab", stage: "clicking Flow's new-project button" });
-  await trustedClick(tab, at.x, at.y);
-  for (let i = 0; i < 60; i++) {
-    const now = await chrome.tabs.get(tab.id);
-    if (SITES.flow.page.test(now.url || "") && now.status === "complete") return now;
-    await new Promise((r) => setTimeout(r, 500));
+  const tab = await toolsTab(startUrl("flow", account));
+  try {
+    await waitForLoad(tab.id);
+    const ask = () => chrome.tabs.sendMessage(tab.id, { type: "new-project" });
+    const at = await ask().catch(async () => { await chrome.tabs.reload(tab.id); await waitForLoad(tab.id); return ask(); }).catch(() => null);
+    if (!at?.ok) throw new Error(at?.error || "Không mở được Google Flow. Đăng nhập Google trong Chrome rồi chạy lại.");
+    reply({ type: "progress", id: "tab", stage: "clicking Flow's new-project button" });
+    const stop = await keepShown(tab);
+    try { await trustedClick(tab, at.x, at.y); } finally { await stop(); }
+    for (let i = 0; i < 60; i++) {
+      const now = await chrome.tabs.get(tab.id);
+      if (SITES.flow.page.test(now.url || "") && now.status === "complete") return now;
+      await sleep(500);
+    }
+    throw new Error("Google Flow chưa tạo được dự án mới.");
+  } catch (error) {
+    await tabsCall(() => chrome.tabs.remove(tab.id)).catch(() => {});
+    throw error;
   }
-  throw new Error("Google Flow chưa tạo được dự án mới.");
 }
 
 function waitForLoad(tabId) {
@@ -173,31 +172,21 @@ function waitForLoad(tabId) {
   });
 }
 
+// Google's "unusual traffic" page (google.com/sorry) in place of the site: only the user gets past it (a check of
+// their own), and jobs sent meanwhile would only add to it.
+const GOOGLE_SORRY = "Google tạm giới hạn tài khoản/máy này vì lưu lượng bất thường (trang google.com/sorry). Mở Cấu hình, bấm Mở Gemini, tự xác minh trong Chrome rồi chạy lại.";
+
 async function runJob(job) {
   const progress = (stage) => reply({ type: "progress", id: job.id, stage });
-  let restore = null;
+  let tab = null, stop = null;
+  const account = job.platform === "chatgpt" ? "" : String(job.account || "");
   try {
-    const account = job.platform === "chatgpt" ? "" : String(job.account || "");
-    const tab = await findTab(job.platform, account);
-    // Shown while it works (an open group, its tab in front); the user's tab comes back once the job is done.
-    const [back] = await chrome.tabs.query({ windowId: tab.windowId, active: true });
-    restore = back && back.id !== tab.id ? back.id : null;
-    await group(tab);
-    await tabsCall(() => chrome.tabs.update(tab.id, { active: true }));
-    if (SITES[job.platform].fresh) {
-      await tabsCall(() => chrome.tabs.update(tab.id, { url: startUrl(job.platform, account) }));
-      await waitForLoad(tab.id);
-    }
+    tab = await jobTab(job.platform, account);
+    tabJobs.set(tab.id, job.id);
+    if (/^https:\/\/www\.google\.com\/sorry\//.test((await chrome.tabs.get(tab.id)).url || "")) throw new Error(GOOGLE_SORRY);
+    stop = await keepShown(tab);
     progress("submitting");
-    let result;
-    try {
-      result = await chrome.tabs.sendMessage(tab.id, { type: "generate", job });
-    } catch {
-      // Tabs opened before the extension was installed have no content script yet.
-      await chrome.tabs.reload(tab.id);
-      await waitForLoad(tab.id);
-      result = await chrome.tabs.sendMessage(tab.id, { type: "generate", job });
-    }
+    let result = await sendJob(tab, job);
     if (!result || !result.ok) throw new Error(result?.error || "Tab không trả kết quả.");
     if (result.url && !result.data) {
       // Signed Flow links are fetched here, where the host permission applies.
@@ -210,11 +199,24 @@ async function runJob(job) {
   } catch (error) {
     reply({ type: "result", id: job.id, ok: false, error: String(error.message || error) });
   } finally {
-    // Back to the user's tab, unless the user has gone to another one meanwhile.
-    if (restore) {
-      const [now] = await chrome.tabs.query({ active: true, lastFocusedWindow: true }).catch(() => []);
-      const tools = Object.values((await chrome.storage.session.get("tabs")).tabs || {}).map((t) => t.id);
-      if (!now || tools.includes(now.id)) await tabsCall(() => chrome.tabs.update(restore, { active: true })).catch(() => {});
+    if (stop) await stop();
+    if (tab) {
+      tabJobs.delete(tab.id);
+      await tabsCall(() => chrome.tabs.remove(tab.id)).catch(() => {});
+      if (tab.slot !== undefined) flowBusy.get(account)?.delete(tab.slot);
+    }
+  }
+}
+
+// The job to the tab's page script. A tab just opened can be loaded before its script is (several opening at once): it
+// is asked again until the script is there, the page reloaded once on the way. Only a page with no script fails to
+// take it, so the job is never sent twice.
+async function sendJob(tab, job) {
+  for (let i = 1; ; i++) {
+    try { return await chrome.tabs.sendMessage(tab.id, { type: "generate", job }); } catch (error) {
+      if (!/Receiving end does not exist|Could not establish connection/i.test(String(error.message || error))) throw error;
+      if (i >= 30) throw new Error(`Trang ${(await chrome.tabs.get(tab.id).catch(() => ({}))).url || "?"} không nhận việc (script của extension không chạy trong tab).`);
+      if (i === 10) { await chrome.tabs.reload(tab.id); await waitForLoad(tab.id); } else await sleep(1000);
     }
   }
 }
@@ -250,19 +252,47 @@ chrome.alarms.create("bridge", { periodInMinutes: 0.5 });
 chrome.alarms.onAlarm.addListener(connect);
 chrome.runtime.onStartup.addListener(connect);
 chrome.runtime.onInstalled.addListener(connect);
-// A real left click at (x, y) in the tab's viewport, sent through the debugger so the page sees a trusted event.
-// Chrome shows its "debugging this browser" bar while attached, for this moment only. The window is left where it is.
-async function trustedClick(tab, x, y) {
-  await tabsCall(() => chrome.tabs.update(tab.id, { active: true }));
+// The tabs the debugger is attached to now (keepShown), so a click goes through the same session.
+const shown = new Set();
+// Keeps a background tab working as if shown, until the returned stop(): a screencast of it makes Chrome render it as a
+// visible page (timers run at full speed, answers keep coming), and focus emulation makes it act as the focused page.
+// The frames are tiny, rare and dropped.
+async function keepShown(tab) {
   const target = { tabId: tab.id };
   await chrome.debugger.attach(target, "1.3");
+  shown.add(tab.id);
+  try {
+    await chrome.debugger.sendCommand(target, "Page.enable");
+    await chrome.debugger.sendCommand(target, "Emulation.setFocusEmulationEnabled", { enabled: true });
+    await chrome.debugger.sendCommand(target, "Page.startScreencast", { format: "jpeg", quality: 1, maxWidth: 32, maxHeight: 32, everyNthFrame: 60 });
+  } catch (error) {
+    shown.delete(tab.id);
+    await chrome.debugger.detach(target).catch(() => {});
+    throw error;
+  }
+  return async () => {
+    if (!shown.delete(tab.id)) return;
+    await chrome.debugger.detach(target).catch(() => {});
+  };
+}
+chrome.debugger.onEvent.addListener((source, method, params) => {
+  if (method === "Page.screencastFrame") chrome.debugger.sendCommand(source, "Page.screencastFrameAck", { sessionId: params.sessionId }).catch(() => {});
+});
+chrome.debugger.onDetach.addListener((source) => shown.delete(source.tabId));
+
+// A real left click at (x, y) in the tab's viewport, sent through the debugger so the page sees a trusted event. The tab
+// stays where it is, in the background.
+async function trustedClick(tab, x, y) {
+  const target = { tabId: tab.id };
+  const own = !shown.has(tab.id);
+  if (own) await chrome.debugger.attach(target, "1.3");
   try {
     const mouse = (type, extra = {}) => chrome.debugger.sendCommand(target, "Input.dispatchMouseEvent", { type, x, y, button: "left", ...extra });
     await mouse("mouseMoved", { button: "none" });
     await mouse("mousePressed", { buttons: 1, clickCount: 1 });
     await mouse("mouseReleased", { buttons: 0, clickCount: 1 });
   } finally {
-    await chrome.debugger.detach(target).catch(() => {});
+    if (own) await chrome.debugger.detach(target).catch(() => {});
   }
 }
 
@@ -272,7 +302,7 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
     return true;
   }
   if (message?.type === "progress" && _sender.tab) {
-    reply({ type: "progress", id: "tab", stage: message.stage });
+    reply({ type: "progress", id: tabJobs.get(_sender.tab.id) || "tab", stage: message.stage });
     return;
   }
   if (message?.type === "needs-click" && _sender.tab) {

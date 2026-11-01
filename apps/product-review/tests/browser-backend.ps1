@@ -8,7 +8,7 @@ New-Item -ItemType Directory -Path $temp|Out-Null
 try{
     # The shared bridge is found from the hub's AI core.
     Assert (Test-Path (Join-Path $script:BridgeHubRoot 'hub/bridge/ensure.mjs')) 'The AI core does not find hub/bridge.'
-    Assert (@(Get-HubAIChoices image | ForEach-Object id) -join ',' -eq 'codex,flow,chatgpt') 'Image AIs are listed from the registry.'
+    Assert (@(Get-HubAIChoices image | ForEach-Object id) -join ',' -eq 'codex,flow') 'Image AIs are listed from the registry.'
     $unsupported = try { Invoke-HubAI -Kind image -Ai gemini -Prompt 'x' -Output (Join-Path $temp 'x.png'); '' } catch { $_.Exception.Message }
     Assert ($unsupported -match '\[CAUSE:UNSUPPORTED\]') 'An AI is only asked for work it can do.'
     # Codex file-delivery lines never reach the browser tab.

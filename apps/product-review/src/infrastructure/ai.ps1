@@ -14,5 +14,7 @@ function Invoke-AI([string]$PromptText, [string[]]$Images, [string]$ResultFile, 
     if ($config.ContainsKey('AiReconnectTimeoutSeconds')) { $options.ReconnectSec = [Math]::Max(1, [int]$config.AiReconnectTimeoutSeconds) }
     if ($config.ContainsKey('AiRetryDelaySeconds')) { $options.RetryDelaySec = [int]$config.AiRetryDelaySeconds }
     if ($ai -ne 'codex') { $options = @{} }
+    # Which AI each call goes to, in the run's log (the start line names the choices; this, each call).
+    Write-Host "  [AI] $kind -> $((Get-HubAIProvider $ai).Name)"
     return Invoke-HubAI -Kind $kind -Ai $ai -Prompt $PromptText -Images $Images -Output $ResultFile -Options $options
 }

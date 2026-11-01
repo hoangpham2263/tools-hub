@@ -7,8 +7,8 @@ import WebSocket from "ws";
 import { causeOf, createBridge } from "./server.mjs";
 
 const usage = join(await mkdtemp(join(tmpdir(), "bridge-usage-")), "ai-usage.jsonl");
-async function start(fetchImpl, googleAccount = () => "") {
-  const server = createBridge({ fetchImpl, googleAccount, usage });
+async function start(fetchImpl, googleAccount = () => "", options = {}) {
+  const server = createBridge({ fetchImpl, googleAccount, usage, ...options });
   await new Promise((resolve) => server.listen(0, "127.0.0.1", resolve));
   return { server, base: `http://127.0.0.1:${server.address().port}`, ws: `ws://127.0.0.1:${server.address().port}` };
 }
@@ -77,8 +77,8 @@ test("reports extension errors and rejects non-extension sockets", async () => {
   socket.close(); server.close();
 });
 
-test("sends one job at a time and starts a session only when no job waits", async () => {
-  const { server, base, ws } = await start();
+test("sends jobs side by side up to its limit and starts a session only when no job waits", async () => {
+  const { server, base, ws } = await start(undefined, undefined, { parallel: 2, perSite: {} });
   const dir = await mkdtemp(join(tmpdir(), "bridge-"));
   let busy = 0, most = 0, sessions = 0;
   const socket = new WebSocket(ws, { origin: "chrome-extension://test" });
@@ -96,15 +96,35 @@ test("sends one job at a time and starts a session only when no job waits", asyn
   assert.equal((await (await fetch(`${base}/status`)).json()).jobs, 3);
   assert.equal((await (await post("/session")).json()).skipped, "busy");
   for (const r of await Promise.all(runs)) assert.equal(r.status, 200);
-  assert.equal(most, 1);
+  assert.equal(most, 2);
   assert.equal((await readFile(join(dir, "c.txt"), "utf8")), "c");
   assert.equal((await (await post("/session")).json()).closed, 2);
   assert.equal(sessions, 1);
   socket.close(); server.close();
 });
 
+test("a site with a limit of its own gets its jobs one at a time while another site's run beside them", async () => {
+  const { server, base, ws } = await start(undefined, undefined, { parallel: 4, perSite: { gemini: 1 } });
+  const dir = await mkdtemp(join(tmpdir(), "bridge-"));
+  const busy = {}, most = {};
+  const socket = new WebSocket(ws, { origin: "chrome-extension://test" });
+  socket.on("message", (data) => {
+    const job = JSON.parse(data);
+    busy[job.platform] = (busy[job.platform] || 0) + 1;
+    most[job.platform] = Math.max(most[job.platform] || 0, busy[job.platform]);
+    setTimeout(() => { busy[job.platform]--; socket.send(JSON.stringify({ type: "result", id: job.id, ok: true, text: job.prompt })); }, 80);
+  });
+  await new Promise((resolve) => socket.on("open", resolve));
+  await new Promise((resolve) => setTimeout(resolve, 50));
+  const post = (platform, p) => fetch(`${base}/generate`, { method: "POST", body: JSON.stringify({ platform, prompt: p, output: join(dir, p) }) });
+  const runs = [post("gemini", "a"), post("gemini", "b"), post("flow", "c"), post("flow", "d")];
+  for (const r of await Promise.all(runs)) assert.equal(r.status, 200);
+  assert.deepEqual(most, { gemini: 1, flow: 2 });
+  socket.close(); server.close();
+});
+
 test("a job that waits too long for its turn says so", async () => {
-  const server = createBridge({ queueMs: 50, usage });
+  const server = createBridge({ queueMs: 50, usage, parallel: 1 });
   await new Promise((resolve) => server.listen(0, "127.0.0.1", resolve));
   const base = `http://127.0.0.1:${server.address().port}`;
   const socket = new WebSocket(`ws://127.0.0.1:${server.address().port}`, { origin: "chrome-extension://test" });

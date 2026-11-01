@@ -85,13 +85,15 @@ function ConvertTo-UiEvent([string]$Line, [int]$CurrentIndex = 0) {
             # The Flow account still needs setting up once (hub/extension/sites/flow.js says what to do).
             $event.Text = "Sản phẩm $($event.Index): $($Matches[1])"
         } elseif ($line -match '\[CAUSE:BRIDGE\]') {
-            $event.Text = "Sản phẩm $($event.Index): chưa nối được ChatGPT/Flow, mở Chrome có extension."
+            $event.Text = "Sản phẩm $($event.Index): chưa nối được Gemini/Flow, mở Chrome có extension."
         } elseif ($line -match '\[CAUSE:POLICY\]') {
             $event.Text = "Sản phẩm $($event.Index): AI từ chối tạo ảnh này (có thể vi phạm chính sách, không bị tính lượt). Đổi ảnh tham khảo, ví dụ ảnh có logo hay chữ thương hiệu thật, rồi chạy lại hoặc dùng Codex."
         } elseif ($line -match '\[CAUSE:STORE_LOCKED\]') {
             $event.Text = "Sản phẩm $($event.Index): cửa hàng có mật khẩu, hãy gắn ảnh sản phẩm."
         } elseif ($line -match '\[CAUSE:AUTH\]') {
             $event.Text = 'Chưa đăng nhập ChatGPT, bấm Cấu hình.'
+        } elseif ($line -match 'google\.com/sorry') {
+            $event.Text = 'Google tạm chặn Gemini vì lưu lượng bất thường: mở Cấu hình, bấm Mở Gemini, tự xác minh trong Chrome rồi chạy lại.'
         } elseif ($line -match '\[CAUSE:QUOTA\]') {
             $event.Text = 'Hết hạn mức, chờ được cấp lại.'
             if($line -match 'HTTP\s+(\d{3})'){$event.Text+=" HTTP $($Matches[1])."}

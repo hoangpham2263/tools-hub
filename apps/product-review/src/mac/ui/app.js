@@ -1042,7 +1042,7 @@ const usage = { quota: "Hạn mức: đang lấy…", at: 0, reading: false };
 const formatCount = (n) => Number(n).toLocaleString("vi-VN");
 // Web AIs and Antigravity report no tokens: each finished call is counted instead ([AI-CALL]), and their limits are
 // the Google account's own, shown on their sites. Codex's tokens and quota only show when Codex is used.
-const CALL_NAMES = { gemini: ["Gemini web", "lượt"], antigravity: ["Antigravity", "lượt"], flow: ["Flow", "ảnh"], chatgpt: ["ChatGPT web", "ảnh"] };
+const CALL_NAMES = { gemini: ["Gemini web", "lượt"], antigravity: ["Antigravity", "lượt"], flow: ["Flow", "ảnh"] };
 const LIMIT_NAMES = { gemini: "lượt Gemini", antigravity: "hạn mức Antigravity", flow: "credit Flow" };
 function updateUsage() {
   if (!ui.lblTokens || !ui.cmbText) return;

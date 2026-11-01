@@ -1,7 +1,9 @@
 // Local bridge, shared by every tool: a tool POSTs a job over HTTP, the Tools Hub extension (hub/extension, in the
 // user's own Chrome) receives it over WebSocket. ensure.mjs starts it and waits for the extension.
-// Jobs go to the extension one at a time, from every tool and thread: a site only works while its tab is shown. A job
-// waits its turn at most queueMs; its own time (timeoutSec) starts when it is sent.
+// Jobs from every tool and thread go to the extension side by side, each in a tab of its own: up to `parallel` at once
+// (the most threads a tool runs), and per site up to `perSite` (Flow side by side; Gemini, which Google sends to its
+// "unusual traffic" page when several chats open at once, and ChatGPT one at a time). More wait their turn, at most
+// queueMs. A job's own time (timeoutSec) starts when it is sent.
 // Listens on 127.0.0.1 only; nothing is exposed to the network.
 import { createServer } from "node:http";
 import { appendFileSync, existsSync, mkdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
@@ -50,30 +52,35 @@ export function causeOf(error) {
   return "BUSY";
 }
 
-export function createBridge({ fetchImpl = fetch, googleAccount = chosenGoogleAccount, quit = () => process.exit(0), queueMs = 30 * 60000, usage = usageFile } = {}) {
+export function createBridge({ fetchImpl = fetch, googleAccount = chosenGoogleAccount, quit = () => process.exit(0), queueMs = 30 * 60000, usage = usageFile, parallel = 4, perSite = { flow: 4, gemini: 1, chatgpt: 1 } } = {}) {
   const record = (entry) => { try { mkdirSync(dirname(usage), { recursive: true }); appendFileSync(usage, JSON.stringify({ t: new Date().toISOString(), ...entry }) + "\n"); } catch {} };
   let extension = null, extensionVersion = "";
   const pending = new Map();
-  // Jobs waiting to be sent, and whether one is with the extension now.
+  // Jobs waiting to be sent, and how many are with the extension now.
   const waiting = [];
-  let running = false;
-  const jobs = () => waiting.length + (running ? 1 : 0);
+  let running = 0;
+  const bySite = {};
+  const jobs = () => waiting.length + running;
   function next() {
-    if (running || !waiting.length) return;
-    const item = waiting.shift();
-    clearTimeout(item.timer);
-    running = true;
-    item.run().then(item.resolve, item.reject).finally(() => { running = false; next(); });
+    for (let i = 0; running < parallel && i < waiting.length; i++) {
+      const item = waiting[i];
+      if ((bySite[item.site] || 0) >= (perSite[item.site] ?? parallel)) continue;
+      waiting.splice(i--, 1);
+      clearTimeout(item.timer);
+      running++;
+      bySite[item.site] = (bySite[item.site] || 0) + 1;
+      item.run().then(item.resolve, item.reject).finally(() => { running--; bySite[item.site]--; next(); });
+    }
   }
-  const inTurn = (run) => new Promise((resolve, reject) => {
-    const item = { run, resolve, reject };
+  const inTurn = (site, run) => new Promise((resolve, reject) => {
+    const item = { site, run, resolve, reject };
     item.timer = setTimeout(() => { waiting.splice(waiting.indexOf(item), 1); reject(new Error("queue")); }, queueMs);
     waiting.push(item);
     next();
   });
   // One message to the extension and its answer ({ type: "result", id, ok, ... }).
   const ask = (message, ms) => new Promise((resolve, reject) => {
-    const id = randomUUID();
+    const id = message.id || randomUUID();
     const timer = setTimeout(() => { pending.delete(id); reject(new Error("timeout")); }, ms);
     timer.unref?.();
     pending.set(id, { resolve, timer });
@@ -129,12 +136,12 @@ export function createBridge({ fetchImpl = fetch, googleAccount = chosenGoogleAc
       })));
       const timeoutSec = Number(job.timeoutSec || 600);
       const account = job.platform === "chatgpt" ? "" : googleAccount();
-      if (jobs()) log(`${job.platform} job waits for ${jobs()} before it`);
-      const result = await inTurn(async () => {
+      const id = randomUUID();
+      const result = await inTurn(job.platform, async () => {
         if (!extension) return { ok: false, error: "Extension chưa kết nối. Mở Chrome có cài extension Tools Hub." };
-        log(`${job.platform} job sent`);
+        log(`[${id.slice(0, 8)}] ${job.platform} job sent (${running} running)`);
         const started = Date.now();
-        const done = await ask({ type: "generate", platform: job.platform, prompt: job.prompt, images, timeoutSec, account }, (timeoutSec + 60) * 1000)
+        const done = await ask({ type: "generate", id, platform: job.platform, prompt: job.prompt, images, timeoutSec, account }, (timeoutSec + 60) * 1000)
           .catch((error) => ({ ok: false, error: error.message === "timeout" ? `Hết thời gian chờ (${timeoutSec + 60}s)` : String(error.message || error), thrown: error }));
         record({ ai: job.platform, kind: KIND[job.platform], account, ok: !!done.ok, ...(done.ok ? {} : { cause: causeOf(done.error) }), ms: Date.now() - started });
         if (done.thrown) throw done.thrown;

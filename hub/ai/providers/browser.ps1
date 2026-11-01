@@ -1,4 +1,4 @@
-﻿# The web AIs (Gemini, Google Flow, ChatGPT) in the signed-in tabs of the user's own Chrome: hub/bridge (local server)
+﻿# The web AIs (Gemini, Google Flow) in the signed-in tabs of the user's own Chrome: hub/bridge (local server)
 # and hub/extension (Tools Hub). The bridge hands the extension one job at a time, since a page only works while its
 # tab is shown, so a call also waits its turn there: up to $script:BridgeQueueSec more than its own time.
 $script:BridgeUrl = 'http://127.0.0.1:8765'
@@ -64,14 +64,15 @@ function Invoke-BrowserText([string]$Platform, [string]$Prompt, [string[]]$Image
             if ($text) { Write-Host "  [AI-CALL] $Platform"; return $text }
             $detail = "$name trả lời trống."
         } catch { $detail = Get-BridgeError $_; Restore-ImageBridge }
-        if ($attempt -eq 2 -or $detail -match 'Hết thời gian|timeout|đăng nhập|Extension') { break }
+        if ($attempt -eq 2 -or $detail -match 'Hết thời gian|timeout|đăng nhập|Extension|google\.com/sorry') { break }
         Write-Host "  [RETRY] $name; attempt $($attempt + 1)/2..." -ForegroundColor Yellow
     }
-    $cause = if ($detail -match 'Hết thời gian|timeout') { 'AI_TIMEOUT' } elseif ($detail -match 'đăng nhập|Extension') { 'BRIDGE' } else { 'BUSY' }
+    # Google's "unusual traffic" page (google.com/sorry): only the user's own check ends it, so it is not retried.
+    $cause = if ($detail -match 'google\.com/sorry') { 'QUOTA' } elseif ($detail -match 'Hết thời gian|timeout') { 'AI_TIMEOUT' } elseif ($detail -match 'đăng nhập|Extension') { 'BRIDGE' } else { 'BUSY' }
     throw "AI failed. ${name}: $detail [CAUSE:$cause]"
 }
 
-# One image from a web AI (Google Flow, ChatGPT), saved as PNG at $Output. Not retried here: the workflow first looks
+# One image from a web AI (Google Flow), saved as PNG at $Output. Not retried here: the workflow first looks
 # for an image that arrived anyway.
 function Invoke-BrowserImage([string]$Platform, [string]$Prompt, [string[]]$Images, [string]$Output, [int]$TimeoutSec = 600) {
     try {

@@ -11,8 +11,8 @@ param(
     [string]$Model = '',
     [string]$ReferenceMapFile = '',
     [switch]$LocalOnly,
-    # codex: Codex CLI; chatgpt / flow: the signed-in browser tab through bridge/ + hub/extension/.
-    [ValidateSet('codex', 'chatgpt', 'flow')][string]$ImageBackend = $(if ($env:PIB_IMAGE_BACKEND) { $env:PIB_IMAGE_BACKEND } else { 'codex' }),
+    # codex: Codex CLI; flow: Google Flow in the signed-in Chrome, through hub/bridge + hub/extension/.
+    [ValidateSet('codex', 'flow')][string]$ImageBackend = $(if ($env:PIB_IMAGE_BACKEND) { $env:PIB_IMAGE_BACKEND } else { 'codex' }),
     # Every text step (product, checks, review): codex: Codex CLI; gemini: Gemini web in the tools' own Chrome;
     # antigravity: the Antigravity CLI (agy), signed in with Google.
     [ValidateSet('codex', 'gemini', 'antigravity')][string]$TextBackend = 'codex'

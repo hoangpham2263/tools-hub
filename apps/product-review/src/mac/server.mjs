@@ -85,7 +85,7 @@ async function startRun({ threads = 1, backend = "codex", text = "codex" }) {
     logFile: join(logs, `image-batch-mac-${stamp}.log`), errFile: join(logs, `image-batch-mac-${stamp}.err.log`) });
   const args = ["-ThrottleLimit", String(threads)];
   // Tạo ảnh: Codex, or Google Flow in the tools' own Chrome (bridge/ + hub/extension/).
-  if (["flow", "chatgpt"].includes(backend)) args.push("-ImageBackend", backend);
+  if (backend === "flow") args.push("-ImageBackend", backend);
   // Viết review: Codex, Gemini web in the same Chrome, or the Antigravity CLI, for every text step.
   if (["gemini", "antigravity"].includes(text)) args.push("-TextBackend", text);
   const map = join(workspace, "reference-inputs", "references.json");

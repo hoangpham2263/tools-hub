@@ -30,7 +30,6 @@ $script:HubAIProviders = [ordered]@{
     codex = [pscustomobject]@{ Name = 'Codex CLI'; Via = 'cli'; Kinds = @('text', 'image') }
     gemini = [pscustomobject]@{ Name = 'Gemini web'; Via = 'browser'; Kinds = @('text') }
     flow = [pscustomobject]@{ Name = 'Google Flow'; Via = 'browser'; Kinds = @('image') }
-    chatgpt = [pscustomobject]@{ Name = 'ChatGPT web'; Via = 'browser'; Kinds = @('image') }
     antigravity = [pscustomobject]@{ Name = 'Antigravity CLI'; Via = 'cli'; Kinds = @('text') }
 }
 
