@@ -6,7 +6,7 @@
 function Get-HubImageProductRules([int]$ProductIndex, [ValidateSet('review', 'content')][string]$Profile = 'review') {
     $fit = switch ($Profile) {
         'review' { "5. FIT: place it at true scale with the perspective, contact shadows and occlusion of image 1. Feet touch the floor (sinking slightly into a rug); match image 1's exposure and noise locally on the product." }
-        'content' { "5. FIT: place it at true scale with the perspective, light direction, contact shadows and occlusion of image 1. Feet touch the floor (sinking slightly into a rug). Render the whole photo clean and sharp with natural fine detail, free of halos, harsh sharpening, HDR and plastic gloss." }
+        'content' { "5. FIT: place it at true scale with the light direction, contact shadows and occlusion of the photo, seen from the camera angle the task asks for. Feet touch the floor (sinking slightly into a rug). Render the whole photo clean and sharp with natural fine detail, free of halos, harsh sharpening, HDR and plastic gloss." }
     }
     @"
 CORE PRODUCT RULES (image $ProductIndex is the product photo; these apply to every product):

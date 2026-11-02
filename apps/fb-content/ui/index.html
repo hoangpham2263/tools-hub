@@ -11,7 +11,7 @@
    chosen product (its images and a post to copy) where Product Review shows its progress. Fits the window. */
 body { height: 100vh; overflow: hidden; }
 main { height: 100%; display: flex; flex-direction: column; }
-.layout { flex: 1; min-height: 0; grid-template-columns: minmax(0, 1fr) 400px; grid-template-rows: auto auto minmax(0, 1fr); }
+.layout { flex: 1; min-height: 0; grid-template-columns: minmax(0, 1fr) 400px; grid-template-rows: auto auto auto minmax(0, 1fr); }
 .tools-row { display: flex; gap: 12px; margin-bottom: 10px; }
 #rows { height: 224px; padding: 10px 10px 6px; }
 /* One row per product, as in Product Review: #, name, status, thumbnail, Xem / sửa, ×. */
@@ -22,6 +22,22 @@ main { height: 100%; display: flex; flex-direction: column; }
 .qrow .thumb { width: 44px; height: 44px; background: var(--control); object-fit: cover; display: block; }
 .qrow .btn { height: 34px; padding: 0; }
 .ok { color: #006400; } .warn { color: rgb(176, 96, 0); }
+.pair2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.pair2 label { margin: 0 0 8px; }
+dialog .pair > div > input + label { margin-top: 12px; }
+.wm-preview { position: relative; margin-top: 8px; width: 100%; background: linear-gradient(135deg, #dcd5c8, #b7ab97); border: 1px solid var(--line); overflow: hidden; }
+.wm-preview .bg { display: block; width: 100%; height: 100%; object-fit: fill; }
+.wm-preview img.mark { position: absolute; max-width: none; }
+.wm-preview.plate { cursor: pointer; }
+.wm-preview.off img.mark { opacity: .35; }
+.wm-preview.plate { background: #eceae4; }
+.wm-preview.none { display: grid; place-content: center; height: 64px; background: #fff; border-style: dashed; color: var(--muted); font-size: 12px; text-align: center; padding: 6px; }
+.check[hidden] { display: none; }
+.check { display: flex; align-items: center; gap: 8px; margin: 4px 0 0; cursor: pointer; }
+.check input { width: auto; margin: 0; }
+.actions-col { padding-top: 10px; }
+.tile.waiting.warn { border-color: rgb(176, 96, 0); }
+.empty-note.warn { white-space: pre-line; text-align: left; max-height: 90px; overflow: auto; }
 .empty-list { height: 100%; display: grid; place-content: center; color: var(--muted); }
 /* Đăng lên: the platforms to write for, each with its logo; at least one stays on. */
 .platforms { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; }
@@ -42,6 +58,19 @@ main { height: 100%; display: flex; flex-direction: column; }
 .run { grid-column: 1 / -1; display: flex; align-items: center; gap: 12px; padding: 11px 14px; }
 .run .btn { height: 40px; }
 #btnRun { width: 160px; } #btnStop { width: 100px; }
+#status { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+#logGroup { grid-column: 1 / -1; display: flex; flex-direction: column; gap: 6px; }
+#logGroup h2 { margin: 0; }
+#progress { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+#log { height: 96px; min-height: 96px; max-height: 96px; resize: none; font-size: 12px; line-height: 1.5; background: #fff; }
+/* Same look as Product Review: a green bar filled by the shots done (sliding while none is done yet), greyed controls while running. */
+.progress { background: #e6e6e6; border: 1px solid #bcbcbc; height: 8px; overflow: hidden; }
+.progress > span { display: block; height: 100%; width: 0; background: #06b025; transition: width .4s; }
+.progress.marquee > span { width: 22%; transition: none; animation: marquee 2.2s linear infinite; }
+@keyframes marquee { from { transform: translateX(-100%); } to { transform: translateX(460%); } }
+.btn:disabled, .btn.primary:disabled { background: #cccccc; border-color: #bfbfbf; color: #838383; cursor: default; }
+select:disabled, input:disabled, textarea:disabled { background-color: #cccccc; border-color: #bfbfbf; color: #838383; }
+.qrow .btn:disabled { opacity: 1; }
 /* Results of the chosen product: its images on the left, the post on the right. */
 #resultGroup { grid-column: 1 / -1; display: flex; flex-direction: column; min-height: 0; }
 #result { flex: 1; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr); gap: 16px; min-height: 0; }
@@ -69,7 +98,7 @@ main { height: 100%; display: flex; flex-direction: column; }
 #results .group-row { gap: 8px; }
 .empty-note { flex: 1; display: grid; place-content: center; text-align: center; background: #fff; border: 1px dashed var(--line); color: var(--muted); padding: 12px; }
 /* Xem / sửa: the product's details and original images, like Product Review's product dialog. */
-dialog { width: 640px; max-width: calc(100vw - 40px); padding: 0; border: 1px solid #7a7a7a; background: var(--control); box-shadow: 0 8px 30px rgba(0, 0, 0, .25); }
+dialog { width: 760px; max-width: calc(100vw - 40px); padding: 0; border: 1px solid #7a7a7a; background: var(--control); box-shadow: 0 8px 30px rgba(0, 0, 0, .25); }
 dialog::backdrop { background: rgba(0, 0, 0, .25); }
 dialog .bar { display: flex; align-items: center; justify-content: space-between; height: 32px; padding: 0 4px 0 12px; background: #fff; border-bottom: 1px solid var(--line); }
 dialog .bar button { width: 32px; height: 28px; border: 0; background: none; font-size: 16px; }
@@ -77,15 +106,51 @@ dialog .body { padding: 14px 16px 16px; }
 dialog .pair { display: grid; grid-template-columns: 2fr 1fr; gap: 12px; }
 dialog .pair label { margin-top: 0; }
 dialog textarea { min-height: 72px; max-height: 120px; }
+#tags { min-height: 96px; }
 dialog .tiles { flex-wrap: nowrap; overflow-x: auto; overflow-y: hidden; padding-bottom: 2px; align-items: flex-start; }
 dialog .foot { display: flex; justify-content: flex-end; gap: 10px; margin-top: 16px; }
 dialog .foot .btn { width: 104px; }
+#imgDlg { width: 760px; }
+#imgDlg.compare { width: min(1180px, calc(100vw - 40px)); }
+#imgGrid { display: flex; gap: 12px; justify-content: center; align-items: flex-start; }
+#imgGrid figure { flex: 1; min-width: 0; margin: 0; text-align: center; }
+#imgGrid img { display: block; max-width: 100%; max-height: 64vh; margin: 0 auto; object-fit: contain; background: #fff; border: 1px solid var(--line); }
+#imgGrid figcaption { margin-top: 6px; font-size: 12px; color: var(--muted); }
+#imgGrid figure.result figcaption { color: var(--text, #222); font-weight: 600; }
+#brandOther { margin-top: 6px; }
+.colors { max-height: 300px; min-height: 120px; overflow-y: auto; background: #fff; border: 1px solid var(--line); }
+.crow { display: flex; align-items: flex-start; gap: 8px; padding: 8px; border-bottom: 1px solid var(--line); }
+.crow[aria-current="true"] { background: var(--hover); }
+.crow .arrow { flex: none; height: 56px; line-height: 56px; color: var(--muted); }
+.crow .scenes { display: flex; flex-wrap: wrap; gap: 8px; flex: 1; min-width: 0; align-items: flex-start; }
+.crow .hint { align-self: center; font-size: 12px; color: var(--muted); }
+.crow-add { display: flex; align-items: center; gap: 8px; padding: 8px; }
+.pt { display: flex; align-items: flex-start; gap: 4px; flex: none; }
+.pt .th { position: relative; width: 56px; height: 56px; background: var(--control); border: 1px solid var(--line); cursor: zoom-in; }
+.pt .th img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.pt .th .remove { position: absolute; top: 2px; right: 2px; width: 18px; height: 18px; padding: 0; font-size: 11px; line-height: 1; }
+.pt .chip { width: 56px; height: 56px; padding: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; font-size: 12px; line-height: 1.2; }
+.pt .chip small { font-size: inherit; line-height: inherit; color: inherit; }
+.addtile { flex: none; width: 56px; height: 56px; padding: 0; font: inherit; font-size: 12px; color: var(--muted); background: #fff; border: 1px dashed var(--line); cursor: pointer; }
+.addtile:hover { background: var(--hover); border-color: var(--accent); }
+.result-color { margin: 4px 0 0; }
+.angles-btn { height: 26px; padding: 0 8px; font-size: 12px; }
+#angleDlg { width: 720px; }
+.angle-top { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
+.angle-top .spacer { flex: 1; }
+.angle-top .sets { display: inline-flex; gap: 8px; }
+.angle-top .btn { height: 28px; padding: 0 10px; }
+.angle-list { max-height: 54vh; overflow-y: auto; background: #fff; border: 1px solid var(--line); padding: 4px 12px 8px; }
+.angle-group { margin: 12px 0 4px; font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; }
+.angle-item { display: grid; grid-template-columns: 20px minmax(0, 1fr); gap: 8px; align-items: start; margin: 0; padding: 6px 0; border-bottom: 1px solid #eee; cursor: pointer; }
+.angle-item:hover { background: var(--hover); }
+.angle-item input { width: auto; margin: 2px 0 0; }
 </style>
 <script src="../../../hub/assets/hub.js" defer></script>
 </head>
 <body data-fit="980x700">
 <main>
-  <header><a class="btn" id="menu" href="/" hidden>← Menu</a><h1>Content MXH</h1></header>
+  <header><a class="btn" id="menu" href="#" hidden>← Menu</a><h1>Content MXH</h1></header>
 
   <div class="layout">
     <section class="group">
@@ -97,18 +162,25 @@ dialog .foot .btn { width: 104px; }
       <div class="listbox" id="rows"></div>
     </section>
     <section class="group actions-col">
-      <h2>Thao tác</h2>
+      
       <label>Đăng lên</label>
       <div class="platforms" id="platforms" role="group" aria-label="Đăng lên"></div>
       <label>Giọng văn</label>
       <div class="seg" id="tones" role="group" aria-label="Giọng văn"></div>
+      <div class="pair2"><div><label for="imageAi">Tạo ảnh</label><select id="imageAi"></select></div><div><label for="textAi">Viết bài</label><select id="textAi"></select></div></div>
       <label for="note">Lời nhắn cho AI</label>
-      <textarea id="note" placeholder="Gửi kèm khuôn sẵn: ý muốn thêm hoặc góp ý. Ví dụ: nhấn mạnh gỗ tự nhiên, giọng gần gũi."></textarea>
+      <textarea id="note" placeholder="Ý muốn thêm hoặc góp ý cho bài viết. Ví dụ: nhấn mạnh khoảnh khắc buổi tối, giọng gần gũi."></textarea>
     </section>
     <section class="group run">
       <button class="btn primary" id="btnRun" type="button">Bắt đầu</button>
       <button class="btn" id="btnStop" type="button" disabled>Dừng</button>
       <span class="muted" id="status"></span>
+    </section>
+    <section class="group" id="logGroup">
+      <h2>Tiến trình &amp; thông báo</h2>
+      <div class="progress" id="bar"><span></span></div>
+      <div class="muted" id="progress"></div>
+      <textarea id="log" readonly></textarea>
     </section>
     <section class="group" id="resultGroup">
       <h2 id="resultTitle">Kết quả</h2>
@@ -124,81 +196,98 @@ dialog .foot .btn { width: 104px; }
   <div class="bar"><span id="dlgTitle">Sản phẩm</span><button type="button" id="dlgX" aria-label="Đóng">✕</button></div>
   <div class="body">
     <div class="pair">
-      <div><label for="name">Tên sản phẩm</label><input id="name" placeholder="Bàn trà gỗ óc chó chân vòm"></div>
-      <div><label for="brand">Thương hiệu</label><input id="brand" placeholder="GRENHEIM"></div>
+      <div><label for="name">Tên sản phẩm</label><input id="name" placeholder="Bàn trà gỗ óc chó chân vòm"><label for="link">Link sản phẩm</label><input id="link" placeholder="https://…"><label for="tags">Hashtag (cách nhau bởi dấu cách)</label><textarea id="tags" placeholder="#BanTraGo #GocTra"></textarea></div>
+      <div><label for="brand">Thương hiệu</label><select id="brand"></select><input id="brandOther" hidden placeholder="Tên thương hiệu" autocomplete="off">
+        <div class="wm-preview" id="wmPreview"></div><label class="check" id="wmCheck"><input type="checkbox" id="watermark"><span>Đóng dấu logo lên ảnh</span></label></div>
     </div>
-    <label for="link">Link sản phẩm</label><input id="link" placeholder="https://…">
-    <label for="points">Điểm nổi bật (mỗi dòng một ý)</label><textarea id="points" placeholder="Gỗ tự nhiên nguyên tấm&#10;Chân vòm vững chắc"></textarea>
-    <label for="tags">Hashtag (cách nhau bởi dấu cách)</label><input id="tags" placeholder="#BanTraGo #GocTra">
-    <label>Ảnh gốc (một sản phẩm có thể nhiều ảnh; mỗi ảnh ra nhiều bối cảnh)</label>
-    <div class="tiles" id="sources"></div>
+    <label>Ảnh sản phẩm theo màu và ảnh cảnh</label>
+    <div class="colors" id="colors"></div>
+    <div class="muted small" id="dlgNote"></div>
     <input id="pick" type="file" accept="image/jpeg,image/png,image/webp" multiple hidden>
     <div class="foot"><button class="btn primary" id="dlgSave" type="button">Lưu</button><button class="btn" id="dlgCancel" type="button">Hủy</button></div>
   </div>
 </dialog>
+<dialog id="imgDlg">
+  <div class="bar"><span id="imgTitle"></span><button type="button" id="imgX" aria-label="Đóng">✕</button></div>
+  <div class="body"><div id="imgGrid"></div><div class="foot"><button class="btn" id="imgClose" type="button">Đóng</button></div></div>
+</dialog>
+<dialog id="angleDlg">
+  <div class="bar"><span>Chọn góc máy</span><button type="button" id="angleX" aria-label="Đóng">✕</button></div>
+  <div class="body">
+    <div class="angle-top"><span class="muted" id="angleSummary"></span><span class="spacer"></span><span id="angleSets" class="sets"></span><button class="btn" id="angleClear" type="button">Bỏ chọn hết</button></div>
+    <div id="angleList" class="angle-list"></div>
+    <div class="foot"><button class="btn primary" id="angleOk" type="button">Xong</button></div>
+  </div>
+</dialog>
 <div class="toast" id="toast"></div>
 <script>
-// Opened from the Tools Hub menu (served over http): a button back to it. Opened as a file: no menu to go back to.
-document.getElementById("menu").hidden = !location.protocol.startsWith("http");
-// Many products at once, as in Product Review, with a post for each platform chosen in Đăng lên. Each has its details and original images; Bắt đầu will make
-// several bối cảnh from each original image (Product Review's image logic, adapted) and write a post per product. Not built yet: the post is a fixed
-// template per tone (compose), and the AI will get Lời nhắn cho AI with the template.
-// The product details are kept in this browser; original images only while the page is open.
+// Content MXH: many products at once. A product has colors; a color has its product photo and, optionally, scene photos
+// (rooms to place it in); every scene (or the product photo itself when a color has none) is shot from the camera angles
+// picked for it. One post per platform chosen in Đăng lên. This page only collects the job and shows the run; the work is
+// src/run-content.ps1, started by src/server.mjs, which turns the run's @@EVENT lines into the events this page polls.
+// The product details and the photos' paths are kept in this browser; photos live in workspace/temp/uploads.
 const $ = (id) => document.getElementById(id);
-const KEY = "fb-content:v2";
-const FIELDS = ["name", "brand", "link", "points", "tags"];
-const TONES = { story: "Kể chuyện", short: "Ngắn gọn", sale: "Bán hàng" };
-// Logos: the official marks (Simple Icons). Each platform gets its own post from the same product: its length limit, how links and hashtags work there, and
-// the image shape that suits it.
-const PLATFORMS = {
-  facebook: { name: "Facebook", limit: 63206, tags: 5, tip: "Link bấm được ngay trong bài · ảnh 4:5 hoặc 1:1",
-    logo: '<svg class="logo" viewBox="0 0 24 24"><circle cx="12" cy="12" r="11" fill="#fff"/><path fill="#1877F2" d="M9.101 23.691v-7.98H6.627v-3.667h2.474v-1.58c0-4.085 1.848-5.978 5.858-5.978.401 0 .955.042 1.468.103a8.68 8.68 0 0 1 1.141.195v3.325a8.623 8.623 0 0 0-.653-.036 26.805 26.805 0 0 0-.733-.009c-.707 0-1.259.096-1.675.309a1.686 1.686 0 0 0-.679.622c-.258.42-.374.995-.374 1.752v1.297h3.919l-.386 2.103-.287 1.564h-3.246v8.245C19.396 23.238 24 18.179 24 12.044c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.628 3.874 10.35 9.101 11.647Z"/></svg>' },
-  instagram: { name: "Instagram", limit: 2200, tags: 30, tip: "Link trong caption không bấm được: để ở bio · ảnh 4:5",
-    logo: '<svg class="logo" viewBox="0 0 24 24"><defs><linearGradient id="igg" x1="0" y1="1" x2="1" y2="0"><stop offset="0" stop-color="#FEDA75"/><stop offset=".35" stop-color="#FA7E1E"/><stop offset=".6" stop-color="#D62976"/><stop offset="1" stop-color="#4F5BD5"/></linearGradient></defs><rect width="24" height="24" rx="6" fill="url(#igg)"/><path fill="#fff" transform="translate(4.5 4.5) scale(.625)" d="M7.0301.084c-1.2768.0602-2.1487.264-2.911.5634-.7888.3075-1.4575.72-2.1228 1.3877-.6652.6677-1.075 1.3368-1.3802 2.127-.2954.7638-.4956 1.6365-.552 2.914-.0564 1.2775-.0689 1.6882-.0626 4.947.0062 3.2586.0206 3.6671.0825 4.9473.061 1.2765.264 2.1482.5635 2.9107.308.7889.72 1.4573 1.388 2.1228.6679.6655 1.3365 1.0743 2.1285 1.38.7632.295 1.6361.4961 2.9134.552 1.2773.056 1.6884.069 4.9462.0627 3.2578-.0062 3.668-.0207 4.9478-.0814 1.28-.0607 2.147-.2652 2.9098-.5633.7889-.3086 1.4578-.72 2.1228-1.3881.665-.6682 1.0745-1.3378 1.3795-2.1284.2957-.7632.4966-1.636.552-2.9124.056-1.2809.0692-1.6898.063-4.948-.0063-3.2583-.021-3.6668-.0817-4.9465-.0607-1.2797-.264-2.1487-.5633-2.9117-.3084-.7889-.72-1.4568-1.3876-2.1228C21.2982 1.33 20.628.9208 19.8378.6165 19.074.321 18.2017.1197 16.9244.0645 15.6471.0093 15.236-.005 11.977.0014 8.718.0076 8.31.0215 7.0301.0839m.1402 21.6932c-1.17-.0509-1.8053-.2453-2.2287-.408-.5606-.216-.96-.4771-1.3819-.895-.422-.4178-.6811-.8186-.9-1.378-.1644-.4234-.3624-1.058-.4171-2.228-.0595-1.2645-.072-1.6442-.079-4.848-.007-3.2037.0053-3.583.0607-4.848.05-1.169.2456-1.805.408-2.2282.216-.5613.4762-.96.895-1.3816.4188-.4217.8184-.6814 1.3783-.9003.423-.1651 1.0575-.3614 2.227-.4171 1.2655-.06 1.6447-.072 4.848-.079 3.2033-.007 3.5835.005 4.8495.0608 1.169.0508 1.8053.2445 2.228.408.5608.216.96.4754 1.3816.895.4217.4194.6816.8176.9005 1.3787.1653.4217.3617 1.056.4169 2.2263.0602 1.2655.0739 1.645.0796 4.848.0058 3.203-.0055 3.5834-.061 4.848-.051 1.17-.245 1.8055-.408 2.2294-.216.5604-.4763.96-.8954 1.3814-.419.4215-.8181.6811-1.3783.9-.4224.1649-1.0577.3617-2.2262.4174-1.2656.0595-1.6448.072-4.8493.079-3.2045.007-3.5825-.006-4.848-.0608M16.953 5.5864A1.44 1.44 0 1 0 18.39 4.144a1.44 1.44 0 0 0-1.437 1.4424M5.8385 12.012c.0067 3.4032 2.7706 6.1557 6.173 6.1493 3.4026-.0065 6.157-2.7701 6.1506-6.1733-.0065-3.4032-2.771-6.1565-6.174-6.1498-3.403.0067-6.156 2.771-6.1496 6.1738M8 12.0077a4 4 0 1 1 4.008 3.9921A3.9996 3.9996 0 0 1 8 12.0077"/></svg>' },
-  threads: { name: "Threads", limit: 500, tags: 1, tip: "Tối đa 500 ký tự, một chủ đề (#) · ảnh 4:5",
-    logo: '<svg class="logo" viewBox="0 0 24 24"><path fill="#000" d="M18.263 11.097c-.03-3.486-1.92-5.586-5.111-5.586-2.13 0-3.922.963-4.863 2.499l2.062 1.438c.535-.843 1.272-1.543 2.628-1.543 1.528 0 2.318.85 2.544 2.431a15 15 0 0 0-2.236-.173c-4.125 0-6.068 1.867-6.068 4.336s1.943 3.99 4.804 3.99c3.139 0 5.013-2.115 5.781-4.735.798.361 1.348 1.204 1.348 2.47 0 3.387-3.907 5.232-7.22 5.232-4.885 0-8.077-3.207-8.077-8.424 0-6.392 4.223-10.487 9.9-10.487 3.808 0 5.69 1.671 6.97 3.914l2.108-1.475C21.44 2.078 18.331 0 13.663 0 6.227 0 1.168 5.277 1.168 12.934c0 7 4.953 11.066 10.856 11.066 4.878 0 9.809-2.846 9.809-7.716 0-2.545-1.46-4.231-3.569-5.187m-6.33 4.855c-1.077 0-2.026-.512-2.026-1.453 0-1.483 1.822-1.934 3.606-1.934.678 0 1.34.045 1.927.173-.422 1.927-1.671 3.215-3.508 3.214Z"/></svg>' },
-  tiktok: { name: "TikTok", limit: 4000, tags: 5, tip: "Caption ngắn đi kèm video · ảnh/video 9:16",
-    logo: '<svg class="logo" viewBox="0 0 24 24"><path fill="#000" d="M12.525.02c1.31-.02 2.61-.01 3.91-.02.08 1.53.63 3.09 1.75 4.17 1.12 1.11 2.7 1.62 4.24 1.79v4.03c-1.44-.05-2.89-.35-4.2-.97-.57-.26-1.1-.59-1.62-.93-.01 2.92.01 5.84-.02 8.75-.08 1.4-.54 2.79-1.35 3.94-1.31 1.92-3.58 3.17-5.91 3.21-1.43.08-2.86-.31-4.08-1.03-2.02-1.19-3.44-3.37-3.65-5.71-.02-.5-.03-1-.01-1.49.18-1.9 1.12-3.72 2.58-4.96 1.66-1.44 3.98-2.13 6.15-1.72.02 1.48-.04 2.96-.04 4.44-.99-.32-2.15-.23-3.02.37-.63.41-1.11 1.04-1.36 1.75-.21.51-.15 1.07-.14 1.61.24 1.64 1.82 3.02 3.5 2.87 1.12-.01 2.19-.66 2.77-1.61.19-.33.4-.67.41-1.06.1-1.79.06-3.57.07-5.36.01-4.03-.01-8.05.02-12.07z"/></svg>' },
-};
-const OPENING = {
-  story: (n) => `Có những món đồ mình chọn vì đẹp, và có những món ở lại lâu vì hợp với nhịp sống trong nhà. ${n} là một món như vậy.`,
-  short: (n) => `${n}.`,
-  sale: (n) => `Giới thiệu ${n}.`,
-};
-const saved = (() => { try { return JSON.parse(localStorage.getItem(KEY)) || {}; } catch { return {}; } })();
-const platforms = [].concat(saved.platforms || []).filter((p) => PLATFORMS[p]);
-const state = { tone: TONES[saved.tone] ? saved.tone : "story", note: saved.note || "", rows: (saved.rows || []).map((r) => ({ ...r, sources: [] })), current: saved.current || "",
-  platforms: platforms.length ? platforms : ["facebook", "instagram"], tab: saved.tab || "" };
-const persist = () => { try { localStorage.setItem(KEY, JSON.stringify({ tone: state.tone, note: state.note, current: state.current, platforms: state.platforms, tab: state.tab, rows: state.rows.map(({ sources, ...r }) => r) })); } catch {} };
+const KEY = "fb-content:v4";
+const FIELDS = ["name", "link", "tags"];
 const el = (tag, props = {}) => Object.assign(document.createElement(tag), props);
+const fileUrl = (path) => `/file?path=${encodeURIComponent(path)}`;
+const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+// Logos: the official marks (Simple Icons), by platform id. Limits, hashtags and tips come from data/platforms.json.
+const LOGOS = {
+  "facebook": "<svg class=\"logo\" viewBox=\"0 0 24 24\"><circle cx=\"12\" cy=\"12\" r=\"11\" fill=\"#fff\"/><path fill=\"#1877F2\" d=\"M9.101 23.691v-7.98H6.627v-3.667h2.474v-1.58c0-4.085 1.848-5.978 5.858-5.978.401 0 .955.042 1.468.103a8.68 8.68 0 0 1 1.141.195v3.325a8.623 8.623 0 0 0-.653-.036 26.805 26.805 0 0 0-.733-.009c-.707 0-1.259.096-1.675.309a1.686 1.686 0 0 0-.679.622c-.258.42-.374.995-.374 1.752v1.297h3.919l-.386 2.103-.287 1.564h-3.246v8.245C19.396 23.238 24 18.179 24 12.044c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.628 3.874 10.35 9.101 11.647Z\"/></svg>",
+  "instagram": "<svg class=\"logo\" viewBox=\"0 0 24 24\"><defs><linearGradient id=\"igg\" x1=\"0\" y1=\"1\" x2=\"1\" y2=\"0\"><stop offset=\"0\" stop-color=\"#FEDA75\"/><stop offset=\".35\" stop-color=\"#FA7E1E\"/><stop offset=\".6\" stop-color=\"#D62976\"/><stop offset=\"1\" stop-color=\"#4F5BD5\"/></linearGradient></defs><rect width=\"24\" height=\"24\" rx=\"6\" fill=\"url(#igg)\"/><path fill=\"#fff\" transform=\"translate(4.5 4.5) scale(.625)\" d=\"M7.0301.084c-1.2768.0602-2.1487.264-2.911.5634-.7888.3075-1.4575.72-2.1228 1.3877-.6652.6677-1.075 1.3368-1.3802 2.127-.2954.7638-.4956 1.6365-.552 2.914-.0564 1.2775-.0689 1.6882-.0626 4.947.0062 3.2586.0206 3.6671.0825 4.9473.061 1.2765.264 2.1482.5635 2.9107.308.7889.72 1.4573 1.388 2.1228.6679.6655 1.3365 1.0743 2.1285 1.38.7632.295 1.6361.4961 2.9134.552 1.2773.056 1.6884.069 4.9462.0627 3.2578-.0062 3.668-.0207 4.9478-.0814 1.28-.0607 2.147-.2652 2.9098-.5633.7889-.3086 1.4578-.72 2.1228-1.3881.665-.6682 1.0745-1.3378 1.3795-2.1284.2957-.7632.4966-1.636.552-2.9124.056-1.2809.0692-1.6898.063-4.948-.0063-3.2583-.021-3.6668-.0817-4.9465-.0607-1.2797-.264-2.1487-.5633-2.9117-.3084-.7889-.72-1.4568-1.3876-2.1228C21.2982 1.33 20.628.9208 19.8378.6165 19.074.321 18.2017.1197 16.9244.0645 15.6471.0093 15.236-.005 11.977.0014 8.718.0076 8.31.0215 7.0301.0839m.1402 21.6932c-1.17-.0509-1.8053-.2453-2.2287-.408-.5606-.216-.96-.4771-1.3819-.895-.422-.4178-.6811-.8186-.9-1.378-.1644-.4234-.3624-1.058-.4171-2.228-.0595-1.2645-.072-1.6442-.079-4.848-.007-3.2037.0053-3.583.0607-4.848.05-1.169.2456-1.805.408-2.2282.216-.5613.4762-.96.895-1.3816.4188-.4217.8184-.6814 1.3783-.9003.423-.1651 1.0575-.3614 2.227-.4171 1.2655-.06 1.6447-.072 4.848-.079 3.2033-.007 3.5835.005 4.8495.0608 1.169.0508 1.8053.2445 2.228.408.5608.216.96.4754 1.3816.895.4217.4194.6816.8176.9005 1.3787.1653.4217.3617 1.056.4169 2.2263.0602 1.2655.0739 1.645.0796 4.848.0058 3.203-.0055 3.5834-.061 4.848-.051 1.17-.245 1.8055-.408 2.2294-.216.5604-.4763.96-.8954 1.3814-.419.4215-.8181.6811-1.3783.9-.4224.1649-1.0577.3617-2.2262.4174-1.2656.0595-1.6448.072-4.8493.079-3.2045.007-3.5825-.006-4.848-.0608M16.953 5.5864A1.44 1.44 0 1 0 18.39 4.144a1.44 1.44 0 0 0-1.437 1.4424M5.8385 12.012c.0067 3.4032 2.7706 6.1557 6.173 6.1493 3.4026-.0065 6.157-2.7701 6.1506-6.1733-.0065-3.4032-2.771-6.1565-6.174-6.1498-3.403.0067-6.156 2.771-6.1496 6.1738M8 12.0077a4 4 0 1 1 4.008 3.9921A3.9996 3.9996 0 0 1 8 12.0077\"/></svg>",
+  "threads": "<svg class=\"logo\" viewBox=\"0 0 24 24\"><path fill=\"#000\" d=\"M18.263 11.097c-.03-3.486-1.92-5.586-5.111-5.586-2.13 0-3.922.963-4.863 2.499l2.062 1.438c.535-.843 1.272-1.543 2.628-1.543 1.528 0 2.318.85 2.544 2.431a15 15 0 0 0-2.236-.173c-4.125 0-6.068 1.867-6.068 4.336s1.943 3.99 4.804 3.99c3.139 0 5.013-2.115 5.781-4.735.798.361 1.348 1.204 1.348 2.47 0 3.387-3.907 5.232-7.22 5.232-4.885 0-8.077-3.207-8.077-8.424 0-6.392 4.223-10.487 9.9-10.487 3.808 0 5.69 1.671 6.97 3.914l2.108-1.475C21.44 2.078 18.331 0 13.663 0 6.227 0 1.168 5.277 1.168 12.934c0 7 4.953 11.066 10.856 11.066 4.878 0 9.809-2.846 9.809-7.716 0-2.545-1.46-4.231-3.569-5.187m-6.33 4.855c-1.077 0-2.026-.512-2.026-1.453 0-1.483 1.822-1.934 3.606-1.934.678 0 1.34.045 1.927.173-.422 1.927-1.671 3.215-3.508 3.214Z\"/></svg>",
+  "tiktok": "<svg class=\"logo\" viewBox=\"0 0 24 24\"><path fill=\"#000\" d=\"M12.525.02c1.31-.02 2.61-.01 3.91-.02.08 1.53.63 3.09 1.75 4.17 1.12 1.11 2.7 1.62 4.24 1.79v4.03c-1.44-.05-2.89-.35-4.2-.97-.57-.26-1.1-.59-1.62-.93-.01 2.92.01 5.84-.02 8.75-.08 1.4-.54 2.79-1.35 3.94-1.31 1.92-3.58 3.17-5.91 3.21-1.43.08-2.86-.31-4.08-1.03-2.02-1.19-3.44-3.37-3.65-5.71-.02-.5-.03-1-.01-1.49.18-1.9 1.12-3.72 2.58-4.96 1.66-1.44 3.98-2.13 6.15-1.72.02 1.48-.04 2.96-.04 4.44-.99-.32-2.15-.23-3.02.37-.63.41-1.11 1.04-1.36 1.75-.21.51-.15 1.07-.14 1.61.24 1.64 1.82 3.02 3.5 2.87 1.12-.01 2.19-.66 2.77-1.61.19-.33.4-.67.41-1.06.1-1.79.06-3.57.07-5.36.01-4.03-.01-8.05.02-12.07z\"/></svg>"
+};
+let DATA = { platforms: {}, tones: {}, angles: [], angleGroups: [], angleSets: [], angleDefault: [], choices: { image: [], text: [] }, brands: [] };
+let PLATFORMS = {};
 
-// The template post for one platform (the AI will write it from this and Lời nhắn cho AI). Facebook: the whole post
-// with its link. Instagram: the link goes to the bio, hashtags at the end. Threads: short, the points in one line, one
-// topic. TikTok: one caption line under the video.
-function compose(row, platform = "facebook") {
-  const P = PLATFORMS[platform];
-  const name = row.name.trim() || "[Tên sản phẩm]";
-  const points = row.points.split("\n").map((s) => s.trim()).filter(Boolean);
-  const link = row.link.trim(), brand = row.brand.trim();
-  const tags = row.tags.split(/\s+/).filter(Boolean).map((t) => (t.startsWith("#") ? t : `#${t}`)).slice(0, P.tags);
-  const parts = [OPENING[state.tone](name)];
-  if (platform === "threads" || platform === "tiktok") {
-    if (points.length) parts.push(points.slice(0, 3).join(" · ") + (platform === "tiktok" ? "." : ""));
-    if (platform === "threads" && link) parts.push(link);
-    if (platform === "tiktok") parts.push(brand ? `Xem ở ${brand}, link trong bio.` : "Link trong bio.");
-  } else {
-    if (points.length) parts.push(points.map((p) => (platform === "instagram" ? `✓ ${p}` : `- ${p}`)).join("\n"));
-    if (brand) parts.push(`${brand} — ${state.tone === "story" ? "vẻ đẹp tự nhiên, qua đôi tay người thợ." : platform === "instagram" ? "link ở bio." : "xem thêm tại link bên dưới."}`);
-    else if (platform === "instagram" && link) parts.push("Link ở bio.");
-    if (platform === "facebook" && link) parts.push(link);
-  }
-  if (tags.length) parts.push(tags.join(" "));
-  return parts.join(platform === "tiktok" ? " " : "\n\n");
-}
+// What this page saved earlier. A product saved before colors existed (photos with angles) becomes one color per photo.
+const saved = (() => {
+  try {
+    const now = JSON.parse(localStorage.getItem(KEY));
+    if (now) return now;
+    const old = JSON.parse(localStorage.getItem("fb-content:v3")) || {};
+    old.rows = (old.rows || []).map((r) => ({ ...r, colors: (r.sources || []).map((s) => ({ id: uid(), name: "", product: { name: s.name, path: s.path }, scenes: [], angles: s.angles })) }));
+    return old;
+  } catch { return {}; }
+})();
+const state = {
+  tone: saved.tone || "story", note: saved.note || "", platforms: [].concat(saved.platforms || []), tab: saved.tab || "", current: saved.current || "",
+  imageAi: saved.imageAi || "flow", textAi: saved.textAi || "gemini", watermark: saved.watermark !== false,
+  rows: (saved.rows || []).map((r) => fresh({ ...r, colors: r.colors || [] })),
+  running: false, since: 0, total: 0, index: 0, summary: null, fatal: "", log: [],
+};
+function fresh(row) { return { ...row, status: "", images: {}, posts: {}, errors: [], warnings: [] }; }
+const persist = () => {
+  try {
+    localStorage.setItem(KEY, JSON.stringify({ tone: state.tone, note: state.note, current: state.current, platforms: state.platforms, tab: state.tab, imageAi: state.imageAi, textAi: state.textAi, watermark: state.watermark,
+      rows: state.rows.map((r) => Object.fromEntries([...FIELDS, "brand", "id", "colors"].map((k) => [k, r[k]]))) }));
+  } catch {}
+};
+const angleLabel = (id) => DATA.angles.find((a) => a.id === id)?.label || id;
+// Angles are picked from the library (hub/image/angles.json) and kept in the library's order. A photo saved with an id that
+// no longer exists, or with none, gets the default picks.
+const normalizeAngles = (list) => {
+  const ids = Array.isArray(list) ? DATA.angles.filter((a) => list.includes(a.id)).map((a) => a.id) : [];
+  return ids.length ? ids : [...DATA.angleDefault];
+};
+const MINUTES_PER_SHOT = 3;
+const shotsEstimate = (n) => `${n} ảnh · khoảng ${n * MINUTES_PER_SHOT} phút`;
+// The scenes of a color: its scene photos, or its own product photo when it has none (the product already stands in a room).
+// A separate scene always starts with its base shot (the product placed in the room, "as photo"); the run shoots the other angles from it.
+const scenesOf = (color) => (color.scenes.length ? color.scenes.map((s) => ({ ...s, angles: s.angles, ref: s, self: false })) : [{ name: color.product.name, path: color.product.path, angles: color.angles, ref: color, self: true }]);
+const shotsOfRow = (row) => row.colors.reduce((n, c) => n + scenesOf(c).reduce((m, s) => m + s.angles.length, 0), 0);
+
 function rowStatus(row) {
-  if (!row.sources.length) return { text: "● Chưa có ảnh", cls: "warn" };
-  const scenes = row.sources.reduce((n, s) => n + s.scenes, 0);
-  return { text: `● ${row.sources.length} ảnh gốc · ${scenes} ảnh`, cls: "ok" };
+  if (row.status === "working") return { text: `● Đang làm · ${Object.keys(row.images || {}).length}/${shotsOfRow(row)} ảnh`, cls: "" };
+  if (row.status === "ok") {
+    const shots = Object.values(row.images).filter((i) => i.ok).length, posts = Object.values(row.posts).filter((p) => p.text).length;
+    return { text: `● Xong · ${shots} ảnh · ${posts} bài`, cls: row.errors.length ? "warn" : "ok" };
+  }
+  if (row.status === "failed") return { text: "● Lỗi, xem Kết quả", cls: "warn" };
+  if (!row.colors.length) return { text: "● Chưa có ảnh", cls: "warn" };
+  return { text: `● ${row.colors.length} màu · ${shotsOfRow(row)} ảnh`, cls: "ok" };
 }
 
 function renderRows() {
@@ -207,23 +296,23 @@ function renderRows() {
     const st = rowStatus(row);
     const card = el("div", { className: "qrow" });
     card.setAttribute("aria-current", row.id === state.current);
-    const thumb = row.sources[0] ? el("img", { className: "thumb", src: row.sources[0].url, alt: "" }) : el("div", { className: "thumb" });
-    const open = el("button", { type: "button", className: "btn", textContent: "Xem / sửa" });
-    const remove = el("button", { type: "button", className: "btn", textContent: "×", title: "Xóa sản phẩm" });
+    const thumb = row.colors[0] ? el("img", { className: "thumb", src: fileUrl(row.colors[0].product.path), alt: "", title: "Bấm để xem lớn" }) : el("div", { className: "thumb" });
+    if (row.colors[0]) { thumb.style.cursor = "zoom-in"; thumb.onclick = (e) => { e.stopPropagation(); showImage(fileUrl(row.colors[0].product.path), `#${i + 1} ${row.name}`); }; }
+    const open = el("button", { type: "button", className: "btn", textContent: "Xem / sửa", disabled: state.running });
+    const remove = el("button", { type: "button", className: "btn", textContent: "×", title: "Xóa sản phẩm", disabled: state.running });
     card.append(el("span", { className: "muted", textContent: `#${i + 1}` }), el("span", { className: "name", textContent: row.name, title: row.link }), el("span", { className: st.cls, textContent: st.text }), thumb, open, remove);
     card.onclick = () => { state.current = row.id; render(); };
     open.onclick = (e) => { e.stopPropagation(); state.current = row.id; render(); edit(row); };
-    remove.onclick = (e) => { e.stopPropagation(); row.sources.forEach((s) => URL.revokeObjectURL(s.url)); state.rows.splice(state.rows.indexOf(row), 1); render(); };
+    remove.onclick = (e) => { e.stopPropagation(); state.rows.splice(state.rows.indexOf(row), 1); render(); };
     return card;
   }) : [el("div", { className: "empty-list", textContent: "Bấm + Thêm sản phẩm để bắt đầu." })]));
 }
 function renderPlatforms() {
   $("platforms").replaceChildren(...Object.entries(PLATFORMS).map(([id, p]) => {
-    const b = el("button", { type: "button", innerHTML: `${p.logo}<span>${p.name}</span>` });
+    const b = el("button", { type: "button", innerHTML: `${p.logo || ""}<span>${p.name}</span>`, disabled: state.running });
     const on = state.platforms.includes(id);
     b.setAttribute("aria-pressed", on);
     b.onclick = () => {
-      if (on && state.platforms.length === 1) return toast("Chọn ít nhất một nền tảng");
       state.platforms = on ? state.platforms.filter((x) => x !== id) : Object.keys(PLATFORMS).filter((x) => x === id || state.platforms.includes(x));
       if (!on) state.tab = id;
       render();
@@ -232,8 +321,8 @@ function renderPlatforms() {
   }));
 }
 function renderTones() {
-  $("tones").replaceChildren(...Object.entries(TONES).map(([id, name]) => {
-    const b = el("button", { type: "button", textContent: name });
+  $("tones").replaceChildren(...Object.entries(DATA.tones).map(([id, t]) => {
+    const b = el("button", { type: "button", textContent: t.name, disabled: state.running });
     b.setAttribute("aria-pressed", id === state.tone);
     b.onclick = () => { state.tone = id; render(); };
     return b;
@@ -245,108 +334,406 @@ function renderResult() {
   if (!state.platforms.includes(state.tab)) state.tab = state.platforms[0];
   const P = PLATFORMS[state.tab];
   $("tabs").replaceChildren(...state.platforms.map((id) => {
-    const b = el("button", { type: "button", innerHTML: `${PLATFORMS[id].logo}<span>${PLATFORMS[id].name}</span>` });
+    const b = el("button", { type: "button", innerHTML: `${PLATFORMS[id].logo || ""}<span>${PLATFORMS[id].name}</span>` });
     b.setAttribute("role", "tab"); b.setAttribute("aria-pressed", id === state.tab); b.setAttribute("aria-selected", id === state.tab);
     b.onclick = () => { state.tab = id; render(); };
     return b;
   }));
-  const text = row ? compose(row, state.tab) : "";
-  $("out").textContent = text;
-  $("tip").textContent = P.tip;
-  $("count").textContent = `${[...text].length.toLocaleString("vi-VN")} / ${P.limit.toLocaleString("vi-VN")} ký tự`;
-  $("count").classList.toggle("over", [...text].length > P.limit);
-  $("copy").disabled = !row;
-  $("results").replaceChildren(...(row?.sources.length
-    ? row.sources.map((s) => {
+  const post = row?.posts[state.tab];
+  const text = post?.text || "";
+  $("out").textContent = text || (row ? (!state.platforms.length ? "Chọn nền tảng ở mục Đăng lên để xem bài." : post?.error ? `Không viết được bài: ${post.error}` : state.running ? "Bài đăng sẽ hiện ở đây khi xong." : "Bấm Bắt đầu để viết bài.") : "");
+  const notes = [...(post?.warnings || []), ...(row?.warnings || [])];
+  $("tip").textContent = [P?.tip, ...notes.map((n) => `⚠ ${n}`)].filter(Boolean).join(" · ");
+  $("count").textContent = P ? `${[...text].length.toLocaleString("vi-VN")} / ${P.limit.toLocaleString("vi-VN")} ký tự` : "";
+  $("count").classList.toggle("over", !!P && [...text].length > P.limit);
+  $("copy").disabled = !text;
+  const lines = [];
+  row?.colors.forEach((color, ci) => {
+    if (row.colors.length > 1) lines.push(el("div", { className: "result-color muted small", textContent: `Ảnh gốc ${ci + 1}` }));
+    scenesOf(color).forEach((scene, si) => {
       const line = el("div", { className: "group-row" });
-      const origin = el("div", { className: "tile origin", title: `Ảnh gốc: ${s.name}` });
-      origin.append(el("img", { src: s.url, alt: s.name }));
-      line.append(origin, el("span", { className: "arrow", textContent: "→" }), ...Array.from({ length: s.scenes }, (_, k) => el("div", { className: "tile waiting", textContent: `Bối cảnh ${k + 1}` })));
-      return line;
-    })
-    : [el("div", { className: "empty-note", textContent: row ? "Thêm ảnh gốc ở Xem / sửa, rồi bấm Bắt đầu." : "Thêm sản phẩm để xem ảnh và bài đăng ở đây." })]));
+      const sources = [{ url: fileUrl(color.product.path), label: "Ảnh sản phẩm gốc" }, ...(scene.self ? [] : [{ url: fileUrl(scene.path), label: "Ảnh cảnh gốc" }])];
+      const originTile = (src, name) => {
+        const t = el("div", { className: "tile origin", title: `${src.label}: ${name}. Bấm để xem lớn` });
+        t.style.cursor = "zoom-in";
+        t.append(el("img", { src: src.url, alt: name }));
+        t.onclick = () => showImage(src.url, src.label);
+        return t;
+      };
+      line.append(originTile(sources[0], color.product.name));
+      if (!scene.self) line.append(el("span", { className: "arrow", textContent: "+" }), originTile(sources[1], scene.name));
+      line.append(el("span", { className: "arrow", textContent: "→" }), ...scene.angles.map((angleId, k) => {
+        const shot = row.images[`${ci + 1}-${si + 1}-${k + 1}`];
+        if (shot?.ok) {
+          const tile = el("div", { className: "tile", title: `${shot.label}. Bấm để xem cạnh ảnh gốc` });
+          tile.style.cursor = "zoom-in";
+          tile.append(el("img", { src: fileUrl(shot.file), alt: shot.label }));
+          tile.onclick = () => showImages([...sources, { url: fileUrl(shot.file), label: `Kết quả · ${shot.label}`, result: true }], `${row.name} · ${shot.label}`);
+          return tile;
+        }
+        const waiting = el("div", { className: "tile waiting", textContent: shot ? `Lỗi · ${angleLabel(angleId)}` : angleLabel(angleId) });
+        if (shot) { waiting.title = shot.message; waiting.classList.add("warn"); }
+        return waiting;
+      }));
+      lines.push(line);
+    });
+  });
+  $("results").replaceChildren(...(lines.length ? lines : [el("div", { className: "empty-note", textContent: row ? "Thêm ảnh sản phẩm ở Xem / sửa, rồi bấm Bắt đầu." : "Thêm sản phẩm để xem ảnh và bài đăng ở đây." })]));
+  const errors = row?.errors || [];
+  if (errors.length) $("results").append(el("div", { className: "empty-note warn", textContent: errors.join("\n"), title: errors.join("\n") }));
 }
-function render() {
-  renderRows(); renderPlatforms(); renderTones(); renderResult();
-  $("status").textContent = `Sẵn sàng • ${state.rows.length} sản phẩm`;
-  persist();
+function renderStatus() {
+  const s = $("status"), label = $("progress"), bar = $("bar");
+  s.title = label.title = "";
+  if (state.running) {
+    const done = state.rows.reduce((n, r) => n + Object.keys(r.images || {}).length, 0), total = Math.max(state.shots || 0, done);
+    const sec = Math.floor((Date.now() - (state.startedAt || Date.now())) / 1000);
+    bar.classList.toggle("marquee", done === 0);
+    bar.firstChild.style.width = done === 0 ? "" : `${Math.min(100, (done / Math.max(1, total)) * 100)}%`;
+    s.textContent = "Đang chạy";
+    label.textContent = `${done}/${total} ảnh đã xong • sản phẩm ${state.index}/${state.total} • ${String(Math.floor(sec / 60)).padStart(2, "0")}:${String(sec % 60).padStart(2, "0")}`;
+  } else {
+    bar.classList.remove("marquee");
+    bar.firstChild.style.width = state.summary ? "100%" : "0";
+    s.textContent = `Sẵn sàng • ${state.rows.length} sản phẩm`;
+    if (state.fatal) label.textContent = `Lỗi: ${state.fatal}`;
+    else if (state.summary) { label.textContent = `Xong ${state.summary.ok}/${state.summary.ok + state.summary.failed} sản phẩm${state.summary.aborted ? " (dừng giữa chừng vì lỗi đăng nhập hoặc hạn mức)" : ""} • ${state.summary.folder}`; label.title = state.summary.folder; }
+    else label.textContent = "Thêm sản phẩm và ảnh đi kèm để bắt đầu.";
+  }
+  const log = $("log"), text = state.log.join("\n");
+  if (log.value !== text) { const stick = log.scrollTop + log.clientHeight >= log.scrollHeight - 24; log.value = text; if (stick) log.scrollTop = log.scrollHeight; }
+  $("btnRun").disabled = state.running; $("btnStop").disabled = !state.running;
+  $("btnAdd").disabled = state.running; $("btnClear").disabled = state.running;
+  $("imageAi").disabled = $("textAi").disabled = $("note").disabled = $("watermark").disabled = state.running;
 }
+setInterval(() => { if (state.running) renderStatus(); }, 1000);
+function render() { renderRows(); renderPlatforms(); renderTones(); renderResult(); renderStatus(); persist(); }
 
-// ----- Xem / sửa -----
-let editing = null, draft = [];
-function renderSources() {
-  const add = el("button", { type: "button", className: "tile add", innerHTML: "<b>+</b>Thêm ảnh<br><span class=small>hoặc kéo thả</span>" });
-  add.onclick = () => $("pick").click();
-  $("sources").replaceChildren(...draft.map((s, i) => {
-    const box = el("div", { className: "src" }), tile = el("div", { className: "tile" });
-    const remove = el("button", { type: "button", className: "btn remove", textContent: "×", title: "Bỏ ảnh này" });
-    remove.onclick = () => { draft.splice(i, 1); renderSources(); };
-    tile.append(el("img", { src: s.url, alt: s.name, title: s.name }), remove);
-    const count = el("label", { className: "count" });
-    const n = el("input", { type: "number", min: 1, max: 6, value: s.scenes, title: "Số bối cảnh tạo từ ảnh này" });
-    n.oninput = () => { s.scenes = Math.min(6, Math.max(1, Number(n.value) || 1)); };
-    count.append(n, "bối cảnh");
-    box.append(tile, count);
-    return box;
-  }), add);
+// ----- Xem / sửa: the product's colors, each with its product photo and scene photos, like Product Review's dialog -----
+let editing = null, draft = [], activeColor = -1, pickColor = -1;
+const OTHER = "__other";
+function setBrand(name) {
+  const known = DATA.brands.some((b) => b.name === name);
+  $("brand").value = known ? name : (name ? OTHER : (DATA.brands[0]?.name || OTHER));
+  $("brandOther").value = known ? "" : (name || "");
+  $("brandOther").hidden = $("brand").value !== OTHER;
 }
-function addFiles(files) {
-  for (const f of files) if (/^image\/(jpeg|png|webp)$/.test(f.type)) draft.push({ name: f.name, url: URL.createObjectURL(f), scenes: 3 });
-  renderSources();
+const getBrand = () => ($("brand").value === OTHER ? $("brandOther").value.trim() : $("brand").value);
+const brandOf = (name) => DATA.brands.find((b) => b.name.toLowerCase() === String(name).trim().toLowerCase() || (b.aliases || []).some((a) => a.toLowerCase() === String(name).trim().toLowerCase()));
+// Preview of the brand's watermark alone: the visible plate of its PNG, cropped by content_box.
+function updateWatermarkPreview() {
+  const box = $("wmPreview"), check = $("wmCheck");
+  const brand = brandOf(getBrand());
+  box.className = "wm-preview";
+  box.replaceChildren();
+  box.style.height = "";
+  if (!brand?.watermark) {
+    box.classList.add("none");
+    box.textContent = getBrand() ? "Thương hiệu này chưa có logo đóng dấu" : "Chọn thương hiệu để xem logo đóng dấu";
+    check.hidden = true;
+    return;
+  }
+  const wm = brand.watermark, [cx, cy, cw, ch] = wm.content_box;
+  check.hidden = false;
+  box.classList.toggle("off", !state.watermark);
+  const mark = new Image();
+  mark.onload = () => {
+    const scale = Math.min(150, (box.clientWidth || 215) - 24) / cw;
+    box.classList.add("plate");
+    box.style.height = Math.round(ch * scale) + 24 + "px";
+    mark.className = "mark";
+    mark.style.width = mark.naturalWidth * scale + "px";
+    mark.style.left = 12 - cx * scale + "px";
+    mark.style.top = 12 - cy * scale + "px";
+    box.replaceChildren(mark);
+  };
+  mark.src = wm.url;
+}
+$("brand").onchange = () => { $("brandOther").hidden = $("brand").value !== OTHER; if (!$("brandOther").hidden) $("brandOther").focus(); updateWatermarkPreview(); };
+$("brandOther").oninput = () => updateWatermarkPreview();
+
+const photoBlock = (photo, title, onRemove, holder) => {
+  const box = el("div", { className: "pt" });
+  const th = el("div", { className: "th", title: `${title} · ${photo.name}. Bấm để xem lớn` });
+  th.append(el("img", { src: fileUrl(photo.path), alt: photo.name }));
+  th.onclick = () => showImage(fileUrl(photo.path), photo.name);
+  const remove = el("button", { type: "button", className: "btn remove", textContent: "×", title: "Bỏ ảnh này" });
+  remove.onclick = (e) => { e.stopPropagation(); onRemove(); };
+  th.append(remove);
+  box.append(th);
+  if (holder) {
+    const chip = el("button", { type: "button", className: "btn chip", title: "Chọn góc máy cho ảnh này" });
+    chip.append(String(anglesOf(holder).length), el("small", { textContent: "góc" }));
+    chip.onclick = () => openAngles(holder);
+    box.append(chip);
+  }
+  return box;
+};
+const addTile = (text, onClick) => el("button", { type: "button", className: "addtile", textContent: text, onclick: onClick });
+function renderColors() {
+  const rows = draft.map((color, i) => {
+    const row = el("div", { className: "crow" });
+    row.setAttribute("aria-current", i === activeColor);
+    const product = photoBlock(color.product, "Ảnh sản phẩm", () => { draft.splice(i, 1); renderColors(); }, color, color.scenes.length > 0);
+    const scenes = el("div", { className: "scenes" });
+    scenes.append(...color.scenes.map((s, k) => photoBlock(s, `Ảnh cảnh ${k + 1}`, () => { color.scenes.splice(k, 1); renderColors(); })),
+      addTile("+ Máy", () => { pickColor = i; $("pick").click(); }), addTile("Dán", () => pasteFromClipboard(i)));
+    if (!color.scenes.length) scenes.append(el("span", { className: "hint", textContent: "Chưa có ảnh cảnh: dùng chính ảnh sản phẩm làm cảnh" }));
+    row.append(product, el("span", { className: "arrow", textContent: "→" }), scenes);
+    const select = () => { if (activeColor !== i) { activeColor = i; [...$("colors").children].forEach((r, n) => r.setAttribute("aria-current", n === i)); } };
+    row.addEventListener("click", select);
+    row.addEventListener("mouseenter", select);
+    row.addEventListener("dragover", (e) => e.preventDefault());
+    row.addEventListener("drop", (e) => { e.preventDefault(); e.stopPropagation(); activeColor = i; addFiles([...e.dataTransfer.files], i); });
+    return row;
+  });
+  const add = el("div", { className: "crow-add" });
+  add.append(addTile("+", () => { pickColor = -1; $("pick").click(); }), addTile("Dán", () => pasteFromClipboard(-1)), el("span", { className: "muted", textContent: "Thêm ảnh sản phẩm (mỗi ảnh một màu)" }));
+  add.addEventListener("mouseenter", () => { activeColor = -1; [...$("colors").children].forEach((r) => r.setAttribute("aria-current", "false")); });
+  add.addEventListener("dragover", (e) => e.preventDefault());
+  add.addEventListener("drop", (e) => { e.preventDefault(); e.stopPropagation(); addFiles([...e.dataTransfer.files], -1); });
+  $("colors").replaceChildren(...rows, add);
+  const shots = draft.reduce((n, c) => n + scenesOf(c).reduce((m, s) => m + s.angles.length, 0), 0);
+  $("dlgNote").textContent = draft.length ? `${draft.length} màu · ${shotsEstimate(shots)}` : "Chưa có ảnh sản phẩm";
+  if ($("dlg").open) updateWatermarkPreview();
+}
+// An image goes to the color under the pointer as a scene, or becomes a new color when none is active.
+async function addFiles(files, colorIndex) {
+  for (const f of files) {
+    if (!/^image\/(jpeg|png|webp)$/.test(f.type)) { toast(`${f.name || "Ảnh"}: chọn ảnh PNG, JPEG hoặc WebP`); continue; }
+    const r = await fetch(`/api/upload?name=${encodeURIComponent(f.name || "clipboard.png")}`, { method: "POST", body: f }).catch(() => null);
+    const body = r && (await r.json().catch(() => null));
+    if (!r || !r.ok || !body?.path) { toast(body?.error || `Không tải được ${f.name}`); continue; }
+    const photo = { name: f.name || "clipboard.png", path: body.path };
+    if (colorIndex >= 0 && draft[colorIndex]) draft[colorIndex].scenes.push({ ...photo, angles: [...(draft[colorIndex].scenes[0]?.angles || draft[colorIndex].angles)] });
+    else { draft.push({ id: uid(), name: "", product: photo, scenes: [], angles: [...DATA.angleDefault] }); activeColor = draft.length - 1; }
+    renderColors();
+  }
+}
+async function pasteFromClipboard(colorIndex) {
+  const files = [];
+  try {
+    for (const item of await navigator.clipboard.read()) {
+      const type = item.types.find((t) => /^image\/(png|jpeg)$/.test(t));
+      if (type) files.push(new File([await item.getType(type)], type === "image/png" ? "clipboard.png" : "clipboard.jpg", { type }));
+    }
+  } catch {}
+  if (!files.length) return toast("Clipboard chưa có ảnh.");
+  addFiles(files, colorIndex);
 }
 function edit(row) {
   editing = row;
   $("dlgTitle").textContent = row ? `Sản phẩm #${state.rows.indexOf(row) + 1}` : "Thêm sản phẩm";
   FIELDS.forEach((f) => { $(f).value = row ? row[f] : ""; });
-  draft = row ? row.sources.map((s) => ({ ...s })) : [];
-  renderSources();
+  setBrand(row ? row.brand : "");
+  draft = row ? row.colors.map((c) => ({ ...c, product: { ...c.product }, scenes: c.scenes.map((s) => ({ ...s, angles: [...s.angles] })), angles: [...c.angles] })) : [];
+  activeColor = -1;
+  renderColors();
   $("dlg").showModal();
+  updateWatermarkPreview();
   $("name").focus();
-}
-function closeDialog() {
-  // Images added and then cancelled are released; kept ones stay with their product.
-  const kept = new Set(state.rows.flatMap((r) => r.sources.map((s) => s.url)));
-  draft.filter((s) => !kept.has(s.url)).forEach((s) => URL.revokeObjectURL(s.url));
-  $("dlg").close();
 }
 $("dlgSave").onclick = () => {
   if (!$("name").value.trim()) { $("name").focus(); return toast("Điền tên sản phẩm"); }
-  const row = editing || { id: Date.now().toString(36) };
+  if (!draft.length) return toast("Thêm ít nhất một ảnh sản phẩm");
+  const row = editing || fresh({ id: uid(), colors: [] });
   FIELDS.forEach((f) => { row[f] = $(f).value; });
-  const keep = new Set(draft.map((s) => s.url));
-  (row.sources || []).filter((s) => !keep.has(s.url)).forEach((s) => URL.revokeObjectURL(s.url));
-  row.sources = draft;
+  row.brand = getBrand();
+  row.colors = draft;
   if (!editing) state.rows.push(row);
   state.current = row.id;
   $("dlg").close();
   render();
   document.querySelector('.qrow[aria-current="true"]')?.scrollIntoView({ block: "nearest" });
 };
-$("dlgCancel").onclick = $("dlgX").onclick = closeDialog;
-$("dlg").addEventListener("cancel", (e) => { e.preventDefault(); closeDialog(); });
-$("pick").onchange = (e) => { addFiles(e.target.files); e.target.value = ""; };
-const strip = $("sources");
-strip.addEventListener("dragover", (e) => { e.preventDefault(); strip.classList.add("dropping"); });
-strip.addEventListener("dragleave", () => strip.classList.remove("dropping"));
-strip.addEventListener("drop", (e) => { e.preventDefault(); strip.classList.remove("dropping"); addFiles(e.dataTransfer.files); });
-
+$("dlgCancel").onclick = $("dlgX").onclick = () => $("dlg").close();
+$("dlg").addEventListener("cancel", (e) => { e.preventDefault(); $("dlg").close(); });
+$("pick").onchange = (e) => { addFiles([...e.target.files], pickColor); e.target.value = ""; };
+// Ctrl+V while the dialog is open: an image goes to the active color (or becomes a new color).
+document.addEventListener("paste", (e) => {
+  if (!$("dlg").open || $("angleDlg").open) return;
+  const files = [...(e.clipboardData?.files || [])].filter((f) => /^image\//.test(f.type));
+  if (!files.length) return;
+  e.preventDefault();
+  addFiles(files, draft.length && activeColor >= 0 ? Math.min(activeColor, draft.length - 1) : -1);
+});
+$("colors").addEventListener("dragover", (e) => e.preventDefault());
+$("colors").addEventListener("drop", (e) => { e.preventDefault(); addFiles([...e.dataTransfer.files], -1); });
 $("btnAdd").onclick = () => edit(null);
 $("btnClear").onclick = () => {
   if (!state.rows.length || !confirm("Xóa tất cả sản phẩm?")) return;
-  state.rows.forEach((r) => r.sources.forEach((s) => URL.revokeObjectURL(s.url)));
   state.rows = []; render();
 };
-$("note").value = state.note;
-$("note").oninput = (e) => { state.note = e.target.value; persist(); };
-$("btnRun").onclick = () => {
-  if (!state.rows.length) return toast("Thêm sản phẩm trước");
-  const missing = state.rows.findIndex((r) => !r.sources.length);
-  if (missing >= 0) return toast(`Sản phẩm #${missing + 1} chưa có ảnh gốc`);
-  toast("Tạo ảnh và bài đăng đang được làm, chưa dùng được");
+
+// ----- Chọn góc máy -----
+let anglePhoto = null, angleDraft = new Set();
+function renderAngles() {
+  const list = $("angleList");
+  list.replaceChildren(...DATA.angleGroups.flatMap((g) => {
+    const items = DATA.angles.filter((a) => a.group === g.id);
+    if (!items.length) return [];
+    const head = el("div", { className: "angle-group", textContent: g.label });
+    return [head, ...items.map((a) => {
+      const row = el("label", { className: "angle-item" });
+      const box = el("input", { type: "checkbox", checked: angleDraft.has(a.id) });
+      box.onchange = () => { box.checked ? angleDraft.add(a.id) : angleDraft.delete(a.id); renderAngles(); };
+      const text = el("span", {});
+      text.append(el("span", { textContent: a.label }), el("span", { className: "muted small", textContent: ` · ${a.label_en}` }));
+      if (a.hidden_side) text.append(el("span", { className: "warn small", textContent: " · ⚠ cần dữ liệu mặt sau" }));
+      text.append(el("div", { className: "muted small", textContent: a.description }));
+      row.append(box, text);
+      return row;
+    })];
+  }));
+  $("angleSummary").textContent = angleDraft.size ? shotsEstimate(angleDraft.size) : "Chưa chọn góc nào";
+  $("angleOk").disabled = !angleDraft.size;
+  $("angleSets").replaceChildren(...DATA.angleSets.map((set) => {
+    const b = el("button", { type: "button", className: "btn", textContent: set.label, title: set.note });
+    b.onclick = () => { angleDraft = new Set(set.angles); renderAngles(); };
+    return b;
+  }));
+}
+// With scenes the color's angles are its scenes' angles (one choice for all of them).
+const anglesOf = (holder) => (holder.scenes?.length ? holder.scenes[0].angles : holder.angles);
+function openAngles(photo) {
+  anglePhoto = photo;
+  angleDraft = new Set(anglesOf(photo));
+  renderAngles();
+  $("angleDlg").showModal();
+}
+$("angleClear").onclick = () => { angleDraft = new Set(); renderAngles(); };
+$("angleOk").onclick = () => {
+  anglePhoto.angles = DATA.angles.filter((a) => angleDraft.has(a.id)).map((a) => a.id);
+  for (const scene of anglePhoto.scenes || []) scene.angles = [...anglePhoto.angles];
+  $("angleDlg").close();
+  renderColors();
 };
+$("angleX").onclick = () => $("angleDlg").close();
+$("angleDlg").addEventListener("cancel", (e) => { e.preventDefault(); $("angleDlg").close(); });
+
+// ----- Xem ảnh lớn: a window with Đóng, Esc or a click outside closes it -----
+// items: [{ url, label, result }]; with several, the originals sit beside the result so they can be compared.
+function showImages(items, title) {
+  $("imgGrid").replaceChildren(...items.map((it) => {
+    const fig = el("figure", { className: it.result ? "result" : "" });
+    const img = el("img", { src: it.url, alt: it.label || "" });
+    fig.append(img, el("figcaption", { textContent: it.label || "" }));
+    return fig;
+  }));
+  $("imgDlg").classList.toggle("compare", items.length > 1);
+  $("imgTitle").textContent = title || "";
+  $("imgDlg").showModal();
+  $("imgClose").focus();
+}
+const showImage = (url, title) => showImages([{ url, label: title }], title);
+$("imgClose").onclick = $("imgX").onclick = () => $("imgDlg").close();
+$("imgDlg").addEventListener("click", (e) => { if (e.target === $("imgDlg")) $("imgDlg").close(); });
+
+// ----- Chạy -----
+const rowOf = (id) => state.rows.find((r) => r.id === id);
+const LOG_MAX = 500;
+function logLine(text) {
+  const t = new Date().toLocaleTimeString("vi-VN", { hour12: false });
+  state.log.push(`${t}  ${text}`);
+  if (state.log.length > LOG_MAX) state.log.splice(0, state.log.length - LOG_MAX);
+}
+function logEvent(e, row) {
+  const name = row ? `#${state.rows.indexOf(row) + 1} ${row.name}` : "";
+  if (e.kind === "start") logLine(`Bắt đầu: ${e.products} sản phẩm.`);
+  else if (e.kind === "product") logLine(`[${e.index}/${state.total}] ${e.name}`);
+  else if (e.kind === "image") logLine(`   Ảnh ${e.label || ""} ${e.ok ? "xong" : "lỗi: " + (e.message || "")}`);
+  else if (e.kind === "post") logLine(`   Bài ${PLATFORMS[e.platform]?.name || e.platform} ${e.error ? "lỗi: " + e.error : "xong"}`);
+  else if (e.kind === "warning") logLine(`   ⚠ ${e.message}`);
+  else if (e.kind === "product-done") logLine(`${e.ok ? "Xong" : "Lỗi"} ${name}${e.errors?.length ? " · " + e.errors.length + " lỗi" : ""}`);
+  else if (e.kind === "done") logLine(`Hoàn tất: ${e.ok} xong, ${e.failed} lỗi${e.aborted ? " (dừng giữa chừng)" : ""}.`);
+  else if (e.kind === "fatal") logLine(`Lỗi: ${e.message}`);
+}
+function onEvent(e) {
+  const row = rowOf(e.product || e.id);
+  logEvent(e, row);
+  if (e.kind === "start") { state.total = e.products; state.index = 0; state.summary = null; state.fatal = ""; }
+  else if (e.kind === "product" && row) { Object.assign(row, fresh(row), { status: "working" }); state.index = e.index; }
+  else if (e.kind === "image" && row) row.images[`${e.color}-${e.scene}-${e.angle}`] = { ok: e.ok, file: e.file, message: e.message, label: e.label };
+  else if (e.kind === "post" && row) row.posts[e.platform] = { text: e.text, warnings: e.warnings || [], error: e.error || "" };
+  else if (e.kind === "warning" && row) row.warnings.push(e.message);
+  else if (e.kind === "product-done" && row) { row.status = e.ok ? "ok" : "failed"; row.errors = e.errors || []; }
+  else if (e.kind === "done") state.summary = e;
+  else if (e.kind === "fatal") state.fatal = e.message;
+}
+let polling = false;
+async function poll() {
+  if (polling) return;
+  polling = true;
+  try {
+    for (;;) {
+      const r = await fetch(`/api/run?since=${state.since}`).then((x) => x.json());
+      r.events.forEach(onEvent);
+      state.since = r.next;
+      state.running = r.running;
+      render();
+      if (!r.running) break;
+      await new Promise((done) => setTimeout(done, 1500));
+    }
+  } catch { state.running = false; render(); }
+  polling = false;
+}
+$("btnRun").onclick = async () => {
+  if (!state.rows.length) return toast("Thêm sản phẩm trước");
+  if (!state.platforms.length) return toast("Chọn nền tảng muốn đăng ở mục Đăng lên");
+  const missing = state.rows.findIndex((r) => !r.colors.length);
+  if (missing >= 0) return toast(`Sản phẩm #${missing + 1} chưa có ảnh sản phẩm`);
+  const shots = state.rows.reduce((n, r) => n + shotsOfRow(r), 0);
+  if (shots > 12 && !confirm(`Sẽ tạo ${shots} ảnh, khoảng ${shots * MINUTES_PER_SHOT} phút và ${shots} lượt Google Flow. Tiếp tục?`)) return;
+  const job = {
+    imageBackend: state.imageAi, textBackend: state.textAi, tone: state.tone, note: state.note, platforms: state.platforms, watermark: state.watermark,
+    products: state.rows.map((r) => ({
+      id: r.id, name: r.name.trim(), brand: (r.brand || "").trim(), link: r.link.trim(), tags: r.tags,
+      colors: r.colors.map((c) => ({ name: c.name.trim(), product: { name: c.product.name, path: c.product.path }, angles: c.angles, scenes: c.scenes.map((s) => ({ name: s.name, path: s.path, angles: s.angles })) })),
+    })),
+  };
+  state.rows = state.rows.map((r) => Object.assign(r, fresh(r)));
+  state.since = 0; state.summary = null; state.fatal = "";
+  const r = await fetch("/api/run", { method: "POST", body: JSON.stringify(job) }).catch(() => null);
+  const body = r && (await r.json().catch(() => ({})));
+  if (!r || !r.ok) return toast(body?.error || "Không bắt đầu được. Mở Content MXH từ Tools Hub.");
+  state.log = [];
+  state.running = true; state.total = job.products.length; state.index = 0; state.startedAt = Date.now(); state.shots = state.rows.reduce((n, r) => n + shotsOfRow(r), 0);
+  render();
+  poll();
+};
+$("btnStop").onclick = async () => { await fetch("/api/stop", { method: "POST" }).catch(() => {}); toast("Đang dừng…"); };
 $("copy").onclick = async () => { await navigator.clipboard.writeText($("out").textContent); toast(`Đã copy bài đăng ${PLATFORMS[state.tab].name}`); };
-function toast(text) { const t = $("toast"); t.textContent = text; t.classList.add("show"); clearTimeout(t._h); t._h = setTimeout(() => t.classList.remove("show"), 1800); }
-render();
+$("note").value = state.note;
+$("watermark").checked = state.watermark;
+// Clicking the logo preview is the same as ticking the box.
+$("wmPreview").onclick = () => { const box = $("watermark"); if (!box.disabled && $("wmPreview").classList.contains("plate")) box.click(); };
+$("watermark").onchange = (e) => { state.watermark = e.target.checked; persist(); updateWatermarkPreview(); };
+$("note").oninput = (e) => { state.note = e.target.value; persist(); };
+function toast(text) { const t = $("toast"); t.textContent = text; t.classList.add("show"); clearTimeout(t._h); t._h = setTimeout(() => t.classList.remove("show"), 2200); }
+
+// ----- Khởi động -----
+const hubPort = new URLSearchParams(location.search).get("hub");
+if (hubPort) { $("menu").href = `http://127.0.0.1:${hubPort}/`; $("menu").hidden = false; }
+window.addEventListener("error", (e) => fetch("/api/client-error", { method: "POST", body: JSON.stringify({ message: e.message, stack: e.error?.stack || "" }) }).catch(() => {}));
+function fillSelect(select, choices, key) {
+  select.replaceChildren(...choices.map((c) => el("option", { value: c.id, textContent: c.name })));
+  if (!choices.some((c) => c.id === state[key])) state[key] = choices[0]?.id || "";
+  select.value = state[key];
+  select.onchange = () => { state[key] = select.value; persist(); };
+}
+(async () => {
+  try { DATA = await fetch("/api/data").then((r) => r.json()); }
+  catch { toast("Không kết nối được máy chủ. Mở Content MXH từ Tools Hub."); }
+  PLATFORMS = Object.fromEntries(Object.entries(DATA.platforms).map(([id, p]) => [id, { ...p, logo: LOGOS[id] }]));
+  state.platforms = state.platforms.filter((p) => PLATFORMS[p]);
+  if (!DATA.tones[state.tone]) state.tone = Object.keys(DATA.tones)[0] || "story";
+  state.rows.forEach((r) => r.colors.forEach((c) => { c.scenes = c.scenes || []; c.angles = normalizeAngles(c.angles); c.scenes.forEach((s) => { s.angles = normalizeAngles(s.angles); }); }));
+  fillSelect($("imageAi"), DATA.choices.image, "imageAi");
+  fillSelect($("textAi"), DATA.choices.text, "textAi");
+  $("brand").replaceChildren(...DATA.brands.map((b) => el("option", { value: b.name, textContent: b.name })), el("option", { value: OTHER, textContent: "Khác…" }));
+  render();
+  poll(); // a run still going (or just finished) on the server is shown again after a reload
+})();
 </script>
 </body>
 </html>

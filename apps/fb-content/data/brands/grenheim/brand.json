@@ -1,0 +1,52 @@
+{
+  "schema_version": 1,
+  "id": "grenheim",
+  "name": "GRENHEIM",
+  "aliases": [
+    "GRENHEIM",
+    "Grenheim"
+  ],
+  "language": "Vietnamese",
+  "about": "GRENHEIM makes natural solid-wood furniture for the home: dining tables, coffee tables, consoles, side tables, bookshelves, desks and bathroom furniture, in straight mid-century shapes and in organic live-edge, trunk and curved-leg shapes. The founder's love of wood began as a child helping his father sand wood in a small workshop; his father no longer works with the brand and belongs only to that inspiration story. The brand values the character of the material, care for details and responsibility for what it hands over.",
+  "tagline": "GRENHEIM — Vẻ đẹp thiên nhiên, qua đôi tay người thợ.",
+  "voice": [
+    "Warm, close and unhurried, with a moderate amount of feeling. Place the piece in a lived moment instead of listing lines and benefits.",
+    "Open with an observation, a situation or a moment that is easy to picture. A short story is fine; never give that experience to a real customer.",
+    "Mention a product detail only when it helps the moment being told. Do not describe the structure or the grain unless the moment needs it, and do not list objects only because they are in the photo.",
+    "Clear Vietnamese with a natural rhythm. Avoid showy wording, abstract ideas and questions the reader has to guess.",
+    "A closing question is optional and must be simple, for example: Bạn sẽ đặt gì lên chiếc kệ này: vài cuốn sách yêu thích, ảnh gia đình hay một món đồ kỷ niệm?",
+    "The post may end with the tagline, the product link and a few relevant hashtags. Use them flexibly; a final question is not required."
+  ],
+  "facts": [
+    "Do not state the wood species from a finish color name, and do not claim solid-block construction or a making method without a source.",
+    "The founder's father is only part of the memory story: do not put him in every product post, do not say he works with the brand now, and never add a number of years (15, 20 or 30).",
+    "The founding year is not announced; do not infer how long the brand has existed.",
+    "Decorations and chairs in a photo are not necessarily sold with the product."
+  ],
+  "avoid": [
+    "The writing style of customer reviews, and any fake customer quote, purchase or experience.",
+    "A catalog list of the product's parts or properties.",
+    "The same opening (for example Có một góc…), the same gathering idea, the same question or the same length in every post."
+  ],
+  "hashtags": [
+    "#GRENHEIM",
+    "#NoiThatGo",
+    "#KhongGianSong"
+  ],
+  "example": "Buổi tối, khi việc trong ngày đã tạm xong, chỉ muốn ngồi xuống sofa và nghe một bản nhạc quen.\n\nTrước mặt là sắc gỗ ấm, những đường vân trải rộng trên mặt bàn và phần chân uốn thành từng khoảng thoáng. Một món đồ có nhiều điều để ngắm, ngay cả khi chẳng đặt thêm gì lên đó.\n\nMẫu bàn trà chân vòm của GRENHEIM dành một chỗ cho những phút thảnh thơi như thế. Để cuốn sách đang đọc ở gần, để câu chuyện tối nay được nối thêm một chút.\n\nGRENHEIM — Vẻ đẹp thiên nhiên, qua đôi tay người thợ.",
+  "watermark": {
+    "file": "watermark.png",
+    "content_box": [
+      288,
+      288,
+      1548,
+      318
+    ],
+    "position": "top-right",
+    "size": 0.13,
+    "margin": 0.03
+  },
+  "colors": {
+    "primary": "#103e2e"
+  }
+}

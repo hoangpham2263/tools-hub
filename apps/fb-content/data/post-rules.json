@@ -1,0 +1,11 @@
+{
+  "schema_version": 1,
+  "rules": [
+    "FACTS: Only the product's name, the colors in the photos, the visible details and the brand facts supply content. Do not invent materials, wood species, sizes, how it was made, years of craft, performance, prices, offers, delivery, customers or reviews. Do not claim decorations or chairs in the photo are sold with it.",
+    "VOICE: Write like a person talking, in everyday words of the brand's language. Do not describe the product like a catalog and do not list its features or benefits. Mention a product detail only when it helps the moment being told.",
+    "OPENING: Do not default to a fixed opening, a rhetorical question or the same closing line in every post. A question to the reader, if used, must be simple and name what it asks about.",
+    "WORDS: No exclamation marks, emoji, excited interjections, slogans or sales superlatives (perfect for, must-have, highly recommend, game changer). No dashes inside sentences.",
+    "STRUCTURE: Avoid patterns that read as machine writing: no list of three (\"A, B and C\"), no \"not just X but Y\", no opener or closer such as overall or in conclusion, no sentence that sums the post up, and no polished words such as stunning, elegant, beautifully, exquisite or timeless. Let sentence lengths differ.",
+    "OUTPUT: Return only the post text, ready to publish, without a title, quotes, Markdown, labels or explanations."
+  ]
+}

@@ -1,0 +1,57 @@
+{
+  "schema_version": 1,
+  "platforms": {
+    "facebook": {
+      "name": "Facebook",
+      "limit": 63206,
+      "tags": 5,
+      "link": "body",
+      "words": [
+        70,
+        150
+      ],
+      "rule": "A post of two to four short paragraphs, then the product link on its own last line before the hashtags.",
+      "tip": "Link bấm được ngay trong bài · ảnh 4:5 hoặc 1:1",
+      "layout": "paragraphs"
+    },
+    "instagram": {
+      "name": "Instagram",
+      "limit": 2200,
+      "tags": 30,
+      "link": "bio",
+      "words": [
+        45,
+        120
+      ],
+      "rule": "A caption of two or three short paragraphs. A link in a caption cannot be tapped, so put no link in it; say the link is in the bio. Hashtags go at the very end.",
+      "tip": "Link trong caption không bấm được: để ở bio · ảnh 4:5",
+      "layout": "paragraphs"
+    },
+    "threads": {
+      "name": "Threads",
+      "limit": 500,
+      "tags": 1,
+      "link": "body",
+      "words": [
+        20,
+        60
+      ],
+      "rule": "One short thought about one topic, at most 500 characters including the link, with the product link on its own last line. At most one hashtag.",
+      "tip": "Tối đa 500 ký tự, một chủ đề (#) · ảnh 4:5",
+      "layout": "paragraphs"
+    },
+    "tiktok": {
+      "name": "TikTok",
+      "limit": 4000,
+      "tags": 5,
+      "link": "bio",
+      "words": [
+        8,
+        35
+      ],
+      "rule": "One or two short lines that sit under a video. Put no link in it; the link is in the bio.",
+      "tip": "Caption ngắn đi kèm video · ảnh/video 9:16",
+      "layout": "line"
+    }
+  }
+}

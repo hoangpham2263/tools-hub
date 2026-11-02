@@ -5,7 +5,7 @@ const ORIGINS = ["https://hoangpham.is-a.dev", "http://localhost:8000"];
 const SCOPE = "openid email https://www.googleapis.com/auth/drive.file";
 const OWNER_EMAILS = ["quochoang.idx@gmail.com", "hoangpham2263@gmail.com"];
 // Drive layout: "Tools Hub/" holds one folder per tool. "Tools Hub/Product Review/" holds "Ảnh đã tạo/<run>/",
-// "Nguồn ảnh/<group>/" and "Logs/"; "Tools Hub/Grok Video Prompt/Video mẫu/<6s|10s|15s>/<prompt code>.mp4" holds
+// "Nguồn ảnh/<group>/" and "Logs/"; "Tools Hub/Content MXH/Ảnh đã tạo/<run>/<product>/" holds that tool's results; "Tools Hub/Grok Video Prompt/Video mẫu/<6s|10s|15s>/<prompt code>.mp4" holds
 // one sample video per prompt.
 const HUB_FOLDER = "Tools Hub";
 const FOLDER_NAME = "Product Review";
@@ -89,12 +89,25 @@ async function handleTempKeys(req, env, id) {
 export function appAllowed(method, path) {
   return (method === "GET" && path === "/api/app-check")
     || (method === "POST" && path === "/api/images")
+    || (method === "POST" && path === "/api/tool-files")
     || (method === "GET" && /^\/api\/sources(\/[^/]+)?$/.test(path))
     || (method === "POST" && path === "/api/logs");
 }
 
 // Batch ids and file names come from the local app; keep them to safe characters.
 export const cleanName = (value, fallback) => String(value || "").replace(/[^\w.-]/g, "_").replace(/^\.+/, "").slice(0, 120) || fallback;
+
+// Results of a tool kept as Product Review keeps its images: "Tools Hub/<tool>/Ảnh đã tạo/<same folders as on the machine>/<file>". Only listed tools, and only
+// file types a result holds, so the app password cannot be used to fill the Drive with anything else.
+export const TOOL_FILE_TOOLS = ["Content MXH"];
+export const TOOL_FILE_TYPES = { ".png": "image/png", ".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".webp": "image/webp", ".txt": "text/plain; charset=utf-8", ".json": "application/json" };
+export const cleanSegment = (value) => String(value || "").normalize("NFC").replace(/[\/:*?"<>|\u0000-\u001f]/g, "_").trim().replace(/^\.+/, "").slice(0, 120);
+export function toolFilePath(value) {
+  const parts = String(value || "").split("/").map(cleanSegment);
+  if (parts.length < 1 || parts.length > 8 || parts.some((p) => !p)) return null;
+  const name = parts[parts.length - 1], mime = TOOL_FILE_TYPES[name.slice(name.lastIndexOf(".")).toLowerCase()];
+  return mime ? { folders: parts.slice(0, -1), name, mime } : null;
+}
 
 // ---------- Google Drive ----------
 async function accessToken(env) {
@@ -523,6 +536,23 @@ async function handle(req, env, ctx) {
     };
     await putItem(env, item);
     return json({ ...item, url: publicUrl(url.origin, item) }, 201);
+  }
+
+  // Upload one result file: POST /api/tool-files?tool=Content MXH&path=<run>/<product>/<file>; the same path again replaces it.
+  if (path === "/api/tool-files" && req.method === "POST") {
+    const tool = String(url.searchParams.get("tool") || "");
+    const target = toolFilePath(url.searchParams.get("path"));
+    if (!TOOL_FILE_TOOLS.includes(tool) || !target) return json({ error: "Tool hoặc đường dẫn file không hợp lệ." }, 400);
+    const bytes = await req.arrayBuffer();
+    if (!bytes.byteLength || bytes.byteLength > 25 * 1024 * 1024) return json({ error: "File rỗng hoặc quá 25MB." }, 400);
+    let parent = await folder(env, RUNS_FOLDER, await folder(env, tool, await folder(env, HUB_FOLDER)));
+    for (const name of target.folders) parent = await folder(env, name, parent);
+    const key = `toolfile:${parent}:${target.name}`;
+    const old = await env.STORE.get(key);
+    const fileId = await uploadFile(env, target.name, target.mime, bytes, parent);
+    await env.STORE.put(key, fileId);
+    if (old) await drive(env, `/drive/v3/files/${old}`, { method: "DELETE" }).catch(() => {});
+    return json({ fileId, path: [tool, RUNS_FOLDER, ...target.folders, target.name].join("/") }, 201);
   }
 
   if (path === "/api/organize" && req.method === "POST") return json(await organizeRuns(env));

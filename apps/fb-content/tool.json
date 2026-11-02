@@ -3,9 +3,8 @@
   "name": "Content MXH",
   "order": 3,
   "status": "dev",
-  "description": "Từ thông tin và ảnh gốc của sản phẩm: tạo ảnh bối cảnh và soạn bài đăng cho Facebook, Instagram, Threads, TikTok (bản tạm).",
+  "description": "Từ một ảnh gốc của sản phẩm: tạo ảnh ở nhiều góc máy và soạn bài đăng riêng cho Facebook, Instagram, Threads, TikTok theo giọng thương hiệu (đang thử).",
   "icon": "icon.svg",
-  "web": "ui/index.html",
   "platforms": [
     {
       "name": "Facebook",
@@ -26,7 +25,8 @@
   ],
   "features": [
     "Nhiều sản phẩm một lần",
-    "Ảnh bối cảnh từ ảnh gốc",
-    "Bài đăng riêng cho từng nền tảng"
-  ]
+    "Một ảnh gốc, chọn số góc máy",
+    "Bài đăng riêng cho từng nền tảng, theo giọng thương hiệu"
+  ],
+  "mac": "src/server.mjs"
 }

@@ -35,3 +35,20 @@ function Connect-DriveAccount([string]$WorkspaceRoot, [string]$Password, [script
 function Disconnect-DriveAccount([string]$WorkspaceRoot) {
     Remove-Item -LiteralPath (Get-SharedConfigPath $WorkspaceRoot 'drive.json') -Force -ErrorAction SilentlyContinue
 }
+
+# Send one result file to Tools Hub/<Tool>/<RelativePath> (folders as in RelativePath, '/' between them). The same path
+# again replaces the file. Three tries; the last error is thrown with its HTTP code.
+function Send-DriveToolFile($Drive, [string]$Tool, [string]$RelativePath, [string]$File) {
+    $bytes = [IO.File]::ReadAllBytes($File)
+    $type = switch ([IO.Path]::GetExtension($File).ToLowerInvariant()) { '.png' { 'image/png' } '.jpg' { 'image/jpeg' } '.jpeg' { 'image/jpeg' } '.webp' { 'image/webp' } '.json' { 'application/json' } default { 'text/plain; charset=utf-8' } }
+    $uri = "$($Drive.ApiUrl)/api/tool-files?tool=$([Uri]::EscapeDataString($Tool))&path=$([Uri]::EscapeDataString($RelativePath))"
+    for ($attempt = 1; $attempt -le 3; $attempt++) {
+        try { return (Invoke-RestMethod -Uri $uri -Method Post -ContentType $type -Headers @{ 'x-admin-key' = $Drive.AdminKey } -Body $bytes -TimeoutSec 120) }
+        catch {
+            $code = 0
+            if ($_.Exception.Response) { try { $code = [int]$_.Exception.Response.StatusCode } catch { Write-Verbose $_ } }
+            if ($attempt -eq 3 -or ($code -ge 400 -and $code -lt 500 -and $code -notin @(408, 429))) { throw "HTTP $code $($_.Exception.Message)" }
+            Start-Sleep -Seconds $attempt
+        }
+    }
+}

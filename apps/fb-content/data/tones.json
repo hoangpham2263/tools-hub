@@ -1,0 +1,17 @@
+{
+  "schema_version": 1,
+  "tones": {
+    "story": {
+      "name": "Kể chuyện",
+      "rule": "Open with one concrete everyday moment or observation that is easy to picture, then tie the product to it lightly. A short story, never a customer's story."
+    },
+    "short": {
+      "name": "Ngắn gọn",
+      "rule": "Two or three plain sentences: the product and one calm thought about how it sits in a home. No story."
+    },
+    "sale": {
+      "name": "Bán hàng",
+      "rule": "Say clearly what the product is and give one reason to look at it, still warm and unhurried. No pressure, no discount, no scarcity."
+    }
+  }
+}

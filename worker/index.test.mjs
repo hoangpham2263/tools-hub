@@ -326,3 +326,26 @@ test("Grok sample videos: admin uploads by prompt code into Tools Hub/Grok Video
   await call("/api/grok-videos/10/close-to-wide", { method: "DELETE", headers: { "x-admin-key": "secret" } });
   assert.deepEqual((await (await call("/grok/videos")).json()).videos, {});
 });
+
+test("tool results keep their folders under Tools Hub/Content MXH/Ảnh đã tạo; same path replaces, only listed tools and types", async () => {
+  const { call, files, env } = setup();
+  const app = { "x-admin-key": "app-pass" };
+  const put = (query, body = "x", headers = app) => call(`/api/tool-files?${query}`, { method: "POST", headers, body });
+  const q = (tool, path) => `tool=${encodeURIComponent(tool)}&path=${encodeURIComponent(path)}`;
+  assert.equal((await put(q("Product Review", "a/b.png"))).status, 400, "only listed tools");
+  assert.equal((await put(q("Content MXH", "a/run.exe"))).status, 400, "only result file types");
+  assert.equal((await put(q("Content MXH", "a/../b.png"))).status, 400, "no way out of the tool folder");
+  assert.equal((await put(q("Content MXH", "a//b.png"))).status, 400, "no empty folder names");
+  assert.equal((await put(q("Content MXH", "a/b.png"), "x", {})).status, 401, "needs the app password");
+  const firstRes = await put(q("Content MXH", "2026-11-02_10h00m00s/01-ban-tra/bai-facebook.txt"), "hello");
+  const first = await firstRes.json();
+  assert.equal(firstRes.status, 201, JSON.stringify(first));
+  assert.equal(first.path, "Content MXH/Ảnh đã tạo/2026-11-02_10h00m00s/01-ban-tra/bai-facebook.txt");
+  const byId = (id) => env.__nodes.get(id);
+  const node = byId(first.fileId);
+  const chain = []; let p = node.parents[0];
+  while (p) { chain.push(byId(p).name); p = byId(p).parents[0]; }
+  assert.deepEqual(chain, ["01-ban-tra", "2026-11-02_10h00m00s", "Ảnh đã tạo", "Content MXH", "Tools Hub"]);
+  const second = await (await put(q("Content MXH", "2026-11-02_10h00m00s/01-ban-tra/bai-facebook.txt"), "hello again")).json();
+  assert.ok(!files.has(first.fileId) && files.has(second.fileId), "the same path replaces the file");
+});
