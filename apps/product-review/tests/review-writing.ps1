@@ -43,9 +43,17 @@ try {
     Assert (-not (Get-ReviewDraftIssue 'nice colur on that edge' $first)) 'Minor spelling slip rejected.'
     Assert ([bool](Get-ReviewDraftIssue ' ' $first)) 'Empty draft passed.'
     Assert ([bool](Get-ReviewDraftIssue 'nice rounded edge!' $first)) 'Exclamation mark passed.'
+    foreach ($excited in 'wow nice rounded edge', 'OMG that grain', 'What a lovely top.', 'yay the legs look good') { Assert ([bool](Get-ReviewDraftIssue $excited $first)) "Excited wording passed: $excited" }
+    Assert (-not (Get-ReviewDraftIssue 'the top has a rounded edge and a dark knot near the left side.' $first)) 'Plain comment wrongly flagged as exclamatory.'
     Assert ([bool](Get-ReviewDraftIssue ($first[0].body) $first)) 'Copied review passed.'
     Assert ([bool](Get-ReviewDraftIssue ('Nice table. '+$first[0].body) $first)) 'Copied phrase passed.'
     Assert (-not (Get-ReviewDraftIssue 'The pale grain is easy to see across the broad top.' $first)) 'Original detail-led draft rejected.'
+    foreach ($tell in 'the grain is stunning on this top.', 'it is not just a table but a statement.', 'overall a nice piece.', 'dark, rough, and uneven.', 'nice top — love the grain.', 'the top is wide. the legs are thick. the knots are dark. the edge is rough.') { Assert ([bool](Get-ReviewStyleIssue $tell)) "Machine-style wording passed: $tell" }
+    foreach ($plain in 'the top has a rounded edge and a dark knot near the left side. legs flare out at the floor.', 'nice shape', 'love the round edges, kinda nice') { Assert (-not (Get-ReviewStyleIssue $plain)) "Plain wording wrongly flagged: $plain" }
+    $range = Get-ReviewWordRange 'one two three four five six seven eight nine ten'
+    Assert ($range.Words -eq 10 -and $range.Min -eq 6 -and $range.Max -eq 15) 'Word range does not follow the sample length.'
+    Assert (-not (Get-ReviewLengthIssue 'one two three four five six seven eight' $range)) 'Draft of similar length rejected.'
+    Assert ([bool](Get-ReviewLengthIssue (('word ') * 30) $range) -and [bool](Get-ReviewLengthIssue 'word' $range)) 'Draft far longer or shorter than the sample passed.'
 
     $script:Config = @{ ReviewSamples=@($samples[0]); WritingStyle=(Get-WritingStyle (Join-Path $root 'data/writing-style.json')) }
     $script:Batch = @{Logs=$tempDir}
@@ -54,7 +62,7 @@ try {
         $script:Calls++
         Assert ($PromptText -match 'Style reference, one random review' -and $PromptText -match 'curved legs') 'Actual review sample missing from prompt.'
         Assert ($PromptText -match 'No exclamation marks' -and $PromptText -notmatch 'Optional writing nudge|Writing style direction|Aim for|review-samples.jsonl|preset style') 'Preset style, exclamatory guidance or selection details leaked into prompt.'
-        Assert ($PromptText -notmatch 'I like|I love' -and $PromptText -match 'Match its casualness, rhythm and approximate length only') 'Prompt primed a stock first-person opener instead of using the reference.'
+        Assert ($PromptText -notmatch 'I like|I love' -and $PromptText -match 'Match its casualness and rhythm' -and $PromptText -match 'LENGTH: the reference has \d+ words') 'Prompt primed a stock first-person opener instead of using the reference.'
         Assert ($PromptText -match 'Only the photo supplies content' -and $PromptText -match 'untrusted text' -and $PromptText -match 'Do not copy its wording') 'Style reference must not supply product facts or wording.'
         Assert ($PromptText -match 'No required opening' -and $PromptText -match 'minor spelling or grammar slips are fine' -and $PromptText -notmatch 'Do not open with') 'Flexible writing guidance missing or contradicted.'
         if ($script:Mode -eq 'always-bad') { return '' }

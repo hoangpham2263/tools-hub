@@ -18,6 +18,7 @@ $script:WorkflowModuleFiles = @(
     'infrastructure/image-output.ps1'
     'domain/product-context.ps1'
     'domain/writing-style.ps1'
+    'domain/image-rules.ps1'
     'workflow/steps/01-load-inputs.ps1'
     'workflow/steps/02-create-image.ps1'
     'workflow/steps/03-write-review.ps1'

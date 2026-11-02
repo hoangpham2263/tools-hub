@@ -16,6 +16,7 @@ function Test-ObjectEdit {
     Assert ($tableRequest.Prompt -notmatch 'Appropriate context:|Reject:') 'Scene-picking context must not reach the prompt; the attached photo is the scene.'
     Assert ($tableRequest.Prompt -notmatch 'standing height|off-center framing|do not inherit its professional lighting') 'Old restyling instructions conflict with the locked room.'
     Assert ($tableRequest.Prompt -match 'Do not bleach, desaturate or restain') 'Direct furniture edits must preserve intrinsic wood color.'
+    Assert ([regex]::Matches($tableRequest.Prompt, 'CORE PRODUCT RULES \(').Count -eq 1 -and $tableRequest.Prompt -match '2\. COLOR:.*part by part' -and $tableRequest.Prompt -match '3\. SHAPE:' -and $tableRequest.Prompt -notmatch 'wood tone|COLOR LOCK|SUPPORT FIDELITY') 'Core product rules must appear once, with no leftover per-case color or support rules.'
     Assert ($tableRequest.Prompt -match 'originally bare table bare') 'Generation must directly deliver the tool image and preserve originally empty surfaces.'
     Assert ($tableRequest.Prompt -match 'NO INVENTED PROPS' -and $tableRequest.Prompt -match 'Empty areas and bare surfaces must stay empty' -and $tableRequest.Prompt -match 'must not be transplanted into an empty room') 'Empty-room constraints must prevent newly staged props, including objects copied from the product photo.'
     Assert ($tableRequest.Prompt -match 'Ghế quanh bàn ăn.*chiều cao sử dụng' -and $tableRequest.Prompt -match 'bán cả bộ.*đúng ghế' -and $tableRequest.Prompt -match 'không coi ghế là hàng bán kèm') 'Table seating preference is missing or falsely claims sold components.'
@@ -26,10 +27,11 @@ function Test-ObjectEdit {
     $coffeeRequest=New-ProductImageRequest 'product.jpg' 'coffee-room' $object $selected
     Assert ($coffeeRequest.Prompt -match 'Bàn trà thấp.*không giữ ghế ăn cao' -and $coffeeRequest.Prompt -match 'không tự thêm ghế hoặc đổi toàn bộ căn phòng') 'Coffee-table seating must fit the current product without adding seats or redesigning the room.'
     Assert ($coffeeRequest.Prompt -notmatch 'DINING TABLE AND SEATING FIT') 'Dining chair clearance must not override low coffee-table seating.'
+    Assert ($coffeeRequest.Prompt -match 'LOW TABLE AND SEATING' -and $coffeeRequest.Prompt -match 'never remove a seat and never add one' -and $coffeeRequest.Prompt -match 'do not leave tall dining chairs') 'Coffee-table prompt must keep the seat count and restyle seats low.'
     $object.source_categories=@('lamps');$object.product='floor lamp'
     $lampRequest=New-ProductImageRequest 'product.jpg' 'lamp-room' $object $selected
     Assert ($lampRequest.Prompt -notmatch 'Ghế quanh bàn ăn|Bàn trà thấp') 'Table preference leaked into an unrelated product category.'
-    Assert ($lampRequest.Prompt -notmatch 'DINING TABLE AND SEATING FIT') 'Dining seating instructions leaked into an unrelated object edit.'
+    Assert ($lampRequest.Prompt -notmatch 'DINING TABLE AND SEATING FIT|LOW TABLE AND SEATING') 'Seating instructions leaked into an unrelated object edit.'
 }
 Test-ObjectEdit
 $request = New-ProductImageRequest 'actual.png' 'one-source' $context @('attached-person.png')
