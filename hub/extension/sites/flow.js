@@ -18,6 +18,41 @@ const freshImage = (tile, before) => [...tile.querySelectorAll("img")].some((img
 const failCards = () => [...document.querySelectorAll("body *")].filter((e) => e.children.length === 0 && /^(Không thành công|Failed|Generation failed|Unsuccessful)$/i.test(e.textContent.trim()) && e.getBoundingClientRect().width > 0);
 const failReason = (card) => (card.parentElement?.innerText || card.textContent).replace(/\s+/g, " ").trim();
 
+// Flow makes the image at the aspect set in its composer (16:9 unless changed), so a review photo of another shape
+// is recomposed to fit: camera angle, room and furniture all change. Before the references go in, the aspect closest
+// to the first image (the review photo) is chosen. Failing to set it does not stop the run.
+const FLOW_ASPECTS = [["16:9", 16 / 9], ["4:3", 4 / 3], ["1:1", 1], ["3:4", 3 / 4], ["9:16", 9 / 16]];
+const FLOW_ICONS = { "16:9": "16_9", "4:3": "landscape", "1:1": "square", "3:4": "portrait", "9:16": "9_16" };
+const settingsButton = () => document.querySelector("button.settings-trigger-button");
+const aspectToggle = (label) => [...document.querySelectorAll(".cdk-overlay-container button.mat-button-toggle-button")].find((b) => b.innerText.split(/\s+/).includes(label));
+const realClick = (el) => {
+  const box = el.getBoundingClientRect();
+  return chrome.runtime.sendMessage({ type: "click", x: box.left + box.width / 2, y: box.top + box.height / 2 }).catch(() => null);
+};
+async function setFlowAspect(file) {
+  try {
+    const bitmap = await createImageBitmap(file);
+    const ratio = bitmap.width / bitmap.height;
+    bitmap.close();
+    const [label] = FLOW_ASPECTS.reduce((best, a) => (Math.abs(Math.log(a[1] / ratio)) < Math.abs(Math.log(best[1] / ratio)) ? a : best));
+    const trigger = await waitFor(settingsButton, 10000, "nút cài đặt của Flow");
+    await realClick(trigger);
+    const toggle = await waitFor(() => aspectToggle(label), 5000, "tỷ lệ khung hình của Flow");
+    // The settings button shows the chosen aspect as its icon (crop_16_9, crop_square, ...), the sign that it took.
+    const chosen = () => settingsButton()?.innerText.includes(`crop_${FLOW_ICONS[label]}`);
+    if (!chosen()) {
+      await realClick(toggle);
+      await waitFor(chosen, 5000, "chọn tỷ lệ khung hình");
+    }
+    note(`aspect ${label} for a ${(ratio).toFixed(2)} review photo`);
+    await realClick(trigger);
+    await sleep(400);
+  } catch (error) {
+    note(`aspect not set: ${error.message || error}`);
+    document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+  }
+}
+
 async function generateFlow(job) {
   const composer = () => document.querySelector('.ProseMirror[contenteditable="true"]');
   let editor = await waitFor(composer, 30000, "ô nhập Flow");
@@ -25,6 +60,10 @@ async function generateFlow(job) {
   if (flowAgentOn()) {
     note("turning Tác nhân off");
     await turnAgentOff();
+    editor = await waitFor(composer, 30000, "ô nhập Flow");
+  }
+  if (job.images?.length) {
+    await setFlowAspect(filesFromJob({ images: job.images.slice(0, 1) })[0]);
     editor = await waitFor(composer, 30000, "ô nhập Flow");
   }
   // The grid shows only the items in view, newest first: from the top, the new items of this job are the first ones.
