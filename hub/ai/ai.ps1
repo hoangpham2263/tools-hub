@@ -88,7 +88,13 @@ Do not modify any input file. Reply briefly in English.
 "@
 }
 
+# The CLIs are agents that can open files. Every input is in the prompt and its images, so they are told to stay in them.
+function Get-CliInputBoundary {
+    'CLOSED INPUT: this prompt and the attached images are everything you need. Do not open, list or search any other file or folder, do not read project notes or instructions, and do not run commands to look around.'
+}
+
 function Invoke-HubAIProvider([string]$Kind, [string]$Ai, [string]$Prompt, [string[]]$Images, [string]$Output, [hashtable]$Options, [int]$timeout) {
+    if ($Ai -in @('codex', 'antigravity')) { $Prompt += "`n" + (Get-CliInputBoundary) }
     switch ($Ai) {
         'codex' {
             $codex = @{

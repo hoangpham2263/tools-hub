@@ -9,6 +9,7 @@ $script:Batch = @{ Dir = $testDir }
 function Invoke-CodexProcess($PromptText, $CommandArgs, $Trace, $TimeoutSeconds, $ReconnectSeconds) {
     $CliArgs = @($CommandArgs)
     $script:LastCliArgs = $CliArgs
+    $script:LastPrompt = $PromptText
     $script:Calls++
     if ($CliArgs[([Array]::IndexOf($CliArgs, '-m') + 1)] -ne 'test-model') { throw 'Model changed on retry.' }
     if ($script:Scenario -eq 'timeout') { 'Deadline reached' | Set-Content $Trace; return [pscustomobject]@{ExitCode=-1;Cause='AI_TIMEOUT';StopConfirmed=$true} }
@@ -30,6 +31,10 @@ try {
     $reply = Invoke-AI 'Check' @() $result
     if ($reply -ne 'FIT' -or $script:Calls -ne 2 -or (Get-Content $result -Raw).Trim() -ne 'FIT') { throw 'Capacity retry did not recover.' }
     if ($script:LastCliArgs -contains 'model_reasoning_effort=low') { throw 'No reasoning level was chosen, so none may be sent.' }
+    # Everything the AI needs is in the prompt: Codex must not load AGENTS.md on its own, and is told to stay in its input.
+    $docAt = [Array]::IndexOf($script:LastCliArgs, 'project_doc_max_bytes=0')
+    if ($docAt -lt 1 -or $script:LastCliArgs[$docAt - 1] -ne '-c') { throw 'Codex was allowed to load AGENTS.md from the repo.' }
+    if ($script:LastPrompt -notmatch 'CLOSED INPUT: this prompt and the attached images are everything you need') { throw 'The CLI prompt does not close its input to the prompt and images.' }
     # Model AI: the chosen reasoning level goes to every Codex call.
     $script:Config.ReasoningEffort = 'low'; $script:Scenario = 'recover'; $script:Calls = 1
     Invoke-AI 'Check' @() (Join-Path $testDir 'effort.txt') | Out-Null

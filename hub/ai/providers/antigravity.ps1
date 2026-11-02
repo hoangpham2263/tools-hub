@@ -11,7 +11,9 @@ function Get-AntigravityCommand {
 
 function Invoke-AntigravityText([string]$Prompt, [string[]]$Images, [string]$ResultFile, [int]$TimeoutSec = 300) {
     $agy = Get-AntigravityCommand
-    $work = "$ResultFile.agy"
+    # A folder of its own in the system temp, outside the repo: agy would otherwise read the AGENTS.md files above
+    # the run's logs. It holds only this prompt and its images.
+    $work = Join-Path ([IO.Path]::GetTempPath()) "hub-agy-$([Guid]::NewGuid().ToString('N'))"
     New-Item -ItemType Directory -Force -Path $work | Out-Null
     [IO.File]::WriteAllText((Join-Path $work 'prompt.md'), $Prompt, [Text.UTF8Encoding]::new($false))
     $names = @()
@@ -53,6 +55,7 @@ function Invoke-AntigravityText([string]$Prompt, [string[]]$Images, [string]$Res
         if ($detail -match '(?i)sign in|login|unauthor') { break }
         if ($attempt -lt 2) { Write-Host "  [RETRY] Antigravity; attempt 2/2..." -ForegroundColor Yellow }
     }
+    Remove-Item -LiteralPath $work -Recurse -Force -ErrorAction SilentlyContinue
     $cause = if ($detail -match '(?i)sign in|login|unauthor') { 'AUTH' } elseif ($detail -match 'giây|timeout') { 'AI_TIMEOUT' } elseif ($detail -match '(?i)quota|limit|429') { 'QUOTA' } else { 'BUSY' }
     throw "AI failed. Antigravity CLI: $(if ($detail.Length -gt 300) { $detail.Substring(0, 300) } else { $detail }) [CAUSE:$cause]"
 }

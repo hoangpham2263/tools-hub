@@ -189,7 +189,9 @@ function Invoke-CodexExec([string]$PromptText, [string[]]$Images, [string]$Resul
     $script:CodexCallTokens = $null
     for ($attempt = 1; $attempt -le $maxAttempts; $attempt++) {
         $attemptFile = if ($attempt -eq 1) { $ResultFile } else { "$ResultFile.attempt-$attempt.txt" }
-        $commandArgs = @('exec', '--json', '--skip-git-repo-check', '-s', $Sandbox, '-C', $WorkDir, '-o', $attemptFile)
+        # project_doc_max_bytes=0: Codex otherwise loads every AGENTS.md from the repo root down to WorkDir by itself
+        # (the repo's and the tool's lessons), outside the prompt. Everything the AI needs is in the prompt and images.
+        $commandArgs = @('exec', '--json', '--skip-git-repo-check', '-s', $Sandbox, '-C', $WorkDir, '-c', 'project_doc_max_bytes=0', '-o', $attemptFile)
         if ($Model) { $commandArgs += @('-m', $Model) }
         if ($Effort) { $commandArgs += @('-c', "model_reasoning_effort=$Effort") }
         foreach ($photo in $Images) { $commandArgs += @('-i', $photo) }
