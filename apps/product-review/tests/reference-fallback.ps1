@@ -17,6 +17,10 @@ function Test-ObjectEdit {
     Assert ($tableRequest.Prompt -notmatch 'standing height|off-center framing|do not inherit its professional lighting') 'Old restyling instructions conflict with the locked room.'
     Assert ($tableRequest.Prompt -match 'Do not bleach, desaturate or restain') 'Direct furniture edits must preserve intrinsic wood color.'
     Assert ([regex]::Matches($tableRequest.Prompt, 'CORE PRODUCT RULES \(').Count -eq 1 -and $tableRequest.Prompt -match '2\. COLOR:.*part by part' -and $tableRequest.Prompt -match '3\. SHAPE:' -and $tableRequest.Prompt -notmatch 'wood tone|COLOR LOCK|SUPPORT FIDELITY') 'Core product rules must appear once, with no leftover per-case color or support rules.'
+    # Profiles change only rule 5 (FIT); the product rules around it are the same text for review and content.
+    $reviewRules = (Get-HubImageProductRules 2 'review') -split "`r?`n"; $contentRules = (Get-HubImageProductRules 2 'content') -split "`r?`n"
+    $differing = @(0..($reviewRules.Count - 1) | Where-Object { $reviewRules[$_] -ne $contentRules[$_] })
+    Assert ($reviewRules.Count -eq $contentRules.Count -and $differing.Count -eq 1 -and $reviewRules[$differing[0]] -match '^5\. FIT' -and $reviewRules[$differing[0]] -match 'exposure and noise' -and $contentRules[$differing[0]] -notmatch 'noise') 'Profiles may differ only in rule 5 (FIT); review keeps the base photo noise.'
     Assert ($tableRequest.Prompt -match 'originally bare table bare') 'Generation must directly deliver the tool image and preserve originally empty surfaces.'
     Assert ($tableRequest.Prompt -match 'NO INVENTED PROPS' -and $tableRequest.Prompt -match 'Empty areas and bare surfaces must stay empty' -and $tableRequest.Prompt -match 'must not be transplanted into an empty room') 'Empty-room constraints must prevent newly staged props, including objects copied from the product photo.'
     Assert ($tableRequest.Prompt -match 'Ghế quanh bàn ăn.*chiều cao sử dụng' -and $tableRequest.Prompt -match 'bán cả bộ.*đúng ghế' -and $tableRequest.Prompt -match 'không coi ghế là hàng bán kèm') 'Table seating preference is missing or falsely claims sold components.'
