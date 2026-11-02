@@ -41,10 +41,10 @@ function log(line) {
 // Every job the extension ran, one JSON line in <hub>/workspace/logs/ai-usage.jsonl, beside the CLI calls hub/ai
 // records (Cấu hình → Lượt dùng AI): with the account it ran with and, when it failed, what stopped it.
 const usageFile = join(dirname(fileURLToPath(import.meta.url)), "..", "..", "workspace", "logs", "ai-usage.jsonl");
-const KIND = { gemini: "text", flow: "image", chatgpt: "image" };
+const KIND = { gemini: "text", flow: "image", chatgpt: "image", grok: "image" };
 export function causeOf(error) {
   const text = String(error || "");
-  if (/chính sách|polic(y|ies)|từ chối tạo/i.test(text)) return "POLICY";
+  if (/chính sách|polic(y|ies)|từ chối tạo|kiểm duyệt|moderat/i.test(text)) return "POLICY";
   if (/quota|limit|hết lượt|giới hạn|429|too many/i.test(text)) return "QUOTA";
   if (/Hết thời gian|timeout/i.test(text)) return "AI_TIMEOUT";
   if (/đăng nhập|sign.?in|log.?in/i.test(text)) return "AUTH";
@@ -52,7 +52,7 @@ export function causeOf(error) {
   return "BUSY";
 }
 
-export function createBridge({ fetchImpl = fetch, googleAccount = chosenGoogleAccount, quit = () => process.exit(0), queueMs = 30 * 60000, usage = usageFile, parallel = 4, perSite = { flow: 4, gemini: 1, chatgpt: 1 } } = {}) {
+export function createBridge({ fetchImpl = fetch, googleAccount = chosenGoogleAccount, quit = () => process.exit(0), queueMs = 30 * 60000, usage = usageFile, parallel = 4, perSite = { flow: 4, gemini: 1, chatgpt: 1, grok: 1 } } = {}) {
   const record = (entry) => { try { mkdirSync(dirname(usage), { recursive: true }); appendFileSync(usage, JSON.stringify({ t: new Date().toISOString(), ...entry }) + "\n"); } catch {} };
   let extension = null, extensionVersion = "";
   const pending = new Map();
@@ -126,7 +126,7 @@ export function createBridge({ fetchImpl = fetch, googleAccount = chosenGoogleAc
       let raw = "";
       for await (const chunk of req) raw += chunk;
       const job = JSON.parse(raw);
-      if (!["chatgpt", "flow", "gemini"].includes(job.platform)) return send(400, { error: "platform must be chatgpt, flow or gemini" });
+      if (!["chatgpt", "flow", "gemini", "grok"].includes(job.platform)) return send(400, { error: "platform must be chatgpt, flow, gemini or grok" });
       if (!job.prompt || !job.output) return send(400, { error: "prompt and output are required" });
       if (!extension) return send(503, { error: "Extension chưa kết nối. Mở Chrome có cài extension Tools Hub." });
       const images = await Promise.all((job.images || []).map(async (path, index) => ({
@@ -135,15 +135,18 @@ export function createBridge({ fetchImpl = fetch, googleAccount = chosenGoogleAc
         data: (await readFile(path)).toString("base64"),
       })));
       const timeoutSec = Number(job.timeoutSec || 600);
-      const account = job.platform === "chatgpt" ? "" : googleAccount();
+      // Grok (grok.com, its own sign-in) and ChatGPT run with whoever is signed in there.
+      const account = ["chatgpt", "grok"].includes(job.platform) ? "" : googleAccount();
+      // Grok makes images and videos: the job says which (kind) and how (options: seconds, resolution, audio).
+      const kind = String(job.kind || KIND[job.platform]);
       const id = randomUUID();
       const result = await inTurn(job.platform, async () => {
         if (!extension) return { ok: false, error: "Extension chưa kết nối. Mở Chrome có cài extension Tools Hub." };
         log(`[${id.slice(0, 8)}] ${job.platform} job sent (${running} running)`);
         const started = Date.now();
-        const done = await ask({ type: "generate", id, platform: job.platform, prompt: job.prompt, images, timeoutSec, account }, (timeoutSec + 60) * 1000)
+        const done = await ask({ type: "generate", id, platform: job.platform, kind, options: job.options || {}, prompt: job.prompt, images, timeoutSec, account }, (timeoutSec + 60) * 1000)
           .catch((error) => ({ ok: false, error: error.message === "timeout" ? `Hết thời gian chờ (${timeoutSec + 60}s)` : String(error.message || error), thrown: error }));
-        record({ ai: job.platform, kind: KIND[job.platform], account, ok: !!done.ok, ...(done.ok ? {} : { cause: causeOf(done.error) }), ms: Date.now() - started });
+        record({ ai: job.platform, kind, account, ok: !!done.ok, ...(done.ok ? {} : { cause: causeOf(done.error) }), ms: Date.now() - started });
         if (done.thrown) throw done.thrown;
         return done;
       });

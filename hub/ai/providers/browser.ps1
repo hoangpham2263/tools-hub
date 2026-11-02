@@ -35,8 +35,11 @@ function Get-BridgeError($ErrorRecord) {
     return $text
 }
 
-function Send-BridgeJob([string]$Platform, [string]$Prompt, [string[]]$Images, [string]$Output, [int]$TimeoutSec) {
-    $body = @{ platform = $Platform; prompt = $Prompt; images = @($Images | Where-Object { $_ }); output = $Output; timeoutSec = $TimeoutSec } | ConvertTo-Json -Depth 4
+# $Kind and $Options go to the page as they are (Grok: image or video, and the video's length, resolution, sound).
+function Send-BridgeJob([string]$Platform, [string]$Prompt, [string[]]$Images, [string]$Output, [int]$TimeoutSec, [string]$Kind = '', [hashtable]$Options = @{}) {
+    $job = @{ platform = $Platform; prompt = $Prompt; images = @($Images | Where-Object { $_ }); output = $Output; timeoutSec = $TimeoutSec }
+    if ($Kind) { $job.kind = $Kind; $job.options = $Options }
+    $body = $job | ConvertTo-Json -Depth 4
     return Invoke-RestMethod -Uri "$script:BridgeUrl/generate" -Method Post -ContentType 'application/json; charset=utf-8' -Body ([Text.Encoding]::UTF8.GetBytes($body)) -TimeoutSec ($TimeoutSec + 120 + $script:BridgeQueueSec)
 }
 
@@ -62,19 +65,43 @@ function Invoke-BrowserText([string]$Platform, [string]$Prompt, [string[]]$Image
 
 # One image from a web AI (Google Flow), saved as PNG at $Output. Not retried here: the workflow first looks
 # for an image that arrived anyway.
-function Invoke-BrowserImage([string]$Platform, [string]$Prompt, [string[]]$Images, [string]$Output, [int]$TimeoutSec = 600) {
+# Options: Aspect (Grok: 9:16, 16:9, 1:1; left as the page has it when not given).
+function Invoke-BrowserImage([string]$Platform, [string]$Prompt, [string[]]$Images, [string]$Output, [int]$TimeoutSec = 600, [hashtable]$Options = @{}) {
+    $page = @{}
+    if ($Options.Aspect) { $page.aspect = [string]$Options.Aspect }
     try {
-        $result = Send-BridgeJob $Platform $Prompt $Images $Output $TimeoutSec
+        $result = Send-BridgeJob $Platform $Prompt $Images $Output $TimeoutSec 'image' $page
     } catch {
         $detail = Get-BridgeError $_
         Restore-ImageBridge
         # A sign-in or a Flow account not set up for images (its first-visit screen, Tác nhân on) needs the user, so it is
         # not retried (BRIDGE).
         # A refusal (Flow: may violate its policies) comes back the same for the same images and prompt: not retried.
-        $cause = if ($detail -match 'chính sách|polic(y|ies)|từ chối tạo') { 'POLICY' } elseif ($detail -match 'Hết thời gian|timeout') { 'AI_TIMEOUT' } elseif ($detail -match 'đăng nhập|Extension|Google Flow của tài khoản đang chọn') { 'BRIDGE' } else { 'BUSY' }
+        $cause = if ($detail -match 'chính sách|polic(y|ies)|từ chối tạo|kiểm duyệt|moderat') { 'POLICY' } elseif ($detail -match 'Hết thời gian|timeout') { 'AI_TIMEOUT' } elseif ($detail -match 'đăng nhập|Extension|Google Flow của tài khoản đang chọn') { 'BRIDGE' } else { 'BUSY' }
         throw "[CAUSE:$cause] $Platform không tạo được ảnh. $detail"
     }
     ConvertTo-PngFile $Output
     Write-Host "  [AI-CALL] $Platform"
+    return $result
+}
+
+# One video from a web AI (Grok), saved as MP4 at $Output: image 1 is its first frame, image 2 (optional) its last.
+# Options: Seconds, Resolution, Audio, Aspect. Not retried here, as an image: the workflow decides.
+function Invoke-BrowserVideo([string]$Platform, [string]$Prompt, [string[]]$Images, [string]$Output, [hashtable]$Options = @{}, [int]$TimeoutSec = 900) {
+    $page = @{}
+    if ($Options.ContainsKey('Seconds')) { $page.seconds = [int]$Options.Seconds }
+    if ($Options.ContainsKey('Resolution')) { $page.resolution = [string]$Options.Resolution }
+    if ($Options.ContainsKey('Audio')) { $page.audio = [bool]$Options.Audio }
+    if ($Options.Aspect) { $page.aspect = [string]$Options.Aspect }
+    try {
+        $result = Send-BridgeJob $Platform $Prompt $Images $Output $TimeoutSec 'video' $page
+    } catch {
+        $detail = Get-BridgeError $_
+        Restore-ImageBridge
+        $cause = if ($detail -match 'chính sách|polic(y|ies)|từ chối tạo|kiểm duyệt|moderat') { 'POLICY' } elseif ($detail -match 'hết lượt|giới hạn|limit') { 'QUOTA' } elseif ($detail -match 'Hết thời gian|timeout') { 'AI_TIMEOUT' } elseif ($detail -match 'đăng nhập|Extension') { 'BRIDGE' } else { 'BUSY' }
+        throw "[CAUSE:$cause] $Platform không tạo được video. $detail"
+    }
+    if (-not (Test-Path -LiteralPath $Output) -or (Get-Item -LiteralPath $Output).Length -lt 10000) { throw "[CAUSE:BUSY] $Platform trả về video rỗng." }
+    Write-Host "  [AI-CALL] $Platform video"
     return $result
 }

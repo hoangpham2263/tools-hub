@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "Tools Hub",
-  "version": "1.0.1",
-  "description": "Cầu nối local của Tools Hub: nhận việc từ các tool (tạo ảnh, viết chữ), làm trong tab Google Flow, Gemini, ChatGPT đang đăng nhập và trả kết quả về máy.",
+  "version": "1.0.11",
+  "description": "Cầu nối local của Tools Hub: nhận việc từ các tool (tạo ảnh, video, viết chữ), làm trong tab Google Flow, Gemini, ChatGPT, Grok đang đăng nhập và trả kết quả về máy.",
   "background": {
     "service_worker": "background.js"
   },
@@ -21,7 +21,9 @@
     "https://flow-content.google/*",
     "https://gemini.google.com/*",
     "https://accounts.google.com/*",
-    "https://*.google.com/*"
+    "https://*.google.com/*",
+    "https://grok.com/*",
+    "https://assets.grok.com/*"
   ],
   "content_scripts": [
     {
@@ -53,6 +55,26 @@
         "sites/gemini.js"
       ],
       "run_at": "document_idle"
+    },
+    {
+      "matches": [
+        "https://grok.com/*"
+      ],
+      "js": [
+        "sites/common.js",
+        "sites/grok.js"
+      ],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": [
+        "https://grok.com/*"
+      ],
+      "js": [
+        "sites/grok-main.js"
+      ],
+      "run_at": "document_start",
+      "world": "MAIN"
     }
   ],
   "action": {

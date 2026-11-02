@@ -1,4 +1,4 @@
-﻿# The AIs every tool can use, behind one call: Invoke-HubAI -Kind text|image -Ai <id> -Prompt ... -Output <file>.
+﻿# The AIs every tool can use, behind one call: Invoke-HubAI -Kind text|image|video -Ai <id> -Prompt ... -Output <file>.
 # A tool dot-sources this file (from apps/<tool>/src: ../../../hub/ai/ai.ps1) and keeps only its own prompts and
 # choices. A new AI is one entry in $script:HubAIProviders plus its provider file in providers/:
 #   cli      a command on this machine (codex, agy)
@@ -30,6 +30,7 @@ $script:HubAIProviders = [ordered]@{
     codex = [pscustomobject]@{ Name = 'Codex CLI'; Via = 'cli'; Kinds = @('text', 'image') }
     gemini = [pscustomobject]@{ Name = 'Gemini web'; Via = 'browser'; Kinds = @('text') }
     flow = [pscustomobject]@{ Name = 'Google Flow'; Via = 'browser'; Kinds = @('image') }
+    grok = [pscustomobject]@{ Name = 'Grok web'; Via = 'browser'; Kinds = @('image', 'video') }
     antigravity = [pscustomobject]@{ Name = 'Antigravity CLI'; Via = 'cli'; Kinds = @('text') }
 }
 
@@ -40,7 +41,7 @@ function Get-HubAIProvider([string]$Id) {
 }
 
 # The AIs that can do one kind of work, for a tool's choices: @{ id; name }.
-function Get-HubAIChoices([ValidateSet('text', 'image')][string]$Kind) {
+function Get-HubAIChoices([ValidateSet('text', 'image', 'video')][string]$Kind) {
     foreach ($id in $script:HubAIProviders.Keys) {
         $provider = $script:HubAIProviders[$id]
         if ($provider.Kinds -contains $Kind) { [pscustomobject]@{ id = $id; name = $provider.Name } }
@@ -48,12 +49,14 @@ function Get-HubAIChoices([ValidateSet('text', 'image')][string]$Kind) {
 }
 
 # Text: the reply, also written to $Output. Image: the image saved at $Output (PNG); Codex saves it where the prompt
-# says and returns its reply, a web AI returns the bridge's answer (source, bytes).
-# Options, all optional: TimeoutSec; Codex: WorkDir (required), Model, Effort, ReconnectSec, Attempts, RetryDelaySec,
+# says and returns its reply, a web AI returns the bridge's answer (source, bytes). Video: an MP4 at $Output, from a web
+# AI (Grok): image 1 is the first frame, image 2 (optional) the last.
+# Options, all optional: TimeoutSec; Grok: Aspect (9:16, 16:9, 1:1), video also Seconds (6, 10, 15), Resolution
+# (480p, 720p, 1080p), Audio; Codex: WorkDir (required), Model, Effort, ReconnectSec, Attempts, RetryDelaySec,
 # ReplyFile (an image's reply).
 function Invoke-HubAI {
     param(
-        [Parameter(Mandatory)][ValidateSet('text', 'image')][string]$Kind,
+        [Parameter(Mandatory)][ValidateSet('text', 'image', 'video')][string]$Kind,
         [Parameter(Mandatory)][string]$Ai,
         [Parameter(Mandatory)][string]$Prompt,
         [string[]]$Images = @(),
@@ -115,7 +118,8 @@ function Invoke-HubAIProvider([string]$Kind, [string]$Ai, [string]$Prompt, [stri
         'antigravity' { return Invoke-AntigravityText $Prompt $Images $Output $(if ($timeout) { $timeout } else { 300 }) }
         default {
             if ($Kind -eq 'text') { return Invoke-BrowserText $Ai $Prompt $Images $Output $(if ($timeout) { $timeout } else { 300 }) }
-            return Invoke-BrowserImage $Ai $Prompt $Images $Output $(if ($timeout) { $timeout } else { 600 })
+            if ($Kind -eq 'video') { return Invoke-BrowserVideo $Ai $Prompt $Images $Output $Options $(if ($timeout) { $timeout } else { 900 }) }
+            return Invoke-BrowserImage $Ai $Prompt $Images $Output $(if ($timeout) { $timeout } else { 600 }) $Options
         }
     }
 }

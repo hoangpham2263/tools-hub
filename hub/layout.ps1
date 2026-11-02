@@ -101,6 +101,9 @@ $script:MovedFiles = @(
     'hub/extension/content-chatgpt.js'
     'hub/extension/content-flow.js'
     'hub/extension/content-gemini.js'
+    # Grok Video Prompt became Grok Video: its prompt library is gone.
+    'apps/grok-video-prompt/data/prompts.js'
+    'apps/grok-video-prompt/data/demo-prompts.js'
 )
 function Remove-MovedFiles([string]$Root) {
     if ((Test-Path -LiteralPath (Join-Path $Root '.git')) -or -not (Test-Path -LiteralPath (Join-Path $Root 'hub/ai/ai.ps1'))) { return }

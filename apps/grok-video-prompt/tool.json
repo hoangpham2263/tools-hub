@@ -1,11 +1,9 @@
 {
   "id": "grok-video-prompt",
-  "name": "Grok Video Prompt",
+  "name": "Grok Video",
   "order": 2,
-  "status": "dev",
-  "description": "Chọn thời lượng 6s/10s/15s và style, copy prompt video cho Grok.",
+  "description": "Từ một ảnh sản phẩm (và ảnh người mẫu nếu có): Grok tạo video khoảng 1 phút đi quanh sản phẩm, các cảnh nối liền.",
   "icon": "icon.svg",
-  "web": "ui/index.html",
   "platforms": [
     {
       "name": "Grok",
@@ -13,8 +11,10 @@
     }
   ],
   "features": [
-    "Prompt video 6s, 10s, 15s",
-    "Chọn style, điền tên rồi copy",
-    "Xem video mẫu của từng style"
-  ]
+    "Video 1 phút liền mạch từ một ảnh",
+    "Chọn và sắp xếp góc máy (thư viện góc dùng chung)",
+    "Người mẫu giới thiệu ở đầu video",
+    "Khổ 9:16, 16:9 hoặc 1:1"
+  ],
+  "mac": "src/server.mjs"
 }

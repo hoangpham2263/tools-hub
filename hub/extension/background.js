@@ -12,6 +12,8 @@ const SITES = {
   chatgpt: { hosts: "https://chatgpt.com/*", page: /^https:\/\/chatgpt\.com\//, start: "https://chatgpt.com/", fresh: true },
   flow: { hosts: "https://flow.google.com/*", page: /^https:\/\/flow\.google\.com\/(u\/\d+\/)?project\//, start: "https://flow.google.com/" },
   gemini: { hosts: "https://gemini.google.com/*", page: /^https:\/\/gemini\.google\.com\//, start: "https://gemini.google.com/app", fresh: true },
+  // Grok Imagine: images and videos (job.kind), with whoever is signed in to grok.com.
+  grok: { hosts: "https://grok.com/*", page: /^https:\/\/grok\.com\//, start: "https://grok.com/imagine", fresh: true },
 };
 // Flow and Gemini run with the Google account chosen on Cấu hình (job.account; "" is Google's default, the first one
 // signed in), opened with ?authuser=; Google then shows the page under /u/<n>/.
@@ -163,12 +165,15 @@ async function newFlowProject(account) {
   }
 }
 
+// A page that finished loading before the listener was added (a fast or cached one) sends no more "complete": the tab's
+// status is checked too, and after 60 s the job goes on anyway (sendJob asks the page until its script answers).
 function waitForLoad(tabId) {
   return new Promise((resolve) => {
-    const listener = (id, info) => {
-      if (id === tabId && info.status === "complete") { chrome.tabs.onUpdated.removeListener(listener); resolve(); }
-    };
+    const done = () => { chrome.tabs.onUpdated.removeListener(listener); clearTimeout(timer); resolve(); };
+    const listener = (id, info) => { if (id === tabId && info.status === "complete") done(); };
+    const timer = setTimeout(done, 60000);
     chrome.tabs.onUpdated.addListener(listener);
+    chrome.tabs.get(tabId).then((tab) => { if (tab.status === "complete") done(); }, done);
   });
 }
 
@@ -179,12 +184,15 @@ const GOOGLE_SORRY = "Google tạm giới hạn tài khoản/máy này vì lưu 
 async function runJob(job) {
   const progress = (stage) => reply({ type: "progress", id: job.id, stage });
   let tab = null, stop = null;
-  const account = job.platform === "chatgpt" ? "" : String(job.account || "");
+  const account = ["chatgpt", "grok"].includes(job.platform) ? "" : String(job.account || "");
   try {
     tab = await jobTab(job.platform, account);
     tabJobs.set(tab.id, job.id);
     if (/^https:\/\/www\.google\.com\/sorry\//.test((await chrome.tabs.get(tab.id)).url || "")) throw new Error(GOOGLE_SORRY);
     stop = await keepShown(tab);
+    // Grok folds its composer's settings (length, resolution, aspect) away in a narrow window: its tab is laid out at a
+    // desktop size whatever the size of the user's Chrome window.
+    if (job.platform === "grok") await chrome.debugger.sendCommand({ tabId: tab.id }, "Emulation.setDeviceMetricsOverride", { width: 1440, height: 900, deviceScaleFactor: 1, mobile: false }).catch(() => {});
     progress("submitting");
     let result = await sendJob(tab, job);
     if (!result || !result.ok) throw new Error(result?.error || "Tab không trả kết quả.");
