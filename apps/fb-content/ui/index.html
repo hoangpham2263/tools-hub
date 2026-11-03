@@ -254,7 +254,7 @@ const saved = (() => {
 })();
 const state = {
   tone: saved.tone || "story", note: saved.note || "", platforms: [].concat(saved.platforms || []), tab: saved.tab || "", current: saved.current || "",
-  imageAi: saved.imageAi || "flow", textAi: saved.textAi || "gemini", watermark: saved.watermark !== false,
+  imageAi: "codex", textAi: saved.textAi || "gemini", watermark: saved.watermark !== false,
   rows: (saved.rows || []).map((r) => fresh({ ...r, colors: r.colors || [] })),
   running: false, since: 0, total: 0, index: 0, summary: null, fatal: "", log: [],
 };
@@ -683,7 +683,7 @@ $("btnRun").onclick = async () => {
   const missing = state.rows.findIndex((r) => !r.colors.length);
   if (missing >= 0) return toast(`Sản phẩm #${missing + 1} chưa có ảnh sản phẩm`);
   const shots = state.rows.reduce((n, r) => n + shotsOfRow(r), 0);
-  if (shots > 12 && !confirm(`Sẽ tạo ${shots} ảnh, khoảng ${shots * MINUTES_PER_SHOT} phút và ${shots} lượt Google Flow. Tiếp tục?`)) return;
+  if (shots > 12 && !confirm(`Sẽ tạo ${shots} ảnh, khoảng ${shots * MINUTES_PER_SHOT} phút và ${shots} lượt tạo ảnh của Codex. Tiếp tục?`)) return;
   const job = {
     imageBackend: state.imageAi, textBackend: state.textAi, tone: state.tone, note: state.note, platforms: state.platforms, watermark: state.watermark,
     products: state.rows.map((r) => ({

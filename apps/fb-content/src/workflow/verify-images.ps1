@@ -53,7 +53,6 @@ function New-CleanRoom($Product, $Scene, [string]$OldItems, [int]$SceneNo, [stri
         try {
             Write-Host "  [SCENE] Making room $SceneNo empty, try $attempt/$($asks.Count)..." -ForegroundColor Cyan
             Invoke-ImageAI $prompt @([string]$Scene.path) $file (Join-Path $Folder "logs/canh-$SceneNo-sach-image.txt")
-            if ($script:Config.ImageBackend -eq 'flow') { try { Remove-HubImageSparkle $file | Out-Null } catch { Write-Host "  [WARN] Sparkle not removed: $($_.Exception.Message)" -ForegroundColor Yellow } }
         } catch {
             Write-Host "  [SCENE] Cleaning the room failed: $($_.Exception.Message)" -ForegroundColor Yellow
             if ((Get-ErrorCause $_.Exception.Message) -in @('QUOTA', 'AUTH', 'BRIDGE')) { $script:Run.Abort = $true }

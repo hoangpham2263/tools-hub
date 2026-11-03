@@ -4,7 +4,6 @@ $script:WorkflowModuleFiles = @(
     '../../../hub/image/product-rules.ps1'
     '../../../hub/image/product-details.ps1'
     '../../../hub/image/watermark.ps1'
-    '../../../hub/image/unsparkle.ps1'
     'infrastructure/workspace.ps1'
     'infrastructure/ai.ps1'
     'infrastructure/watermark.ps1'

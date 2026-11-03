@@ -73,13 +73,14 @@ Assert ($acme -notmatch 'GRENHEIM|Vẻ đẹp thiên nhiên|memorial|father' -an
 # Job checks.
 $png = Join-Path $TestWorkspaceRoot 'job-check.png'
 New-TestPng $png 4 4
-$good = [pscustomobject]@{ imageBackend = 'flow'; textBackend = 'gemini'; tone = 'story'; platforms = @('facebook'); products = @([pscustomobject]@{ id = 'a'; name = 'Ban'; colors = @(
+$good = [pscustomobject]@{ imageBackend = 'codex'; textBackend = 'gemini'; tone = 'story'; platforms = @('facebook'); products = @([pscustomobject]@{ id = 'a'; name = 'Ban'; colors = @(
     [pscustomobject]@{ name = 'Nau'; product = [pscustomobject]@{ name = 'p.png'; path = $png }; angles = @('as-photo', 'detail', 'high'); scenes = @() },
     [pscustomobject]@{ name = 'Den'; product = [pscustomobject]@{ name = 'q.png'; path = $png }; angles = @('as-photo'); scenes = @([pscustomobject]@{ name = 'room.png'; path = $png; angles = @('front', 'hero') }) }) }) }
 Test-ContentJob $good
 function Copy-Job($Job, [scriptblock]$Change) { $copy = $Job | ConvertTo-Json -Depth 8 | ConvertFrom-Json; & $Change $copy; $copy }
 Assert (Throws { Test-ContentJob (Copy-Job $good { param($j) $j.imageBackend = 'gemini' }) }) 'Gemini cannot make images.'
 Assert (Throws { Test-ContentJob (Copy-Job $good { param($j) $j.textBackend = 'flow' }) }) 'Flow cannot write posts.'
+Assert (Throws { Test-ContentJob (Copy-Job $good { param($j) $j.imageBackend = 'flow' }) }) 'Content MXH makes its pictures with Codex only, not with Flow.'
 Assert (Throws { Test-ContentJob (Copy-Job $good { param($j) $j.platforms = @('myspace') }) }) 'An unknown platform must stop the job.'
 Assert (Throws { Test-ContentJob (Copy-Job $good { param($j) $j.tone = 'angry' }) }) 'An unknown tone must stop the job.'
 Assert (Throws { Test-ContentJob (Copy-Job $good { param($j) $j.products[0].name = ' ' }) }) 'A product needs a name.'

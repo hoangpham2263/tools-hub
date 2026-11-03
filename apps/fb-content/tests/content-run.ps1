@@ -32,7 +32,7 @@ function Invoke-HubAI {
     }
     if ($Prompt -match '"has_item"') { $script:RoomChecks++; $reply = if ($script:Behavior.RoomHasItemTimes -ge $script:RoomChecks) { '{"has_item": true, "what": "a table"}' } else { '{"has_item": false, "what": "an empty rug"}' } }
     elseif ($Prompt -match '"same_product"') { $script:ShotChecks++; $reply = if ($script:Behavior.MismatchTimes -ge $script:ShotChecks) { '{"same_product": false, "why": "the base is a ring, not a twisted ribbon"}' } else { '{"same_product": true, "why": ""}' } }
-    elseif ($Prompt -match '"old_items"') { $reply = if ($script:Behavior.NoOldItems) { '{"old_items":"none"}' } else { '{"old_items":"A kidney-shaped dark wood table with a ring-shaped base and two rattan chairs."}' } }
+    elseif ($Prompt -match '"old_items"') { $reply = if (-not $script:Behavior.OldItems) { '{"old_items":"none"}' } else { '{"old_items":"A kidney-shaped dark wood table with a ring-shaped base and two rattan chairs."}' } }
     elseif ($Prompt -match 'identify the actual product') { $reply = '{"product":"table","details":"two forked root legs; medium orange-leaning top"}' }
     else {
         $platform = [regex]::Match($Prompt, 'write one (\w+) post').Groups[1].Value
@@ -53,7 +53,7 @@ New-TestPng $photo 8 6
 function New-TestJob([int]$Products = 1, [int]$Angles = 3) {
     $pick = @('as-photo', 'three-quarter-left', 'three-quarter-right', 'high') | Select-Object -First $Angles
     [pscustomobject]@{
-        imageBackend = 'flow'; textBackend = 'gemini'; tone = 'story'; note = 'nhan manh buoi toi'; verify = 'false'; sceneMode = 'named'
+        imageBackend = 'codex'; textBackend = 'gemini'; tone = 'story'; note = 'nhan manh buoi toi'; verify = 'false'
         platforms = @('facebook', 'instagram', 'threads', 'tiktok')
         products = @(1..$Products | ForEach-Object {
             [pscustomobject]@{ id = "p$_"; name = "Ban tra goc cay $_"; brand = 'GRENHEIM'; link = 'https://shop.test/p/1'; tags = '#BanTraGo'
@@ -75,7 +75,7 @@ Assert ($kinds[0] -eq 'start' -and $kinds -contains 'product' -and @($kinds | Wh
 Assert (@($script:Events | Where-Object { $_.kind -eq 'image' -and -not $_.ok }).Count -eq 0 -and ($script:Events | Where-Object kind -eq 'done').ok -eq 1) 'Every shot and the product must be ok.'
 foreach ($name in 'anh-1-1-1-as-photo', 'anh-1-1-2-three-quarter-left', 'anh-1-1-3-three-quarter-right') { Assert (Test-ImageFile (Join-Path $product.FullName "$name.png")) "$name was not saved as an image." }
 $imageCalls = @($script:Calls | Where-Object Kind -eq 'image')
-Assert ($imageCalls.Count -eq 3 -and @($imageCalls | Where-Object { $_.Images.Count -eq 1 -and $_.Images[0] -eq $photo }).Count -eq 3 -and $imageCalls[0].Ai -eq 'flow') 'Each shot sends the one photo to the chosen image AI.'
+Assert ($imageCalls.Count -eq 3 -and @($imageCalls | Where-Object { $_.Images.Count -eq 1 -and $_.Images[0] -eq $photo }).Count -eq 3 -and $imageCalls[0].Ai -eq 'codex') 'Each shot sends the one photo to the chosen image AI.'
 Assert ($imageCalls[0].Prompt -match 'same position, height, angle' -and $imageCalls[1].Prompt -match '45 degrees to the LEFT' -and $imageCalls[2].Prompt -match '45 degrees to the RIGHT') 'The shots must use the camera lines of the angles picked.'
 Assert ($imageCalls[1].Prompt -match 'two forked root legs' -and $imageCalls[1].Prompt -match 'shot 2 of 3') 'The product note and the shot number must reach the prompt.'
 $textCalls = @($script:Calls | Where-Object Kind -eq 'text')
@@ -216,62 +216,50 @@ $done11 = @($script:Events | Where-Object kind -eq 'product-done')
 Assert ($code -eq 0 -and $script:DriveTries -eq 1) 'After Drive refuses, no further file is sent in this run.'
 Assert ($done11.Count -eq 2 -and $done11[0].ok -and (@($done11[0].errors) -join ' ') -match 'máy chủ Drive chưa được cập nhật' -and (@($done11[1].errors) -join ' ') -notmatch 'Drive') 'The refusal is explained once, on the first product only, and the products stay successful.'
 $script:DriveRefuse = $false
-# 12. The old item of the scene is named in every shot of the scene (default mode); in the clean mode it is first taken out of the real
-# scene photo once, and the angles then start from that clean copy and the product photo; a room without such an item is left alone.
-Reset-Run
-$code = Invoke-ContentRun (New-SceneJob) (Join-Path $temp 'out12')
+# 12. A scene whose own furniture of the product's kind is taken out first: the scene photo is read once to name that item, the item is
+# removed from the real scene photo (checked until the room is empty), and the angles then start from the product photo and the clean
+# copy. A room without such an item is left alone. A room that cannot be emptied falls back to the real photo, naming the old item.
+Reset-Run; $script:Behavior = @{ OldItems = $true }
+$job = New-SceneJob
+$code = Invoke-ContentRun $job (Join-Path $temp 'out12')
+$run12 = @(Get-ChildItem (Join-Path $temp 'out12') -Directory)[0]; $product12 = @(Get-ChildItem $run12.FullName -Directory)[0]
 $calls12 = @($script:Calls | Where-Object Kind -eq 'image')
 $sceneReads = @($script:Calls | Where-Object { $_.Kind -eq 'text' -and $_.Prompt -match '"old_items"' })
-Assert ($code -eq 0 -and $calls12.Count -eq 3 -and $sceneReads.Count -eq 1 -and $sceneReads[0].Images[0] -eq $scenePhoto) 'The scene photo is read once to name its old item.'
-foreach ($i in 1, 2) { Assert ($calls12[$i].Images[1] -eq $scenePhoto -and $calls12[$i].Prompt -match 'In image 2 the old item is: A kidney-shaped dark wood table' -and $calls12[$i].Prompt -match 'Delete exactly that item') "Shot $i must name the old item and still use the real scene photo." }
-Reset-Run; $script:Behavior = @{ NoOldItems = $true }
-$code = Invoke-ContentRun (New-SceneJob) (Join-Path $temp 'out12b')
-Assert ($code -eq 0 -and @($script:Calls | Where-Object { $_.Kind -eq 'image' -and $_.Prompt -match 'the old item is:' }).Count -eq 0) 'A room with no item of the product''s kind adds no named item.'
-Reset-Run
-$job = New-SceneJob
-$job | Add-Member -NotePropertyName sceneMode -NotePropertyValue 'clean' -Force
-$code = Invoke-ContentRun $job (Join-Path $temp 'out12c')
-$run12 = @(Get-ChildItem (Join-Path $temp 'out12c') -Directory)[0]; $product12 = @(Get-ChildItem $run12.FullName -Directory)[0]
-$calls12 = @($script:Calls | Where-Object Kind -eq 'image')
 $cleanFile = Join-Path $product12.FullName 'logs/canh-1-sach.png'
-Assert ($code -eq 0 -and $calls12.Count -eq 4 -and $calls12[1].Images.Count -eq 1 -and $calls12[1].Images[0] -eq $scenePhoto -and $calls12[1].Prompt -match 'Remove completely: A kidney-shaped dark wood table' -and (Test-ImageFile $cleanFile)) 'The clean mode first removes the old item from the real scene photo, once.'
-foreach ($i in 2, 3) { Assert ($calls12[$i].Images[0] -eq $colorPhoto -and $calls12[$i].Images[1] -eq $cleanFile -and $calls12[$i].Prompt -notmatch 'the old item is:') "Shot $i of the clean mode starts from the product photo and the clean copy of the scene." }
+Assert ($code -eq 0 -and $sceneReads.Count -eq 1 -and $sceneReads[0].Images[0] -eq $scenePhoto) 'The scene photo is read once to name its old item.'
+Assert ($calls12.Count -eq 4 -and $calls12[1].Images.Count -eq 1 -and $calls12[1].Images[0] -eq $scenePhoto -and $calls12[1].Prompt -match 'Remove completely: A kidney-shaped dark wood table' -and (Test-ImageFile $cleanFile)) 'The old item is first removed from the real scene photo, once.'
+foreach ($i in 2, 3) { Assert ($calls12[$i].Images[0] -eq $colorPhoto -and $calls12[$i].Images[1] -eq $cleanFile -and $calls12[$i].Prompt -notmatch 'the old item is:') "Shot $i starts from the product photo and the clean copy of the scene." }
 Reset-Run
-# 13. The fresh mode: a short photo brief written for this tool (no Product Review rule list), product as image 1, setting as image 2.
-Reset-Run
+$code = Invoke-ContentRun (New-SceneJob) (Join-Path $temp 'out12b')
+Assert ($code -eq 0 -and @($script:Calls | Where-Object Kind -eq 'image').Count -eq 3 -and @($script:Calls | Where-Object { $_.Kind -eq 'image' -and $_.Prompt -match 'the old item is:|Remove completely' }).Count -eq 0) 'A room with no item of the product''s kind is left alone: no cleaning, no named item.'
+Reset-Run; $script:Behavior = @{ OldItems = $true; RoomHasItemTimes = 9 }
+$code = Invoke-ContentRun (New-SceneJob) (Join-Path $temp 'out12c')
+$calls12 = @($script:Calls | Where-Object Kind -eq 'image')
+foreach ($i in 4, 5) { Assert ($calls12[$i].Images[1] -eq $scenePhoto -and $calls12[$i].Prompt -match 'In image 2 the old item is: A kidney-shaped dark wood table' -and $calls12[$i].Prompt -match 'Delete exactly that item') "Shot $i of a room that could not be emptied uses the real scene photo and names the old item." }
+
+# 13. The room is made empty again and again, asking harder each time, and every picture is checked against the product photo and made
+# again once when it is not the same product.
+Reset-Run; $script:Behavior = @{ OldItems = $true }
 $job = New-SceneJob
-$job | Add-Member -NotePropertyName sceneMode -NotePropertyValue 'fresh' -Force
+$job.verify = 'true'
 $code = Invoke-ContentRun $job (Join-Path $temp 'out13')
 $calls13 = @($script:Calls | Where-Object Kind -eq 'image')
-foreach ($i in 1, 2) { Assert ($calls13[$i].Images[0] -eq $colorPhoto -and $calls13[$i].Images[1] -eq $scenePhoto -and $calls13[$i].Prompt -match 'THE PRODUCT \(reference image 1\)' -and $calls13[$i].Prompt -match 'THE SETTING \(reference image 2\)' -and $calls13[$i].Prompt -match 'THE SHOT' -and $calls13[$i].Prompt -match 'forked root legs' -and $calls13[$i].Prompt -match 'kidney-shaped dark wood table' -and $calls13[$i].Prompt -notmatch 'CORE PRODUCT RULES|BASE PHOTO|IMMUTABLE') "Fresh shot $i must be the short brief with the product as image 1 and the setting as image 2." }
-Assert ($code -eq 0 -and $calls13.Count -eq 3) 'The fresh mode makes the same shots.'
-Reset-Run
-# 14. The default: the scene's own table is taken out first, checked until the room is empty, and every picture is checked against
-# the product photo and made again once when it is not the same product.
-Reset-Run
-$job = New-SceneJob
-$job.sceneMode = 'clean'; $job.verify = 'true'
-$code = Invoke-ContentRun $job (Join-Path $temp 'out14')
-$calls14 = @($script:Calls | Where-Object Kind -eq 'image')
-Assert ($code -eq 0 -and $calls14.Count -eq 4 -and $script:RoomChecks -eq 1 -and $script:ShotChecks -eq 3) 'A room that is empty at once is made once and checked once; every shot of the run is checked once.'
+Assert ($code -eq 0 -and $calls13.Count -eq 4 -and $script:RoomChecks -eq 1 -and $script:ShotChecks -eq 3) 'A room that is empty at once is made once and checked once; every shot of the run is checked once.'
 Assert (@($script:Events | Where-Object kind -eq 'warning').Count -eq 0) 'Nothing to warn about when every check passes.'
-# the room still has the table after the first two tries: made three times, the third one is accepted when it is empty
-Reset-Run; $script:Behavior = @{ RoomHasItemTimes = 2 }
-$code = Invoke-ContentRun $job (Join-Path $temp 'out14b')
-$calls14 = @($script:Calls | Where-Object Kind -eq 'image')
-Assert ($code -eq 0 -and @($calls14 | Where-Object { $_.Prompt -match 'Remove ALL tables' }).Count -eq 1 -and @($calls14 | Where-Object { $_.Prompt -match 'Make the middle of the room EMPTY' }).Count -eq 1 -and $script:RoomChecks -eq 3) 'A room that still has the table is cleaned again, asking harder each time.'
-# the room never gets empty: the real photo is used and one warning says why
-Reset-Run; $script:Behavior = @{ RoomHasItemTimes = 9 }
-$code = Invoke-ContentRun $job (Join-Path $temp 'out14c')
-$calls14 = @($script:Calls | Where-Object Kind -eq 'image')
-Assert ($code -eq 0 -and $calls14[-1].Images[1] -eq $scenePhoto -and (($script:Events | Where-Object kind -eq 'warning').message -join ' ') -match 'Chưa dọn được bàn cũ') 'A room that cannot be emptied falls back to the real photo with a warning.'
-# a shot that is not the product is made again once, told why; a second mismatch is reported but kept
-Reset-Run; $script:Behavior = @{ MismatchTimes = 1 }
-$code = Invoke-ContentRun $job (Join-Path $temp 'out14d')
-$calls14 = @($script:Calls | Where-Object Kind -eq 'image')
-Assert ($code -eq 0 -and $calls14.Count -eq 5 -and $calls14[1].Prompt -match 'The previous attempt was rejected: the base is a ring, not a twisted ribbon' -and @($script:Events | Where-Object kind -eq 'warning').Count -eq 0) 'A shot that is not the product is made again once with the reason, and a good second try needs no warning.'
-Reset-Run; $script:Behavior = @{ MismatchTimes = 99 }
-$code = Invoke-ContentRun $job (Join-Path $temp 'out14e')
+Reset-Run; $script:Behavior = @{ OldItems = $true; RoomHasItemTimes = 2 }
+$code = Invoke-ContentRun $job (Join-Path $temp 'out13b')
+$calls13 = @($script:Calls | Where-Object Kind -eq 'image')
+Assert ($code -eq 0 -and @($calls13 | Where-Object { $_.Prompt -match 'Remove ALL tables' }).Count -eq 1 -and @($calls13 | Where-Object { $_.Prompt -match 'Make the middle of the room EMPTY' }).Count -eq 1 -and $script:RoomChecks -eq 3) 'A room that still has the table is cleaned again, asking harder each time.'
+Reset-Run; $script:Behavior = @{ OldItems = $true; RoomHasItemTimes = 9 }
+$code = Invoke-ContentRun $job (Join-Path $temp 'out13c')
+$calls13 = @($script:Calls | Where-Object Kind -eq 'image')
+Assert ($code -eq 0 -and $calls13[-1].Images[1] -eq $scenePhoto -and (($script:Events | Where-Object kind -eq 'warning').message -join ' ') -match 'Chưa dọn được bàn cũ') 'A room that cannot be emptied falls back to the real photo with a warning.'
+Reset-Run; $script:Behavior = @{ OldItems = $true; MismatchTimes = 1 }
+$code = Invoke-ContentRun $job (Join-Path $temp 'out13d')
+$calls13 = @($script:Calls | Where-Object Kind -eq 'image')
+Assert ($code -eq 0 -and $calls13.Count -eq 5 -and $calls13[1].Prompt -match 'The previous attempt was rejected: the base is a ring, not a twisted ribbon' -and @($script:Events | Where-Object kind -eq 'warning').Count -eq 0) 'A shot that is not the product is made again once with the reason, and a good second try needs no warning.'
+Reset-Run; $script:Behavior = @{ OldItems = $true; MismatchTimes = 99 }
+$code = Invoke-ContentRun $job (Join-Path $temp 'out13e')
 Assert ($code -eq 0 -and @($script:Events | Where-Object { $_.kind -eq 'warning' -and $_.message -match 'chưa đúng sản phẩm gốc' }).Count -ge 1 -and @($script:Events | Where-Object { $_.kind -eq 'image' -and $_.ok }).Count -eq 3) 'A shot that stays wrong is kept and reported, never dropped.'
 Reset-Run
 Write-Host 'PASS: angles per photo, scenes with a base shot, watermark copies, posts per platform, repair, retry, quota stop and policy refusal.' -ForegroundColor Green

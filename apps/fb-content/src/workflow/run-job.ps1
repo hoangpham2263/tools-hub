@@ -4,10 +4,8 @@
 
 function Invoke-ContentRun($Job, [string]$OutDir) {
     Test-ContentJob $Job
-    # SceneMode: clean (default) takes the scene's own furniture of the product's kind out of the real scene photo first (checked, up to 3
-    # tries); named, product and fresh are the other ways tried. Verify: every picture is checked against the product photo and made
-    # again once when it is not the same product.
-    $script:Config = @{ ImageBackend = [string]$Job.imageBackend; TextBackend = [string]$Job.textBackend; SceneMode = $(if ([string]$Job.sceneMode -in @('named', 'clean', 'product', 'fresh', 'simple')) { [string]$Job.sceneMode } else { 'clean' }); Verify = ([string]$Job.verify -ne 'false') }
+    # Verify: every picture is checked against the product photo and made again once when it is not the same product.
+    $script:Config = @{ ImageBackend = [string]$Job.imageBackend; TextBackend = [string]$Job.textBackend; Verify = ([string]$Job.verify -ne 'false') }
     $folder = New-RunFolder $OutDir
     $script:Run = @{ Dir = $folder; Abort = $false; Watermark = [bool]$Job.watermark }
     $drive = Get-ContentDrive

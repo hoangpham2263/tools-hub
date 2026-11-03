@@ -14,9 +14,9 @@ function Get-ColorScenes($Color) {
 }
 
 function Test-ContentJob($Job) {
-    $imageAis = @(Get-HubAIChoices 'image' | ForEach-Object id)
     $textAis = @(Get-HubAIChoices 'text' | ForEach-Object id)
-    if ($Job.imageBackend -notin $imageAis) { throw "Image AI must be one of: $($imageAis -join ', ')." }
+    # Content MXH makes its pictures with Codex only (Google Flow is for Product Review).
+    if ($Job.imageBackend -ne 'codex') { throw 'Image AI must be codex: Content MXH makes its pictures with Codex.' }
     if ($Job.textBackend -notin $textAis) { throw "Text AI must be one of: $($textAis -join ', ')." }
     [void](Get-PostTone ([string]$Job.tone))
     if (-not @($Job.platforms).Count) { throw 'Choose at least one platform.' }

@@ -40,7 +40,8 @@ Assert ($refused -eq '' -and $script:WatermarkNote -match 'Chưa đóng dấu lo
 Assert (Throws { Add-HubImageWatermark $image $mark (Join-Path $temp 'x.png') ([int[]]@(1, 2, 3)) }) 'A bad content box must be refused.'
 Assert (Throws { Add-HubImageWatermark $image $mark (Join-Path $temp 'x.png') ([int[]]$pack.watermark.content_box) 'top-right' 0.9 }) 'A watermark wider than half the image must be refused.'
 Assert (Throws { Add-HubImageWatermark (Join-Path $temp 'missing.png') $mark (Join-Path $temp 'x.png') ([int[]]$pack.watermark.content_box) }) 'A missing image must be refused.'
-# Google's sparkle: a picture that has it is cleaned in place with the untouched one kept; a picture without it is left alone.
+# Google's sparkle (the hub's own step, for the tools that use Flow; Content MXH no longer loads it): a picture that has it is cleaned in place with the untouched one kept; a picture without it is left alone.
+. (Join-Path $PSScriptRoot '../../../hub/image/unsparkle.ps1')
 $spark = Join-Path $temp 'sparkled.png'
 $maker = Join-Path $temp 'make-sparkled.mjs'
 $hubImage = [Uri]::new((Resolve-Path (Join-Path $PSScriptRoot '../../../hub/image')).Path + [IO.Path]::DirectorySeparatorChar).AbsoluteUri

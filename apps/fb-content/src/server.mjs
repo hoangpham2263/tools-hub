@@ -40,7 +40,7 @@ const HUB_ASSETS = ["icon.svg", "tool.css", "hub.js"];
 
 // Which AIs the window offers. The run checks the choice again against the hub's registry (Test-ContentJob).
 const CHOICES = {
-  image: [{ id: "flow", name: "Google Flow" }, { id: "codex", name: "Codex CLI" }],
+  image: [{ id: "codex", name: "Codex CLI" }],
   text: [{ id: "gemini", name: "Gemini web" }, { id: "codex", name: "Codex CLI" }, { id: "antigravity", name: "Antigravity CLI" }],
 };
 
