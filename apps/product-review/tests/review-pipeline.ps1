@@ -6,7 +6,7 @@ $root = Split-Path $PSScriptRoot -Parent
 $tempHub = Join-Path $TestWorkspaceRoot ('review-pipeline-test-' + [Guid]::NewGuid().ToString('N'))
 $tempRoot = Join-Path $tempHub 'apps/product-review'
 New-Item -ItemType Directory -Path $tempRoot, (Join-Path $tempHub 'hub') | Out-Null
-foreach ($shared in @('setup', 'ai', 'image')) { Copy-Item -LiteralPath (Join-Path $root "../../hub/$shared") -Destination (Join-Path $tempHub 'hub') -Recurse }
+foreach ($shared in @('setup', 'ai')) { Copy-Item -LiteralPath (Join-Path $root "../../hub/$shared") -Destination (Join-Path $tempHub 'hub') -Recurse }
 function Assert($Condition, [string]$Message) { if (-not $Condition) { throw $Message } }
 try {
     Copy-Item -LiteralPath (Join-Path $root 'src') -Destination $tempRoot -Recurse

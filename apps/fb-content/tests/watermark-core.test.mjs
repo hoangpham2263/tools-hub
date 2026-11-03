@@ -1,4 +1,4 @@
-// hub/image/watermark.mjs: the PNG reader and writer, the scaling, where the watermark lands, and the command line.
+// src/infrastructure/watermark.mjs: the PNG reader and writer, the scaling, where the watermark lands, and the command line.
 // Pure Node, so the same checks hold on Windows and macOS.   node --test hub/tests/watermark.test.mjs
 import test from "node:test";
 import assert from "node:assert/strict";
@@ -8,12 +8,12 @@ import { tmpdir } from "node:os";
 import { join, dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { spawnSync } from "node:child_process";
-import { decodePng, encodePng, resize, placeWatermark } from "../image/watermark.mjs";
+import { decodePng, encodePng, resize, placeWatermark } from "../src/infrastructure/watermark.mjs";
 
 const here = dirname(fileURLToPath(import.meta.url));
-const script = resolve(here, "../image/watermark.mjs");
-const assetFile = resolve(here, "../../apps/fb-content/data/brands/grenheim/watermark.png");
-const BOX = JSON.parse(readFileSync(resolve(here, "../../apps/fb-content/data/brands/grenheim/brand.json"), "utf8").replace(/^\uFEFF/, "")).watermark.content_box; // where the plate sits inside GRENHEIM's PNG
+const script = resolve(here, "../src/infrastructure/watermark.mjs");
+const assetFile = resolve(here, "../data/brands/grenheim/watermark.png");
+const BOX = JSON.parse(readFileSync(resolve(here, "../data/brands/grenheim/brand.json"), "utf8").replace(/^\uFEFF/, "")).watermark.content_box; // where the plate sits inside GRENHEIM's PNG
 
 // A PNG built by hand, so the reader is checked against bytes it did not write itself.
 const crcTable = Array.from({ length: 256 }, (_, n) => { let c = n; for (let k = 0; k < 8; k++) c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1; return c >>> 0; });

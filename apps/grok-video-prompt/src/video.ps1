@@ -1,6 +1,6 @@
 ﻿# Grok Video's run: one product photo becomes a video of about a minute that moves around the product in one take.
 #   1. Key frames (Grok image): frame 0 is the photo rendered clean (or, with a model photo, the model presenting the
-#      product in the same room); frame i is the same room seen from scene i's camera angle (hub/image/angles.json),
+#      product in the same room); frame i is the same room seen from scene i's camera angle (data/angles.json),
 #      only for the angles Grok's image edit does well (data/video.json keyframeAngles: close crops, high, overhead).
 #      Every frame is made from the product photo itself, not from the frame before, so the product does not drift.
 #      Orbits, low and wide views have no key frame: Grok's video model makes that camera move on its own.
@@ -35,7 +35,7 @@ function ConvertTo-Slug([string]$Text) {
 function Get-ErrorCause([string]$Message) { if ($Message -match '\[CAUSE:(\w+)\]') { $Matches[1] } else { 'UNKNOWN' } }
 
 function Get-VideoSettings { Read-JsonFile (Join-Path (Get-ToolRoot) 'data/video.json') }
-function Get-AngleLibrary { Read-JsonFile (Join-Path (Get-ToolRoot) '../../hub/image/angles.json') }
+function Get-AngleLibrary { Read-JsonFile (Join-Path (Get-ToolRoot) 'data/angles.json') }
 
 # The job the window sends, checked: { product, photo, model, scenes[], seconds, resolution, audio }. Scenes are angle
 # ids in the order the camera visits them; one may come back later in the video.
@@ -99,7 +99,7 @@ STEP 1 - ROOM
 Image 1 is the only room. Its walls, floor, windows, light, plants and every other object stay exactly as they are, in the same arrangement; only the camera moves and the whole view changes perspective together. Do not add, remove, move or restyle anything.
 
 STEP 2 - PRODUCT
-$(Get-HubImageProductRules 1 'content')
+$(Get-VideoProductRules 1)
 Show the product without any brand name or logo.
 
 STEP 3 - CAMERA ($($Angle.label_en))
@@ -121,7 +121,7 @@ STEP 1 - ROOM (image 1)
 Image 1 is the only room: walls, floor, windows, light and every object stay as they are, in the same arrangement. The camera stays where it is in image 1; pull back slightly only if needed so the person and the whole product both fit.
 
 STEP 2 - PRODUCT (image 1)
-$(Get-HubImageProductRules 1 'content')
+$(Get-VideoProductRules 1)
 Rule 6 does not forbid the one person from image 2 that this task adds; it still applies to everything else.
 
 STEP 3 - PERSON (image 2)

@@ -66,7 +66,7 @@ async function pageData() {
     const pack = await readJson(join(brandsDir, dir, "brand.json")).catch(() => null);
     if (pack) brands.push({ id: pack.id, name: pack.name, aliases: pack.aliases || [], hashtags: pack.hashtags || [], watermark: pack.watermark ? { ...pack.watermark, url: `/brand/${pack.id}/${pack.watermark.file}` } : null });
   }
-  const library = await readJson(join(hubRoot, "hub", "image", "angles.json"));
+  const library = await readJson(join(root, "data", "angles.json"));
   return {
     platforms: (await readJson(join(data, "platforms.json"))).platforms,
     tones: (await readJson(join(data, "tones.json"))).tones,

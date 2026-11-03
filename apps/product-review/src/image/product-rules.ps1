@@ -1,13 +1,7 @@
-﻿# Core rules for how a product must look in an edited photo, shared by every tool that edits images (furniture,
-# garments, anything else). A profile changes only how the photo is rendered (rule 5); what the product looks like
-# (rules 1-4, 6, 7) is the same for every profile. Per-type blocks (dining seating, worn garment) only add placement.
-#   review:  the base photo is kept as it is, noise included (Product Review).
-#   content: the same scene rendered clean and sharp for brand content (Content MXH).
-function Get-HubImageProductRules([int]$ProductIndex, [ValidateSet('review', 'content')][string]$Profile = 'review') {
-    $fit = switch ($Profile) {
-        'review' { "5. FIT: place it at true scale with the perspective, contact shadows and occlusion of image 1. Feet touch the floor (sinking slightly into a rug); match image 1's exposure and noise locally on the product." }
-        'content' { "5. FIT: place it at true scale with the light direction, contact shadows and occlusion of the photo, seen from the camera angle the task asks for. Feet touch the floor (sinking slightly into a rug). Render the whole photo clean and sharp with natural fine detail, free of halos, harsh sharpening, HDR and plastic gloss." }
-    }
+﻿# Core rules for how the product must look in an edited photo (Product Review). Rule 5 (FIT) says how the photo itself is rendered; what the
+# product looks like (rules 1-4, 6, 7) must not change. The base photo is kept as it is, noise included.
+function Get-ReviewProductRules([int]$ProductIndex) {
+    $fit = "5. FIT: place it at true scale with the perspective, contact shadows and occlusion of image 1. Feet touch the floor (sinking slightly into a rug); match image 1's exposure and noise locally on the product."
     @"
 CORE PRODUCT RULES (image $ProductIndex is the product photo; these apply to every product):
 1. SOURCE: image $ProductIndex is the only source for how the product looks. The text note only names things; where it differs from image $ProductIndex, follow image $ProductIndex.

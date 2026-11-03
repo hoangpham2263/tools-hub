@@ -72,7 +72,6 @@ try{
     # Laid out like an install (apps/<tool> beside hub/), so the script finds the hub's shared helpers.
     $copy="$temp/install/apps/product-review";New-Item -ItemType Directory -Force -Path "$copy/workspace","$temp/install/hub"|Out-Null;Copy-Item -Recurse (Join-Path $root 'src') "$copy/src"
     Copy-Item -Recurse (Join-Path $root '../../hub/ai') "$temp/install/hub/ai"
-    Copy-Item -Recurse (Join-Path $root '../../hub/image') "$temp/install/hub/image"
     $shell=(Get-Command powershell.exe,pwsh -ErrorAction SilentlyContinue|Select-Object -First 1).Source
     & $shell -NoProfile -ExecutionPolicy Bypass -File "$copy/src/import-batch.ps1" -File $file -Folder $img -StatusFile $status 2>&1 | Write-Host
     $s=Get-Content $status -Raw -Encoding UTF8|ConvertFrom-Json
