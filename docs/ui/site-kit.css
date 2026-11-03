@@ -31,3 +31,13 @@ a { color: var(--primary); }
 .home-tool img { border-radius: var(--radius-lg, 10px); }
 .home-tool-name { font-family: var(--font-heading); font-size: 1.125rem; }
 @media (max-width: 900px) { .home-tools { grid-template-columns: minmax(0, 1fr); } }
+.home-state { padding: 10px 14px; border: 1px solid var(--border); border-radius: var(--radius-lg, 10px); background: var(--card); }
+.home-state.ok { border-color: var(--state-border); color: var(--accent-foreground); }
+.home-state.todo { border-color: color-mix(in srgb, var(--destructive) 40%, transparent); }
+.home-tool-state { color: var(--primary); }
+
+/* a tool is shown as itself: its app in a frame */
+.tool-page { display: block; }
+.tool-frame { display: block; width: 100%; height: calc(100vh - 140px); min-height: 560px; border: 1px solid var(--border); border-radius: var(--radius-xl, 14px); background: var(--card); }
+.tool-off { display: grid; gap: 12px; padding: 24px; max-width: 640px; }
+.row-actions { display: flex; gap: 8px; flex-wrap: wrap; }

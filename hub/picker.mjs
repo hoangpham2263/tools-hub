@@ -16,7 +16,7 @@ const here = dirname(fileURLToPath(import.meta.url));
 const root = resolve(here, "..");
 const portFor = (dir, base) => base + (parseInt(createHash("sha1").update(dir).digest("hex").slice(0, 6), 16) % 1000);
 // HUB_PICKER_PORT (tests, the Windows launcher hub/launch.ps1): a fixed port and no window.
-const PORT = Number(process.env.HUB_PICKER_PORT) || portFor(root, 46000);
+const PORT = Number(process.env.HUB_PICKER_PORT) || 46100;
 const tools = readdirSync(join(root, "apps"), { withFileTypes: true })
   .filter((d) => d.isDirectory() && existsSync(join(root, "apps", d.name, "tool.json")))
   .map((d) => ({ ...JSON.parse(readFileSync(join(root, "apps", d.name, "tool.json"), "utf8")), dir: join(root, "apps", d.name) }))
@@ -61,7 +61,7 @@ ${tools.map((t) => `<form method="post" action="/open/${esc(t.id)}"${t.status ==
 
 // A tool with its own server: its address when it is running, else "".
 async function findServer(tool) {
-  const base = portFor(tool.dir, 47000);
+  const base = Number(tool.port) || portFor(tool.dir, 47000);
   for (let port = base; port <= base + 20; port++) {
     const body = await fetch(`http://127.0.0.1:${port}/api/root`).then((r) => r.json()).catch(() => null);
     if (body?.root === tool.dir) return `http://127.0.0.1:${port}/`;

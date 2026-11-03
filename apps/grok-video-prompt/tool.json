@@ -16,5 +16,6 @@
     "Người mẫu giới thiệu ở đầu video",
     "Khổ 9:16, 16:9 hoặc 1:1"
   ],
-  "mac": "src/server.mjs"
+  "mac": "src/server.mjs",
+  "port": 47102
 }

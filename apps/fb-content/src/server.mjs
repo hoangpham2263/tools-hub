@@ -15,7 +15,8 @@ import { PWSH, toolEnv, psFile, psCommand, killTree, appWindow, openFolder } fro
 const here = dirname(fileURLToPath(import.meta.url));
 const root = resolve(here, "..");
 const hubRoot = resolve(root, "..", "..");
-const BASE_PORT = Number(process.env.FC_PORT || 47000 + (parseInt(createHash("sha1").update(root).digest("hex").slice(0, 6), 16) % 1000));
+const toolPort = (() => { try { return Number(JSON.parse(readFileSync(join(root, "tool.json"), "utf8").replace(/^\uFEFF/, "")).port) || 0; } catch { return 0; } })();
+const BASE_PORT = Number(process.env.FC_PORT || toolPort || 47000 + (parseInt(createHash("sha1").update(root).digest("hex").slice(0, 6), 16) % 1000));
 let PORT = BASE_PORT;
 // One workspace folder for every tool: <hub>/workspace/fb-content/ (Git ignores that single folder). A tool outside an install (a copy in
 // a temp folder) keeps its own workspace/. What an older install kept in apps/fb-content/workspace/ moves here, entry by entry.
@@ -160,7 +161,11 @@ async function listRuns() {
 }
 
 // ----- HTTP -----
-const send = (res, status, data) => { res.writeHead(status, { "content-type": "application/json; charset=utf-8", "cache-control": "no-store" }); res.end(JSON.stringify(data)); };
+// The Tools Hub site (https://hoangpham.is-a.dev/tools-hub/) asks every tool's fixed port whether the app runs, to open it:
+// only this answer, only for that origin (the browser's own "loopback" permission still applies).
+const SITE_ORIGIN = "https://hoangpham.is-a.dev";
+const rootHeaders = (req) => (req.headers.origin === SITE_ORIGIN ? { "access-control-allow-origin": SITE_ORIGIN, "vary": "Origin" } : {});
+const send = (res, status, data, headers = {}) => { res.writeHead(status, { "content-type": "application/json; charset=utf-8", "cache-control": "no-store", ...headers }); res.end(JSON.stringify(data)); };
 const body = async (req, limit = 60 * 1024 * 1024) => {
   const chunks = []; let size = 0;
   for await (const c of req) { size += c.length; if (size > limit) throw new Error("Tệp quá lớn."); chunks.push(c); }
@@ -186,7 +191,7 @@ function restart() {
 async function handle(req, res) {
   const url = new URL(req.url, "http://localhost");
   const path = url.pathname;
-  if (path === "/api/root") return send(res, 200, { root, service: "fb-content", protocol: 1, version: version(), pid: process.pid });
+  if (path === "/api/root") return send(res, 200, { root, service: "fb-content", protocol: 1, version: version(), pid: process.pid }, rootHeaders(req));
   if (path === "/api/data") return send(res, 200, await pageData());
   if (path === "/api/client-error" && req.method === "POST") {
     const { message = "", stack = "" } = JSON.parse((await body(req)).toString("utf8") || "{}");

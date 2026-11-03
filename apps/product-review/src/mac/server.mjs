@@ -4,7 +4,7 @@ import { createServer } from "node:http";
 import { spawn, execFile } from "node:child_process";
 import { createInterface } from "node:readline";
 import { writeFile, mkdir, copyFile, rm, stat, appendFile, readFile } from "node:fs/promises";
-import { createReadStream, existsSync, mkdirSync, openSync, readdirSync, renameSync, rmdirSync, statSync, appendFileSync } from "node:fs";
+import { createReadStream, existsSync, mkdirSync, openSync, readFileSync, readdirSync, renameSync, rmdirSync, statSync, appendFileSync } from "node:fs";
 import { join, dirname, extname, resolve, sep, basename } from "node:path";
 import { tmpdir } from "node:os";
 import { fileURLToPath } from "node:url";
@@ -17,7 +17,8 @@ const root = resolve(here, "..", "..");
 // Tools Hub root: this tool is apps/<id>/ inside it (hub/update.ps1 updates the whole hub).
 const hubRoot = resolve(root, "..", "..");
 // Each install gets its own port (from its folder), so two copies on one Mac never share data.
-const BASE_PORT = Number(process.env.PR_PORT || 47000 + (parseInt(createHash("sha1").update(resolve(here, "..", "..")).digest("hex").slice(0, 6), 16) % 1000));
+const toolPort = (() => { try { return Number(JSON.parse(readFileSync(join(resolve(here, "..", ".."), "tool.json"), "utf8").replace(/^\uFEFF/, "")).port) || 0; } catch { return 0; } })();
+const BASE_PORT = Number(process.env.PR_PORT || toolPort || 47000 + (parseInt(createHash("sha1").update(resolve(here, "..", "..")).digest("hex").slice(0, 6), 16) % 1000));
 let PORT = BASE_PORT;
 // One workspace folder for every tool: <hub>/workspace/product-review/ (Git ignores that single folder). A tool outside an install (a copy in
 // a temp folder) keeps its own workspace/. What an older install kept in apps/product-review/workspace/ moves here, entry by entry.
@@ -180,12 +181,16 @@ const allowedFile = (p) => {
   return [root + sep, resolve(tmpdir()) + sep].some((base) => full.startsWith(base)) && TYPES[extname(full).toLowerCase()]?.startsWith("image/");
 };
 const body = async (req) => { const chunks = []; for await (const c of req) chunks.push(c); return Buffer.concat(chunks); };
-const send = (res, status, data) => { res.writeHead(status, { "content-type": "application/json; charset=utf-8", "cache-control": "no-store" }); res.end(JSON.stringify(data)); };
+// The Tools Hub site (https://hoangpham.is-a.dev/tools-hub/) asks every tool's fixed port whether the app runs, to open it:
+// only this answer, only for that origin (the browser's own "loopback" permission still applies).
+const SITE_ORIGIN = "https://hoangpham.is-a.dev";
+const rootHeaders = (req) => (req.headers.origin === SITE_ORIGIN ? { "access-control-allow-origin": SITE_ORIGIN, vary: "Origin" } : {});
+const send = (res, status, data, headers = {}) => { res.writeHead(status, { "content-type": "application/json; charset=utf-8", "cache-control": "no-store", ...headers }); res.end(JSON.stringify(data)); };
 
 async function handle(req, res) {
   const url = new URL(req.url, "http://localhost");
   const path = url.pathname;
-  if (path === "/api/root") return send(res, 200, { root, service: "product-review", protocol: 1, pid: process.pid });
+  if (path === "/api/root") return send(res, 200, { root, service: "product-review", protocol: 1, pid: process.pid }, rootHeaders(req));
   // Errors in the window (app.js), kept like the Windows window's.
   if (path === "/api/client-error" && req.method === "POST") {
     const { message = "", stack = "" } = JSON.parse((await body(req)).toString("utf8") || "{}");
