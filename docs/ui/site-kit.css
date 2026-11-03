@@ -41,3 +41,6 @@ a { color: var(--primary); }
 .tool-frame { display: block; width: 100%; height: calc(100vh - 140px); min-height: 560px; border: 1px solid var(--border); border-radius: var(--radius-xl, 14px); background: var(--card); }
 .tool-off { display: grid; gap: 12px; padding: 24px; max-width: 640px; }
 .row-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+.content { min-width: 0; }
+.tool-page { width: 100%; min-width: 0; }
+.tool-frame { width: 100%; }
