@@ -1,6 +1,27 @@
-﻿# All project runtime state belongs to this ignored directory.
+﻿# All project runtime state belongs to one ignored directory: the tool's folder of the common workspace, <hub>/workspace/product-review/
+# (Git ignores that single folder). A project root that is not this tool inside an install (a copy in a temp folder, a draft
+# project) keeps its own workspace/.
+function Get-ProjectWorkspace([string]$ProjectRoot) {
+    $full = [IO.Path]::GetFullPath($ProjectRoot)
+    $hub = [IO.Path]::GetFullPath((Join-Path $full '../..'))
+    if ((Split-Path $full -Leaf) -eq 'product-review' -and (Split-Path (Split-Path $full -Parent) -Leaf) -eq 'apps' -and (Test-Path -LiteralPath (Join-Path $hub 'hub/update.ps1'))) {
+        return (Join-Path $hub 'workspace/product-review')
+    }
+    Join-Path $full 'workspace'
+}
+
 function Initialize-ProjectWorkspace([string]$ProjectRoot) {
-    $root = Join-Path ([IO.Path]::GetFullPath($ProjectRoot)) 'workspace'
+    $root = Get-ProjectWorkspace $ProjectRoot
+    # What an older install kept in apps/product-review/workspace/ moves to the common workspace, entry by entry.
+    $old = Join-Path ([IO.Path]::GetFullPath($ProjectRoot)) 'workspace'
+    if ($root -ne $old -and (Test-Path -LiteralPath $old)) {
+        New-Item -ItemType Directory -Force -Path $root | Out-Null
+        foreach ($entry in @(Get-ChildItem -LiteralPath $old -Force)) {
+            $target = Join-Path $root $entry.Name
+            if (-not (Test-Path -LiteralPath $target)) { try { Move-Item -LiteralPath $entry.FullName -Destination $target } catch { Write-Verbose $_ } }
+        }
+        if (-not @(Get-ChildItem -LiteralPath $old -Force)) { Remove-Item -LiteralPath $old -Force -ErrorAction SilentlyContinue }
+    }
     $paths = @{
         Root = $root
         Output = Join-Path $root 'output'

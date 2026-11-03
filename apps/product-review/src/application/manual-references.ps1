@@ -110,7 +110,7 @@ function Save-ManualReference([string]$ProjectRoot,[string]$Url,[string]$ImagePa
     if(-not [Uri]::TryCreate($Url,[UriKind]::Absolute,[ref]$uri) -or $uri.Scheme -notin @('http','https')){throw 'Invalid product URL.'}
     $extension=[IO.Path]::GetExtension($ImagePath).ToLowerInvariant()
     if($extension -notin @('.png','.jpg','.jpeg')){throw 'Choose a PNG or JPEG reference.'}
-    $folder=Join-Path $ProjectRoot 'workspace/reference-inputs'
+    $folder=Join-Path (Get-ProjectWorkspace $ProjectRoot) 'reference-inputs'
     New-Item -ItemType Directory -Path $folder -Force|Out-Null
     $mapPath=Join-Path $folder 'references.json'
     $map=Read-ManualReferenceMap $mapPath
@@ -139,7 +139,7 @@ function Save-ManualReference([string]$ProjectRoot,[string]$Url,[string]$ImagePa
 
 # Copies a link's product and review images (from a draft map) into the project's map, in order.
 function Copy-ManualEntry([string]$ProjectRoot,[string]$Url,$Entry) {
-    $mapPath=Join-Path $ProjectRoot 'workspace/reference-inputs/references.json'
+    $mapPath=Join-Path (Get-ProjectWorkspace $ProjectRoot) 'reference-inputs/references.json'
     foreach($product in @(Get-ManualProducts $Entry)){
         $target=-1
         if($product.file){

@@ -21,8 +21,8 @@ try{
     # AGENTS.md: the guide follows the release; this machine's lessons stay and the release's new ones are added once.
     $lesson={param($Id,$Text)"### $Id`n<!-- app-lesson: {`"id`":`"$Id`",`"scope`":`"category`",`"category`":`"x`"} -->`n- $Text`n`n"}
     $block={param($Items)"<!-- app-lessons:start -->`n## Bài học`n`nGhi chú.`n`n$($Items -join '')<!-- app-lessons:end -->`n"}
-    Set-Content "$new/AGENTS.md" ("# Hướng dẫn mới`n`n"+(& $block @((& $lesson 'shared-a' 'chung a'),(& $lesson 'shared-b' 'chung b')))) -NoNewline
-    Set-Content "$app/AGENTS.md" ("# Hướng dẫn cũ`n`n"+(& $block @((& $lesson 'shared-a' 'chung a, máy này sửa'),(& $lesson 'mine' 'riêng máy')))) -NoNewline
+    Set-Content "$new/AGENTS.md" ("# Hướng dẫn mới`n`n"+(& $block @((& $lesson 'shared-a' 'chung a'),(& $lesson 'shared-b' 'chung b')))) -Encoding UTF8 -NoNewline
+    Set-Content "$app/AGENTS.md" ("# Hướng dẫn cũ`n`n"+(& $block @((& $lesson 'shared-a' 'chung a, máy này sửa'),(& $lesson 'mine' 'riêng máy')))) -Encoding UTF8 -NoNewline
     Remove-Item "$app/workspace/agent-lessons-seen.txt" -ErrorAction SilentlyContinue
     Merge-AgentInstructions $new $app
     $merged=Get-Content "$app/AGENTS.md" -Raw
@@ -32,13 +32,13 @@ try{
     Assert ((Read-AgentLessons "$app/AGENTS.md").Count -eq 3) 'The merged lessons must still read as valid lessons.'
     Assert (Test-Path "$app/workspace/backups/AGENTS-before-update.md") 'The previous AGENTS.md must be backed up.'
     # A release lesson removed on this machine is not brought back by the next update.
-    Set-Content "$app/AGENTS.md" ("# Hướng dẫn mới`n`n"+(& $block @((& $lesson 'mine' 'riêng máy')))) -NoNewline
+    Set-Content "$app/AGENTS.md" ("# Hướng dẫn mới`n`n"+(& $block @((& $lesson 'mine' 'riêng máy')))) -Encoding UTF8 -NoNewline
     Merge-AgentInstructions $new $app
     $again=Get-Content "$app/AGENTS.md" -Raw
     Assert (-not $again.Contains('shared-b') -and -not $again.Contains('shared-a')) 'Removed release lessons must stay removed.'
     # A lesson still as last shipped takes the release's new wording; one edited here keeps this machine's text.
-    Set-Content "$app/AGENTS.md" ("# Hướng dẫn mới`n`n"+(& $block @((& $lesson 'shared-a' 'chung a'),(& $lesson 'shared-b' 'chung b, máy này sửa')))) -NoNewline
-    Set-Content "$new/AGENTS.md" ("# Hướng dẫn mới`n`n"+(& $block @((& $lesson 'shared-a' 'chung a, bản mới'),(& $lesson 'shared-b' 'chung b, bản mới')))) -NoNewline
+    Set-Content "$app/AGENTS.md" ("# Hướng dẫn mới`n`n"+(& $block @((& $lesson 'shared-a' 'chung a'),(& $lesson 'shared-b' 'chung b, máy này sửa')))) -Encoding UTF8 -NoNewline
+    Set-Content "$new/AGENTS.md" ("# Hướng dẫn mới`n`n"+(& $block @((& $lesson 'shared-a' 'chung a, bản mới'),(& $lesson 'shared-b' 'chung b, bản mới')))) -Encoding UTF8 -NoNewline
     Merge-AgentInstructions $new $app
     $refined=Get-Content "$app/AGENTS.md" -Raw
     Assert ($refined.Contains('chung a, bản mới') -and $refined.Contains('chung b, máy này sửa') -and -not $refined.Contains('chung b, bản mới')) 'Unchanged lessons take new wording; edited ones stay.'
@@ -68,8 +68,8 @@ try{
     $legacy=Join-Path $temp 'legacy';$tool="$legacy/apps/product-review"
     foreach($p in @("$legacy/src/ui/main-window.ps1","$legacy/src/gui.ps1","$legacy/src/mac/server.mjs","$legacy/data/names.txt","$legacy/data/source-photos/Áo/a.jpg","$legacy/bridge/node_modules/ws/index.js","$legacy/workspace/drive.json","$legacy/workspace/version.txt","$legacy/workspace/output/run1/results.json","$tool/tool.json","$tool/data/names.txt")){New-Item -ItemType File -Force -Path $p|Out-Null}
     Set-Content "$legacy/workspace/drive.json" 'my login';Set-Content "$legacy/workspace/version.txt" 'v2'
-    Set-Content "$legacy/AGENTS.md" ("# Hướng dẫn cũ`n`n"+(& $block @((& $lesson 'mine' 'riêng máy')))) -NoNewline
-    Set-Content "$tool/AGENTS.md" ("# Hướng dẫn tool`n`n"+(& $block @((& $lesson 'shared-a' 'chung a')))) -NoNewline
+    Set-Content "$legacy/AGENTS.md" ("# Hướng dẫn cũ`n`n"+(& $block @((& $lesson 'mine' 'riêng máy')))) -Encoding UTF8 -NoNewline
+    Set-Content "$tool/AGENTS.md" ("# Hướng dẫn tool`n`n"+(& $block @((& $lesson 'shared-a' 'chung a')))) -Encoding UTF8 -NoNewline
     Move-LegacyLayout $legacy
     Assert ((Get-Content "$tool/workspace/drive.json") -eq 'my login' -and (Test-Path "$tool/workspace/output/run1/results.json")) 'The login and runs must move into the tool.'
     Assert ((Get-Content "$legacy/workspace/version.txt") -eq 'v2') 'The installed version stays with the hub.'

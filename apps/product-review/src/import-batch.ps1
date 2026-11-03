@@ -8,6 +8,7 @@ $root = Split-Path $PSScriptRoot -Parent
 . (Join-Path $PSScriptRoot '../../../hub/ai/common.ps1')
 . (Join-Path $PSScriptRoot 'infrastructure/source-catalog.ps1')
 . (Join-Path $PSScriptRoot 'application/image-feedback.ps1')
+. (Join-Path $PSScriptRoot 'application/workspace.ps1')
 . (Join-Path $PSScriptRoot 'application/manual-references.ps1')
 . (Join-Path $PSScriptRoot 'application/batch-import.ps1')
 $status = [ordered]@{ done = 0; total = 0; links = @(); products = 0; reviews = 0; failed = @(); errors = @(); finished = $false }

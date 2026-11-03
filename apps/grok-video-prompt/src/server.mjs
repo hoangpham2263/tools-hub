@@ -5,7 +5,7 @@ import { createServer } from "node:http";
 import { spawn, execFile } from "node:child_process";
 import { createInterface } from "node:readline";
 import { mkdir, writeFile, appendFile, readFile } from "node:fs/promises";
-import { createReadStream, existsSync, mkdirSync, openSync, readFileSync, statSync, renameSync, appendFileSync } from "node:fs";
+import { createReadStream, existsSync, mkdirSync, openSync, readFileSync, readdirSync, rmdirSync, statSync, renameSync, appendFileSync } from "node:fs";
 import { join, dirname, extname, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 import { randomUUID, createHash } from "node:crypto";
@@ -17,7 +17,20 @@ const root = resolve(here, "..");
 const hubRoot = resolve(root, "..", "..");
 const BASE_PORT = Number(process.env.GV_PORT || 47000 + (parseInt(createHash("sha1").update(root).digest("hex").slice(0, 6), 16) % 1000));
 let PORT = BASE_PORT;
-const workspace = join(root, "workspace");
+// One workspace folder for every tool: <hub>/workspace/grok-video-prompt/ (Git ignores that single folder). A tool outside an install (a copy in
+// a temp folder) keeps its own workspace/. What an older install kept in apps/grok-video-prompt/workspace/ moves here, entry by entry.
+const installed = existsSync(join(hubRoot, "hub", "update.ps1"));
+const oldWorkspace = join(root, "workspace");
+const workspace = installed ? join(hubRoot, "workspace", "grok-video-prompt") : oldWorkspace;
+if (installed && existsSync(oldWorkspace)) {
+  mkdirSync(workspace, { recursive: true });
+  for (const name of readdirSync(oldWorkspace)) {
+    const target = join(workspace, name);
+    if (existsSync(target)) continue;
+    try { renameSync(join(oldWorkspace, name), target); } catch (e) { console.error(`Not moved to the common workspace: ${name} (${e.code})`); }
+  }
+  try { rmdirSync(oldWorkspace); } catch {}
+}
 const logs = join(workspace, "logs");
 const uploads = join(workspace, "temp", "uploads");
 const configApi = createConfigApi({ hubRoot, pwsh: PWSH, env: toolEnv });

@@ -9,9 +9,9 @@ function Get-RemoteSourceGroups($Drive) {
 # Groups for the picker: only the groups switched on in the management page, read each time the picker
 # opens so a switch applies at once. The last list is kept in workspace/source-groups.json for offline use.
 function Get-SourceGroupChoices([string]$ProjectRoot) {
-    $cache = Join-Path $ProjectRoot 'workspace/source-groups.json'
+    $cache = Join-Path (Get-ProjectWorkspace $ProjectRoot) 'source-groups.json'
     $groups = try {
-        $drive = Get-DriveConfig (Join-Path $ProjectRoot 'workspace')
+        $drive = Get-DriveConfig (Get-ProjectWorkspace $ProjectRoot)
         if (-not $drive) { throw 'Chưa có mật khẩu app.' }
         $fetched = @(Get-RemoteSourceGroups $drive)
         try { Set-Content -LiteralPath $cache -Value (ConvertTo-Json -InputObject $fetched -Compress) -Encoding UTF8 } catch { Write-Verbose $_ }
@@ -110,13 +110,13 @@ function Get-SourceOfflinePickerFiles([bool]$SignedIn, [string]$SourceDir, [stri
 
 # The danh mục the picker opens on, chosen with its Mặc định box (workspace/source-default.txt); '' for none.
 function Get-DefaultSourceGroup([string]$ProjectRoot) {
-    $path = Join-Path $ProjectRoot 'workspace/source-default.txt'
+    $path = Join-Path (Get-ProjectWorkspace $ProjectRoot) 'source-default.txt'
     if (-not (Test-Path -LiteralPath $path)) { return '' }
     return (Get-Content -LiteralPath $path -Raw -Encoding UTF8).Trim().Normalize([Text.NormalizationForm]::FormC)
 }
 
 function Set-DefaultSourceGroup([string]$ProjectRoot, [string]$Group) {
-    $path = Join-Path $ProjectRoot 'workspace/source-default.txt'
+    $path = Join-Path (Get-ProjectWorkspace $ProjectRoot) 'source-default.txt'
     if ($Group) { [IO.File]::WriteAllText($path, $Group.Normalize([Text.NormalizationForm]::FormC), [Text.UTF8Encoding]::new($false)) }
     else { Remove-Item -LiteralPath $path -Force -ErrorAction SilentlyContinue }
 }

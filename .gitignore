@@ -1,6 +1,6 @@
-# Machine-local state: hub/ (version, backups) and each tool's own workspace. Base data stays versioned.
+# Machine-local state, in one place: workspace/ holds the hub's (version, backups, config) and, in workspace/<tool id>/, each tool's results,
+# logs, login and cache. Base data stays versioned.
 /workspace/
-/apps/*/workspace/
 /apps/*/bridge/node_modules/
 /hub/bridge/node_modules/
 /worker/.wrangler/

@@ -11,7 +11,8 @@ if ($onWindows) {
 }
 $project = Split-Path $PSScriptRoot -Parent
 # The suites mock every AI call; the calls they count go to a file of the tests, not to the install's Lượt dùng AI.
-$env:HUB_AI_USAGE_FILE = Join-Path $project 'workspace/tests/ai-usage.jsonl'
+$hubRoot = Split-Path (Split-Path $project -Parent) -Parent
+$env:HUB_AI_USAGE_FILE = if (Test-Path -LiteralPath (Join-Path $hubRoot 'hub/update.ps1')) { Join-Path $hubRoot 'workspace/fb-content/tests/ai-usage.jsonl' } else { Join-Path $project 'workspace/tests/ai-usage.jsonl' }
 $env:TOOLS_HUB_TEST = '1'
 $failures = New-Object Collections.Generic.List[string]
 foreach ($file in @(Get-ChildItem (Join-Path $project 'src'), $PSScriptRoot -Recurse -File -Filter '*.ps1')) {

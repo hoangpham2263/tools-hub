@@ -4,7 +4,7 @@
 $script:DriveTool = 'Content MXH'
 
 function Get-ContentDrive {
-    try { Get-DriveConfig (Join-Path (Get-ToolRoot) 'workspace') } catch { $null }
+    try { Get-DriveConfig (Get-ToolWorkspace) } catch { $null }
 }
 
 # Every picture and text of a folder (not logs/), sent with its path under the run's parent folder. Returns the number sent;

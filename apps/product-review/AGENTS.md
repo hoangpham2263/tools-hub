@@ -93,7 +93,7 @@ CLI exit 0 không xác nhận công cụ tạo ảnh thành công. Giữ console
 - `data/source-photos/catalog.json`: inventory và thông tin nguồn ảnh. Ảnh nằm trên Drive (tab Nguồn ảnh của trang quản lý), app tải theo nhóm về `data/source-photos/<nhóm>/`; không commit ảnh kho vào Git.
 - `src/infrastructure/ai.ps1` (`Invoke-AI`, nối cấu hình của tool với lõi chung `hub/ai`), `hub/ai/providers/browser.ps1`, `hub/extension/`, `hub/bridge/`: tạo ảnh qua tab Google Flow / ChatGPT, viết chữ qua Gemini web (ô Viết review / Tạo ảnh cạnh Bắt đầu → `-TextBackend` / `-ImageBackend`; Gemini thay Codex ở mọi bước chữ trong `Invoke-AI`). Không dùng API key; Gemini CLI không còn đăng nhập Google được. CLI dùng Antigravity (`agy`, `hub/ai/providers/antigravity.ps1`): prompt và ảnh vào một thư mục riêng vì agy chỉ nhận prompt qua `-p`. Không tự đổi AI: chạy lỗi với AI khác thì hỏi người dùng có chạy lại bằng Codex không. Chạy trong Chrome chính của máy (tab riêng, nhóm Tools Hub). Tab nền hay cửa sổ bị che thì trang không chạy: mỗi việc đưa tab của nó lên trước. Flow tạo ảnh theo tỷ lệ đặt trong ô nhập (mặc định 16:9, ảnh ra 1376×768) nên ảnh nền vuông/dọc bị dựng lại cả khung và góc máy: `hub/extension/sites/flow.js` chọn tỷ lệ gần nhất với ảnh review (16:9, 4:3, 1:1, 3:4, 9:16) trước khi dán ảnh; không chọn được thì chạy tiếp với tỷ lệ đang có. Flow chỉ nhận cú bấm thật (`chrome.debugger`); sau khi tải ảnh tham khảo Flow vẽ lại ô nhập, phải tìm lại.
 - `tests/run.ps1`: chạy suite liên quan bằng Windows PowerShell khi được phép.
-- `workspace/output/`: kết quả và log cục bộ, Git bỏ qua.
+- `<hub>/workspace/product-review/output/`: kết quả và log cục bộ (cả thư mục `workspace/` của hub nằm ngoài Git).
 
 <!-- app-lessons:start -->
 ## Bài học đã đúc kết

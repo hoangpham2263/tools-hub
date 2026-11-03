@@ -32,6 +32,15 @@ function Get-AgentLessonItems([string]$Body) {
     return , @(foreach ($item in $items) { [pscustomobject]@{ Id = [string](ConvertFrom-Json -InputObject $item.Groups['meta'].Value).id; Text = $item.Value } })
 }
 
+# Where a tool keeps what the merge remembers (seen lessons, the AGENTS.md backup): its folder of the common workspace,
+# <hub>/workspace/<tool id>, inside an install, else its own workspace/.
+function Get-ToolStateFolder([string]$Tool) {
+    $apps = Split-Path $Tool -Parent
+    $hub = Split-Path $apps -Parent
+    if ((Split-Path $apps -Leaf) -eq 'apps' -and (Test-Path -LiteralPath (Join-Path $hub 'hub/update.ps1'))) { return (Join-Path $hub ('workspace/' + (Split-Path $Tool -Leaf))) }
+    Join-Path $Tool 'workspace'
+}
+
 function Merge-AgentInstructions([string]$Source, [string]$Target) {
     $from = Join-Path $Source 'AGENTS.md'; $to = Join-Path $Target 'AGENTS.md'
     if (-not (Test-Path -LiteralPath $from)) { return }
@@ -42,7 +51,11 @@ function Merge-AgentInstructions([string]$Source, [string]$Target) {
         if ($up.Count -ne 1 -or $mine.Count -ne 1) { return }
         $upItems = Get-AgentLessonItems $up[0].Groups['body'].Value; $myItems = Get-AgentLessonItems $mine[0].Groups['body'].Value
         if ($null -eq $upItems -or $null -eq $myItems) { return }
-        $seenFile = Join-Path $Target 'workspace/agent-lessons-seen.txt'
+        $state = Get-ToolStateFolder $Target
+        $seenFile = Join-Path $state 'agent-lessons-seen.txt'
+        # An older install kept it in the tool's own workspace/ until the tool next starts and moves it.
+        $oldSeen = Join-Path $Target 'workspace/agent-lessons-seen.txt'
+        if (-not (Test-Path -LiteralPath $seenFile) -and (Test-Path -LiteralPath $oldSeen)) { $seenFile = $oldSeen }
         $hash = { param($Text) [BitConverter]::ToString([Security.Cryptography.SHA1]::Create().ComputeHash([Text.Encoding]::UTF8.GetBytes(($Text -replace '\r', '').Trim()))) -replace '-' }
         $seen = @{}
         if (Test-Path -LiteralPath $seenFile) { foreach ($line in Get-Content -LiteralPath $seenFile) { $id, $sum = $line -split '\s+', 2; if ($id) { $seen[$id] = [string]$sum } } }
@@ -55,13 +68,13 @@ function Merge-AgentInstructions([string]$Source, [string]$Target) {
         }
         if ($added.Count) { $body = $body.TrimEnd() + "`n`n" + (($added | ForEach-Object { $_.Text.TrimEnd() }) -join "`n`n") + "`n`n" }
         $merged = $upstream.Substring(0, $up[0].Index) + "<!-- app-lessons:start -->`n" + $body + '<!-- app-lessons:end -->' + $upstream.Substring($up[0].Index + $up[0].Length)
-        New-Item -ItemType Directory -Force -Path (Join-Path $Target 'workspace/backups') | Out-Null
+        New-Item -ItemType Directory -Force -Path (Join-Path $state 'backups') | Out-Null
         if ($merged -ne $local) {
-            Copy-Item -LiteralPath $to -Destination (Join-Path $Target 'workspace/backups/AGENTS-before-update.md') -Force
+            Copy-Item -LiteralPath $to -Destination (Join-Path $state 'backups/AGENTS-before-update.md') -Force
             [IO.File]::WriteAllText($to, $merged, [Text.UTF8Encoding]::new($true))
         }
         foreach ($item in $upItems) { $seen[$item.Id] = & $hash $item.Text }
-        Set-Content -LiteralPath $seenFile -Value @($seen.Keys | Sort-Object | ForEach-Object { "$_ $($seen[$_])" }) -Encoding UTF8
+        Set-Content -LiteralPath (Join-Path $state 'agent-lessons-seen.txt') -Value @($seen.Keys | Sort-Object | ForEach-Object { "$_ $($seen[$_])" }) -Encoding UTF8
     } catch { Write-Verbose $_ }
 }
 

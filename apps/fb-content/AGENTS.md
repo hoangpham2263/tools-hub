@@ -17,7 +17,7 @@ Một lượt chạy làm lần lượt từng sản phẩm:
    - **Kiểm tra trước khi hiện** (`verify`, mặc định bật, tắt bằng `verify: "false"` trong job): sau mỗi ảnh, AI chữ so sản phẩm trong ảnh mới với ảnh sản phẩm gốc (mặt bàn, chân đế, màu gỗ, có bàn thứ hai không). Lệch thì tạo lại một lần kèm lý do; lệch lần hai vẫn giữ ảnh và báo cảnh báo. Kiểm tra không đọc được thì không chặn.
    - **Đóng dấu logo** (công tắc trong giao diện, mặc định tắt): sau mỗi ảnh tạo xong, code ghép logo thương hiệu lên một bản sao `anh-…-logo.png`; ảnh không logo vẫn giữ, giao diện hiển thị bản có logo, và các góc sau vẫn dựng từ ảnh nền không logo. AI không bao giờ vẽ logo (prompt cấm logo và chữ vì AI ảnh có thể từ chối prompt về thương hiệu). Thương hiệu chưa có logo thì giữ ảnh thường và báo một lần.
 3. **Viết bài** (`workflow/write-posts.ps1`): mỗi nền tảng một bài từ sản phẩm, màu, gói thương hiệu, quy tắc nền tảng, giọng văn và lời nhắn. Link và hashtag do code đặt lại sau khi AI viết (`Format-PostText`), không để phụ thuộc AI.
-4. Lưu kết quả ở `workspace/output/<thời điểm>/<STT>-<tên>/`: `anh-<màu>-<cảnh>-<góc>-<mã góc>.png`, `bai-<nền tảng>.txt`, `snapshot.json` (hash ảnh, góc, mô tả từng màu, giọng), `logs/` (prompt từng ảnh, phản hồi AI). `results.json` ở cấp lượt chạy.
+4. Lưu kết quả ở `<hub>/workspace/fb-content/output/<thời điểm>/<STT>-<tên>/`: `anh-<màu>-<cảnh>-<góc>-<mã góc>.png`, `bai-<nền tảng>.txt`, `snapshot.json` (hash ảnh, góc, mô tả từng màu, giọng), `logs/` (prompt từng ảnh, phản hồi AI). `results.json` ở cấp lượt chạy.
 
 Mọi prompt cùng bố cục `TASK` rồi các `STEP` đánh số. Mọi đầu vào của AI nằm trong prompt và ảnh đính kèm; AI không tự đọc file (xem `AGENTS.md` gốc).
 
@@ -40,7 +40,7 @@ Mọi prompt cùng bố cục `TASK` rồi các `STEP` đánh số. Mọi đầu
 - `ui/index.html` do `src/server.mjs` phục vụ (tool.json `mac`); cổng riêng từ thư mục cài, tìm bằng `/api/root`. Cập nhật, Cấu hình, Tải lại là của hub.
 - Hộp "Xem / sửa" theo kiểu Product Review: mỗi màu một dòng (ảnh sản phẩm, ô tên màu, các ảnh cảnh, nút "+ Máy", "Dán"), kéo thả hoặc Ctrl+V vào dòng đang chọn thì thành ảnh cảnh, vào chỗ trống thì thành màu mới. Mọi ô chọn dùng cùng kiểu `select` của hub. Chưa chọn nền tảng nào mặc định; bấm Bắt đầu mà chưa chọn thì báo. Dữ liệu của bản cũ (ảnh kèm số góc) tự chuyển thành mỗi ảnh một màu.
 - Giao diện chỉ gom đầu vào và theo dõi lượt chạy: máy chủ chạy `src/run-content.ps1`, các dòng `@@EVENT {json}` thành sự kiện (`start`, `product`, `image`, `post`, `warning`, `product-done`, `done`, `fatal`) mà trang hỏi lại mỗi 1,5 giây; tải lại trang vẫn thấy lượt đang chạy.
-- Ảnh tải lên lưu ở `workspace/temp/uploads`; máy chủ chỉ trả lại ảnh nằm trong `workspace/`.
+- Ảnh tải lên lưu ở `<hub>/workspace/fb-content/temp/uploads`; máy chủ chỉ trả lại ảnh nằm trong thư mục workspace của tool.
 - Tỷ lệ khung ảnh do Codex tự chọn, chưa điều khiển được. Tỷ lệ theo từng nền tảng (4:5, 9:16) chưa làm.
 
 ## 5. Kiểm tra

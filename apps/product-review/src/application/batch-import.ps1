@@ -76,9 +76,9 @@ function Get-ImportImage([string]$Source, [string]$Folder) {
 # Attaches every row's images to its link. $OnProgress gets (images done, images in all). A row whose product image
 # fails keeps none of its reviews, so a review never lands on another product image.
 function Import-ProductBatch([string]$ProjectRoot, $Rows, [scriptblock]$OnProgress) {
-    $temp = Join-Path $ProjectRoot ('workspace/temp/import-' + [Guid]::NewGuid().ToString('N'))
+    $temp = Join-Path (Get-ProjectWorkspace $ProjectRoot) ('temp/import-' + [Guid]::NewGuid().ToString('N'))
     New-Item -ItemType Directory -Force -Path $temp | Out-Null
-    $mapPath = Join-Path $ProjectRoot 'workspace/reference-inputs/references.json'
+    $mapPath = Join-Path (Get-ProjectWorkspace $ProjectRoot) 'reference-inputs/references.json'
     $total = [int](@($Rows | ForEach-Object { @(@($_.Product) + @($_.Reviews) | Where-Object { $_ }).Count }) | Measure-Object -Sum).Sum
     $result = [ordered]@{ links = @(); products = 0; reviews = 0; failed = @() }
     $done = 0

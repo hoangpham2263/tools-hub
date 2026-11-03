@@ -7,10 +7,19 @@
 #   2. Clips (Grok video): clip i goes to frame i (Grok's last frame) and starts on the real last frame of clip i-1
 #      (ffmpeg), so each clip starts exactly where the one before ended; clip 1 starts on frame 0.
 #   3. One video (hub/media/ffmpeg.ps1): the clips joined, the shared frame shown once.
-# Output: workspace/output/<time>-<product>/: khung-<i>-<angle>.png, clip-<i>.mp4, video-<product>.mp4, logs/.
+# Output: <workspace>/output/<time>-<product>/ (the tool's folder of the common workspace): khung-<i>-<angle>.png, clip-<i>.mp4, video-<product>.mp4, logs/.
 # The window follows the run through @@EVENT lines (start, frame, clip, final, warning, done, fatal).
 
 function Get-ToolRoot { Split-Path $PSScriptRoot -Parent }
+
+# One workspace folder for every tool: <hub>/workspace/grok-video-prompt/ (Git ignores that single folder); outside an install a tool keeps
+# its own workspace/. server.mjs moves what an older install kept in apps/grok-video-prompt/workspace/.
+function Get-ToolWorkspace {
+    $root = Get-ToolRoot
+    $hub = Split-Path (Split-Path $root -Parent) -Parent
+    if (Test-Path -LiteralPath (Join-Path $hub 'hub/update.ps1')) { return (Join-Path $hub 'workspace/grok-video-prompt') }
+    Join-Path $root 'workspace'
+}
 function Read-JsonFile([string]$Path) { Get-Content -LiteralPath $Path -Raw -Encoding UTF8 | ConvertFrom-Json }
 function Send-Event([hashtable]$Event) { Write-Host ('@@EVENT ' + (ConvertTo-Json -InputObject $Event -Compress -Depth 6)) }
 function Write-Utf8([string]$Path, [string]$Text) {
