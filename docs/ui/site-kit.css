@@ -23,3 +23,11 @@ input:focus, select:focus, button:focus-visible, .btn:focus-visible { border-col
 .drop-on { outline: none !important; border-color: var(--state-border-strong) !important; background: var(--state-fill); }
 a { color: var(--primary); }
 .card, .tool-grid > div { background: var(--card); }
+
+/* the tools on the home page */
+.home-tools { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin: 8px 0 16px; }
+.home-tool { display: flex; flex-direction: column; align-items: flex-start; gap: 8px; padding: 16px; text-align: left; height: auto; background: var(--card); border: 1px solid var(--border); border-radius: var(--radius-xl, 14px); color: var(--foreground); }
+.home-tool:hover { background: var(--state-fill); }
+.home-tool img { border-radius: var(--radius-lg, 10px); }
+.home-tool-name { font-family: var(--font-heading); font-size: 1.125rem; }
+@media (max-width: 900px) { .home-tools { grid-template-columns: minmax(0, 1fr); } }
