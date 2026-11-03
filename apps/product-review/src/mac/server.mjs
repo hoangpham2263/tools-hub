@@ -4,7 +4,7 @@ import { createServer } from "node:http";
 import { spawn, execFile } from "node:child_process";
 import { createInterface } from "node:readline";
 import { writeFile, mkdir, copyFile, rm, stat, appendFile, readFile } from "node:fs/promises";
-import { createReadStream, existsSync, mkdirSync, openSync, readFileSync, readdirSync, renameSync, rmdirSync, statSync, appendFileSync } from "node:fs";
+import { createReadStream, existsSync, mkdirSync, openSync, renameSync, statSync, appendFileSync } from "node:fs";
 import { join, dirname, extname, resolve, sep, basename } from "node:path";
 import { tmpdir } from "node:os";
 import { fileURLToPath } from "node:url";
@@ -17,23 +17,9 @@ const root = resolve(here, "..", "..");
 // Tools Hub root: this tool is apps/<id>/ inside it (hub/update.ps1 updates the whole hub).
 const hubRoot = resolve(root, "..", "..");
 // Each install gets its own port (from its folder), so two copies on one Mac never share data.
-const toolPort = (() => { try { return Number(JSON.parse(readFileSync(join(resolve(here, "..", ".."), "tool.json"), "utf8").replace(/^\uFEFF/, "")).port) || 0; } catch { return 0; } })();
-const BASE_PORT = Number(process.env.PR_PORT || toolPort || 47000 + (parseInt(createHash("sha1").update(resolve(here, "..", "..")).digest("hex").slice(0, 6), 16) % 1000));
+const BASE_PORT = Number(process.env.PR_PORT || 47000 + (parseInt(createHash("sha1").update(resolve(here, "..", "..")).digest("hex").slice(0, 6), 16) % 1000));
 let PORT = BASE_PORT;
-// One workspace folder for every tool: <hub>/workspace/product-review/ (Git ignores that single folder). A tool outside an install (a copy in
-// a temp folder) keeps its own workspace/. What an older install kept in apps/product-review/workspace/ moves here, entry by entry.
-const installed = existsSync(join(hubRoot, "hub", "update.ps1"));
-const oldWorkspace = join(root, "workspace");
-const workspace = installed ? join(hubRoot, "workspace", "product-review") : oldWorkspace;
-if (installed && existsSync(oldWorkspace)) {
-  mkdirSync(workspace, { recursive: true });
-  for (const name of readdirSync(oldWorkspace)) {
-    const target = join(workspace, name);
-    if (existsSync(target)) continue;
-    try { renameSync(join(oldWorkspace, name), target); } catch (e) { console.error(`Not moved to the common workspace: ${name} (${e.code})`); }
-  }
-  try { rmdirSync(oldWorkspace); } catch {}
-}
+const workspace = join(root, "workspace");
 const logs = join(workspace, "logs");
 const uploads = join(workspace, "temp", "mac-uploads");
 const configApi = createConfigApi({ hubRoot, pwsh: PWSH, env: toolEnv });
@@ -51,7 +37,7 @@ function logError(where, text) {
 process.on("uncaughtException", (e) => { logError("Máy chủ Mac", e.stack || e); process.exit(1); });
 process.on("unhandledRejection", (e) => logError("Máy chủ Mac", e?.stack || e));
 
-const TYPES = { ".html": "text/html; charset=utf-8", ".css": "text/css", ".js": "text/javascript", ".svg": "image/svg+xml", ".png": "image/png", ".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".webp": "image/webp", ".ico": "image/x-icon", ".woff2": "font/woff2" };
+const TYPES = { ".html": "text/html; charset=utf-8", ".css": "text/css", ".js": "text/javascript", ".svg": "image/svg+xml", ".png": "image/png", ".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".webp": "image/webp", ".ico": "image/x-icon" };
 
 // ----- PowerShell application calls -----
 let rpcProc = null;
@@ -181,16 +167,12 @@ const allowedFile = (p) => {
   return [root + sep, resolve(tmpdir()) + sep].some((base) => full.startsWith(base)) && TYPES[extname(full).toLowerCase()]?.startsWith("image/");
 };
 const body = async (req) => { const chunks = []; for await (const c of req) chunks.push(c); return Buffer.concat(chunks); };
-// The Tools Hub site (https://hoangpham.is-a.dev/tools-hub/) asks every tool's fixed port whether the app runs, to open it:
-// only this answer, only for that origin (the browser's own "loopback" permission still applies).
-const SITE_ORIGIN = "https://hoangpham.is-a.dev";
-const rootHeaders = (req) => (req.headers.origin === SITE_ORIGIN ? { "access-control-allow-origin": SITE_ORIGIN, vary: "Origin" } : {});
-const send = (res, status, data, headers = {}) => { res.writeHead(status, { "content-type": "application/json; charset=utf-8", "cache-control": "no-store", ...headers }); res.end(JSON.stringify(data)); };
+const send = (res, status, data) => { res.writeHead(status, { "content-type": "application/json; charset=utf-8", "cache-control": "no-store" }); res.end(JSON.stringify(data)); };
 
 async function handle(req, res) {
   const url = new URL(req.url, "http://localhost");
   const path = url.pathname;
-  if (path === "/api/root") return send(res, 200, { root, service: "product-review", protocol: 1, pid: process.pid }, rootHeaders(req));
+  if (path === "/api/root") return send(res, 200, { root, service: "product-review", protocol: 1, pid: process.pid });
   // Errors in the window (app.js), kept like the Windows window's.
   if (path === "/api/client-error" && req.method === "POST") {
     const { message = "", stack = "" } = JSON.parse((await body(req)).toString("utf8") || "{}");
@@ -301,15 +283,6 @@ async function handle(req, res) {
     if (!allowedFile(file) || !existsSync(file)) { res.writeHead(404); return res.end(); }
     res.writeHead(200, { "content-type": TYPES[extname(file).toLowerCase()], "cache-control": "no-store" });
     return createReadStream(file).pipe(res);
-  }
-  // The hub's UI kit (fonts and tokens), served as the hub's own assets.
-  const uiAsset = /^\/hub\/assets\/ui\/([\w./-]+\.(?:css|woff2))$/.exec(path);
-  if (uiAsset) {
-    const base = resolve(hubRoot, "hub", "assets", "ui");
-    const asset = resolve(base, uiAsset[1]);
-    if (!asset.startsWith(base + sep) || !existsSync(asset)) { res.writeHead(404); return res.end(); }
-    res.writeHead(200, { "content-type": TYPES[extname(asset).toLowerCase()], "cache-control": "no-store" });
-    return createReadStream(asset).pipe(res);
   }
   const rel = path === "/" ? "index.html" : path.slice(1);
   const file = resolve(here, "ui", rel);

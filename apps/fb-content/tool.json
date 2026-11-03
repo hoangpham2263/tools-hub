@@ -28,6 +28,5 @@
     "Một ảnh gốc, chọn số góc máy",
     "Bài đăng riêng cho từng nền tảng, theo giọng thương hiệu"
   ],
-  "mac": "src/server.mjs",
-  "port": 47103
+  "mac": "src/server.mjs"
 }

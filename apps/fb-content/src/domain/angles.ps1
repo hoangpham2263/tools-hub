@@ -1,7 +1,7 @@
-﻿# The camera angles one product photo can be shot from: the library in data/angles.json (the 24 presets of GRENHEIM's
+﻿# The camera angles one product photo can be shot from: the library in hub/image/angles.json, shared with Grok Video (the 24 presets of GRENHEIM's
 # camera-angle library, plus "as photo"). A shot is asked for by its id, in the order the user picked them.
 
-function Get-ContentAngleLibrary { Read-JsonFile (Join-Path (Get-ToolRoot) 'data/angles.json') }
+function Get-ContentAngleLibrary { Read-JsonFile (Join-Path (Get-ToolRoot) '../../hub/image/angles.json') }
 
 # The angles for these ids, in this order. An unknown id, a repeat or an empty list stops the job.
 function Get-ContentAngles([string[]]$Ids) {

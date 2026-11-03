@@ -45,7 +45,7 @@ function Test-ContentJob($Job) {
 function Resolve-ProductDetails($Product, $Color, [int]$ColorNo, [string]$Folder) {
     Write-Host "  [DETAILS] Reading the product photo of color $ColorNo..." -ForegroundColor Cyan
     try {
-        $raw = Invoke-AI (Get-ContentDetailsPrompt ([string]$Product.name)) @([string]$Color.product.path) (Join-Path $Folder "logs/details-$ColorNo.txt")
+        $raw = Invoke-AI (Get-HubImageDetailsPrompt ([string]$Product.name)) @([string]$Color.product.path) (Join-Path $Folder "logs/details-$ColorNo.txt")
         $json = [regex]::Match([string]$raw, '\{[\s\S]*\}').Value
         $result = $json | ConvertFrom-Json
         if ($result.error -or -not $result.details) { throw 'The photo does not show an identifiable product.' }

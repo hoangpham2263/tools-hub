@@ -55,7 +55,7 @@ function Save-RejectedSample($Item, [string]$BatchDir, [string]$Folder, [string]
 
 # Samples marked Bỏ that Gửi lỗi has not sent yet, oldest first.
 function Get-UnsentRejectedSamples([string]$ProjectRoot) {
-    $root = Join-Path (Get-ProjectWorkspace $ProjectRoot) 'rejected'
+    $root = Join-Path $ProjectRoot 'workspace/rejected'
     if (-not (Test-Path -LiteralPath $root)) { return @() }
     return @(Get-ChildItem -LiteralPath $root -Directory | Where-Object { -not (Test-Path -LiteralPath (Join-Path $_.FullName '.sent')) } | Sort-Object LastWriteTime)
 }

@@ -82,7 +82,7 @@ scripts/            công cụ chuẩn bị dữ liệu, đẩy ảnh lên kho
 workspace/          trạng thái của hub (phiên bản, bản sao lưu), không lên Git
 ```
 
-Thêm tool mới: tạo `apps/<id>/tool.json` (`id`, `name`, `description`, `icon`, và `windows` + `mac` hoặc `web`) cùng `icon.svg` + `icon.png`; launcher tự hiện tool đó. Giao diện web dùng bộ chung `hub/assets/ui/` (xem `guide.html`).
+Thêm tool mới: tạo `apps/<id>/tool.json` (`id`, `name`, `description`, `icon`, và `windows` + `mac` hoặc `web`) cùng `icon.svg` + `icon.png`; launcher tự hiện tool đó. Giao diện web dùng chung `hub/assets/tool.css`.
 Kiểm thử Product Review: `apps/product-review/test.cmd` (Windows), `apps/product-review/test.sh` (Mac). Chi tiết workflow: [apps/product-review/docs/workflow.txt](apps/product-review/docs/workflow.txt); hướng dẫn cho AI: [AGENTS.md](AGENTS.md) và [apps/product-review/AGENTS.md](apps/product-review/AGENTS.md).
 
 ## Phát hành

@@ -14,12 +14,12 @@
   // Which section each step is in, in this order; anything else the check adds goes under Cài đặt.
   const AI = ["login", "google", "antigravity"];
   const BASE = ["drive", "node", "codex", "browser"];
-  const marks = { ok: ["✔", "var(--primary)"], fail: ["✖", "var(--destructive)"], warn: ["!", "#b45309"] };
+  const marks = { ok: ["✔", "darkgreen"], fail: ["✖", "firebrick"], warn: ["!", "#b06000"] };
   const items = new Map();
   const item = (id, parent) => {
-    const box = el("div", "item"), mark = el("span", "mark", "○"), body = el("div", "body"), side = el("div", "actions");
+    const box = el("div", "item"), mark = el("span", "mark", "○"), body = el("div", "body"), side = el("div", "side");
     const name = el("div", "name"), account = el("div", "account"), detail = el("div", "detail", "Đang kiểm tra…"), uses = el("div", "uses"), extra = el("div");
-    const fix = el("button", "btn", ""); fix.type = "button"; fix.hidden = true; fix.dataset.variant = "outline"; fix.dataset.size = "sm";
+    const fix = el("button", "btn", ""); fix.type = "button"; fix.hidden = true;
     body.append(name, account, detail, uses, extra); side.append(fix);
     box.append(mark, body, side);
     parent.append(box);
@@ -74,7 +74,7 @@
       // Google with more than one account signed in: choose here which one Flow and Gemini run with.
       const accounts = [].concat(step.Accounts || []);
       if (step.Id === "google" && step.State === "ok" && accounts.length > 1) {
-        const pick = el("select", "select account-pick");
+        const pick = el("select", "account-pick");
         pick.setAttribute("aria-label", "Tài khoản Google cho Flow và Gemini");
         for (const email of accounts) pick.append(Object.assign(el("option", "", email), { value: email, selected: email === step.Account }));
         pick.onchange = async () => {
@@ -91,13 +91,13 @@
       if (step.Action) {
         const signedIn = step.State === "ok";
         row.fix.textContent = signedIn && ["login", "google", "antigravity"].includes(step.Action) ? "Đổi tài khoản" : ["expired", "signedout"].includes(step.SignIn) ? "Đăng nhập lại" : signedIn && step.Action === "drive" ? "Đăng xuất" : LABELS[step.Action] || "Mở";
-        if (signedIn) row.fix.dataset.variant = "outline"; else delete row.fix.dataset.variant;
+        row.fix.classList.toggle("primary", !signedIn);
         row.fix.hidden = false;
         row.fix.onclick = () => fix(step, row);
       }
       if (step.Action && SITES[step.Id]) for (const [text, site] of SITES[step.Id]) {
         const b = el("button", "btn site", text);
-        b.type = "button"; b.dataset.variant = "outline"; b.dataset.size = "sm";
+        b.type = "button";
         b.onclick = () => fix({ ...step, Action: "site" }, row, site);
         row.side.append(b);
       }
@@ -143,7 +143,7 @@
       return post("/api/config/drive", null, "DELETE").then(check);
     }
     if (row.extra.querySelector(".drive-form")) return row.extra.querySelector("input").focus();
-    const form = el("div", "drive-form"), pass = el("input", "input"), go = el("button", "btn", "Lưu"), err = el("div", "err");
+    const form = el("div", "drive-form"), pass = el("input"), go = el("button", "btn primary", "Lưu"), err = el("div", "err");
     pass.type = "password"; pass.placeholder = "Mật khẩu app"; go.type = "button";
     form.append(pass, go);
     row.extra.replaceChildren(form, err);
@@ -161,7 +161,7 @@
   };
 
   // Installing, opening Chrome or signing in runs on this computer; the steps are checked again after.
-  const buttons = () => [...document.querySelectorAll(".item .actions .btn")];
+  const buttons = () => [...document.querySelectorAll(".item .side .btn")];
   const fix = async (step, row, site) => {
     if (step.Action === "drive") return drive(step, row);
     for (const b of buttons()) b.disabled = true;
@@ -176,10 +176,6 @@
     if (r.error) row.detail.textContent = r.error;
   };
   $(".again").onclick = () => { check(); usage(); };
-  const themeBtn = $("#themeBtn");
-  const themeLabel = () => { themeBtn.textContent = document.documentElement.classList.contains("dark") ? "Sáng" : "Tối"; };
-  themeBtn.onclick = () => { const dark = document.documentElement.classList.toggle("dark"); try { localStorage.setItem("themeMode", dark ? "dark" : "light"); } catch {} themeLabel(); };
-  themeLabel();
 
   // Lượt dùng AI (GET /api/usage): calls, failures and Codex tokens per AI and account; the last failure with its cause.
   const CAUSES = { QUOTA: "Hết lượt", AUTH: "Chưa đăng nhập", AI_TIMEOUT: "Quá thời gian", NETWORK: "Mất mạng", BUSY: "AI bận hoặc lỗi", BRIDGE: "Extension hoặc Flow cần xử lý", PROCESS_ACTIVE: "Codex chưa dừng hẳn", UNSUPPORTED: "AI không làm được việc này", POLICY: "Bị từ chối (chính sách)", UNKNOWN: "Lỗi khác" };

@@ -1,5 +1,5 @@
 ﻿# Step 2: for every scene of every color, the camera angles the user picked. Every shot is a separate request: the room
-# stays, only the camera moves (the angle library is data/angles.json). A scene that is the product's own photo is sent
+# stays, only the camera moves (the angle library is hub/image/angles.json). A scene that is the product's own photo is sent
 # alone. A separate scene photo is sent with the color's product photo for EVERY shot of that scene: both are the user's real
 # photos (image 1 the product, image 2 the room), and a generated picture is never an input of another one, so a mistake in
 # one shot cannot be carried into the others. The product photo is always image 1, the room photo image 2.
@@ -12,7 +12,7 @@ $script:ContentBrandInstruction = "Show the product without any brand name or lo
 function New-ContentImagePrompt([string]$ProductName, [string]$Details, $Angle, [int]$Index, [int]$Total, [bool]$WithProduct = $false, [string]$OldItems = '') {
     # The product photo is always image 1. With a separate room photo, that is image 2; otherwise image 1 is both.
     $roomIndex = if ($WithProduct) { 2 } else { 1 }
-    $rules = Get-ContentProductRules 1
+    $rules = Get-HubImageProductRules 1 'content'
     $note = "Automatic text note on image 1 (it may be wrong; wherever it differs from image 1, follow image 1): $(if ($Details) { $Details } else { 'none' })"
     $moved = $Angle.id -ne 'as-photo'
     $task = if ($WithProduct -and -not $moved) { 'EDIT THE PHOTOGRAPH IN IMAGE 2 into ONE clean, sharp, photorealistic brand photograph of the same room with the product from image 1 placed in it. Do not generate a new scene or reuse the setting of any other image.' }

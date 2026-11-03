@@ -2,9 +2,9 @@
 # For every URL: load product, take the review photo the user attached, create one photo, write a review.
 # URLs are processed in parallel (-ThrottleLimit); results are committed one by one in the main thread.
 param(
-    [Alias('UrlList')][string]$List = '',
+    [Alias('UrlList')][string]$List = (Join-Path (Split-Path $PSScriptRoot -Parent) 'workspace/urls.txt'),
     [Alias('InputDir')][string]$SourceDir = (Join-Path (Split-Path $PSScriptRoot -Parent) 'data/source-photos'),
-    [string]$OutDir = '',
+    [string]$OutDir = (Join-Path (Split-Path $PSScriptRoot -Parent) 'workspace/output'),
     # Ignored: one attached review photo per image. Kept so older callers still start.
     [Alias('ReferencePhotosPerImage')][int]$PhotosPerImage = 1,
     [ValidateRange(1, 4)][int]$ThrottleLimit = 2,
@@ -23,10 +23,6 @@ $OutputEncoding = [Text.UTF8Encoding]::new($false)
 [Console]::InputEncoding = $OutputEncoding
 [Console]::OutputEncoding = $OutputEncoding
 if ($ThrottleLimit -lt 1) { throw 'ThrottleLimit must be positive.' }
-# The list and the output default to the tool's folder of the common workspace.
-. (Join-Path $PSScriptRoot 'application/workspace.ps1')
-if (-not $List) { $List = Join-Path (Get-ProjectWorkspace (Split-Path $PSScriptRoot -Parent)) 'urls.txt' }
-if (-not $OutDir) { $OutDir = Join-Path (Get-ProjectWorkspace (Split-Path $PSScriptRoot -Parent)) 'output' }
 foreach ($variableName in @('List', 'SourceDir', 'OutDir')) {
     Set-Variable $variableName ($ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath((Get-Variable $variableName -ValueOnly)))
 }

@@ -14,7 +14,7 @@ foreach ($scenario in @('chatgpt', 'api', 'missing')) {
     $report = $json | ConvertFrom-Json
     $expected = $scenario -ne 'missing'
     if ($report.Ready -ne $expected -or $report.Checks.Count -ne $(if ($expected) { 4 } else { 3 })) { throw 'Incorrect sign-in readiness.' }
-    if ($json -match 'Write-Error|CategoryInfo|Logged in using|auth\.json|\.codex|credit|token') { throw 'Technical sign-in details leaked into the user report.' }
+    if ($json -match 'Write-Error|CategoryInfo|Logged in using|C:\\|credit|token') { throw 'Technical sign-in details leaked into the user report.' }
     if ($scenario -eq 'chatgpt' -and $report.Checks[2].Message -notmatch 'đã đăng nhập') { throw 'Successful stderr status was rejected.' }
     if ($scenario -eq 'api' -and $report.Checks[2].Message -notmatch 'tính phí riêng') { throw 'API sign-in must not be reported as ChatGPT.' }
     if (-not $expected -and -not $report.Checks[2].Action) { throw 'Missing sign-in must include user guidance.' }

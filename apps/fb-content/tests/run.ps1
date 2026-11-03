@@ -1,5 +1,5 @@
 ﻿# All checks run in fresh PowerShell processes (Windows PowerShell 5.1 on Windows, pwsh on macOS); no AI call is made.
-param([string[]]$Name = @('prompts', 'posts', 'watermark-core', 'watermark', 'content-run'))
+param([string[]]$Name = @('prompts', 'posts', 'watermark-core', 'unsparkle-core', 'watermark', 'content-run'))
 $ErrorActionPreference = 'Stop'
 $onWindows = ($PSVersionTable.PSEdition -eq 'Desktop') -or $IsWindows
 if ($onWindows) {
@@ -11,8 +11,7 @@ if ($onWindows) {
 }
 $project = Split-Path $PSScriptRoot -Parent
 # The suites mock every AI call; the calls they count go to a file of the tests, not to the install's Lượt dùng AI.
-$hubRoot = Split-Path (Split-Path $project -Parent) -Parent
-$env:HUB_AI_USAGE_FILE = if (Test-Path -LiteralPath (Join-Path $hubRoot 'hub/update.ps1')) { Join-Path $hubRoot 'workspace/fb-content/tests/ai-usage.jsonl' } else { Join-Path $project 'workspace/tests/ai-usage.jsonl' }
+$env:HUB_AI_USAGE_FILE = Join-Path $project 'workspace/tests/ai-usage.jsonl'
 $env:TOOLS_HUB_TEST = '1'
 $failures = New-Object Collections.Generic.List[string]
 foreach ($file in @(Get-ChildItem (Join-Path $project 'src'), $PSScriptRoot -Recurse -File -Filter '*.ps1')) {
@@ -28,9 +27,10 @@ foreach ($testName in $Name) {
     if ($testName -notmatch '^[a-z][a-z0-9-]+$' -or $testName -eq 'run') { throw "Invalid test name: $testName" }
     $path = Join-Path $PSScriptRoot "$testName.ps1"
     # The drawing is plain Node, tested with node --test (same on every OS).
-    if ($testName -eq 'watermark-core') {
+    if ($testName -in @('watermark-core', 'unsparkle-core')) {
         Write-Host "Testing: $testName" -ForegroundColor Cyan
-        & node --test (Join-Path $PSScriptRoot 'watermark-core.test.mjs')
+        $coreFile = ($testName -replace '-core', '') + '.test.mjs'
+        & node --test (Join-Path $project "../../hub/tests/$coreFile")
         if ($LASTEXITCODE -ne 0) { $failures.Add($testName) }
         continue
     }

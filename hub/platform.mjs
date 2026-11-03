@@ -57,14 +57,6 @@ export function openChrome(url = "", { background = false } = {}) {
   });
 }
 
-// A folder shown in Explorer (Windows) or Finder (macOS), for the "open the results" buttons. Explorer exits with 1 even
-// when it opened the folder, so only a missing program is an error.
-export function openFolder(folder) {
-  const proc = spawn(onWindows ? "explorer.exe" : "open", [folder], { detached: true, stdio: "ignore", windowsHide: false });
-  proc.on("error", () => {});
-  proc.unref();
-}
-
 // A window of its own on macOS: Chrome for Testing (hub/browser.mjs) in app mode (no tabs or address bar); before
 // it is downloaded, the user's Chrome, else the default browser. On Windows the app window (hub/launch.ps1) shows the
 // pages, so nothing opens here.

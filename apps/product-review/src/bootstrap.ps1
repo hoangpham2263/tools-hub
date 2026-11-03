@@ -1,7 +1,7 @@
 ﻿# Ordered module manifest shared by the entry point and parallel workers.
 $script:WorkflowModuleFiles = @(
     '../../../hub/ai/ai.ps1'
-    'image/product-rules.ps1'
+    '../../../hub/image/product-rules.ps1'
     'application/workspace.ps1'
     '../../../hub/setup/ai-settings.ps1'
     'infrastructure/file-system.ps1'

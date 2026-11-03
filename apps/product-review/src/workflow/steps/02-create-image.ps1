@@ -3,7 +3,7 @@
 # only for a lost connection, a timeout or a busy service. Visual review belongs to the user.
 #
 # Every prompt has the same layout: TASK, then numbered STEPS (base photo, product, placement, keep, output).
-# Product fidelity lives once in Get-ReviewProductRules (src/image/product-rules.ps1); this file only says where things go.
+# Product fidelity lives once in Get-HubImageProductRules (hub/image/product-rules.ps1); this file only says where things go.
 
 # Image 1 is the review photo the user attached, image 2 the product.
 function New-ProductImageRequest([string]$Reference, [string]$ItemId, $Context, [string]$ReviewPhoto) {
@@ -14,7 +14,7 @@ function New-ProductImageRequest([string]$Reference, [string]$ItemId, $Context, 
     # One rule for every AI: Google Flow refuses a prompt asking to remove watermarks or to swap a real brand for a
     # made-up one ("may violate our policies"), so the product is shown unbranded.
     $brandInstruction = "Show the product without any brand name or logo, and add no labels, watermarks or text to the image. Keep the product's own artwork, print, pattern and colors."
-    $coreRules = Get-ReviewProductRules $productIndex
+    $coreRules = Get-HubImageProductRules $productIndex 'review'
     $textNote = "Automatic text note on image $productIndex (it may be wrong; wherever it differs from image $productIndex, follow image $productIndex): $($context.details)"
     $promptText = @"
 TASK: EDIT THE EXISTING REVIEW PHOTOGRAPH in image 1 to create exactly ONE complete photorealistic lifestyle photograph.

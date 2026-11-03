@@ -1,6 +1,6 @@
 // Puts a watermark PNG on a copy of a PNG image. Plain Node (node:zlib only), so it works the same on Windows and macOS
 // with nothing else installed: no System.Drawing, no sips, no Chrome. The original file is never written.
-//   node watermark.mjs --image in.png --mark watermark.png --out out.png --box x,y,w,h
+//   node hub/image/watermark.mjs --image in.png --mark watermark.png --out out.png --box x,y,w,h
 //        [--position top-right|top-left|bottom-right|bottom-left|bottom-center] [--size 0.16] [--margin 0.03]
 // --size is the visible watermark's width as a fraction of the image width, --margin its distance from the edge, also
 // as a fraction of the width; --box is where the visible part sits inside the mark PNG (x,y,width,height in its pixels;

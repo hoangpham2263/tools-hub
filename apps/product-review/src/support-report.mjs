@@ -2,7 +2,7 @@
 import { spawn } from 'node:child_process';
 import { existsSync, createWriteStream } from 'node:fs';
 import { readFile, writeFile, mkdir, readdir, stat } from 'node:fs/promises';
-import { basename, dirname, delimiter, join, resolve } from 'node:path';
+import { dirname, delimiter, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { randomUUID } from 'node:crypto';
 import * as tls from 'node:tls';
@@ -14,7 +14,7 @@ const emit = (kind, text) => process.stdout.write(`${kind}|${clean(text)}\n`);
 // one not yet moved there, keeps them in its own workspace.
 const sharedConfig = (name, project = root) => {
   const hub = resolve(project, '..', '..'), shared = join(hub, 'workspace', 'config', name);
-  return existsSync(join(hub, 'hub', 'update.ps1')) && existsSync(shared) ? shared : join(workspaceOf(project), name);
+  return existsSync(join(hub, 'hub', 'update.ps1')) && existsSync(shared) ? shared : join(project, 'workspace', name);
 };
 const json = async (file) => JSON.parse((await readFile(file, 'utf8')).replace(/^\uFEFF/, ''));
 
@@ -71,15 +71,8 @@ async function generate(prompt, output, trace, timeoutMs = 120000) {
   });
 }
 
-// The tool's folder of the common workspace (<hub>/workspace/product-review) inside an install, else its own workspace/.
-export function workspaceOf(project) {
-  const hub = resolve(project, '..', '..');
-  const inInstall = basename(project) === 'product-review' && basename(dirname(project)) === 'apps' && existsSync(join(hub, 'hub', 'update.ps1'));
-  return inInstall ? join(hub, 'workspace', 'product-review') : join(project, 'workspace');
-}
-
 export async function main({ generateOnly = false, projectRoot = root, generateReport = generate, request = fetch } = {}) {
-  const workspace = workspaceOf(projectRoot);
+  const workspace = join(projectRoot, 'workspace');
   const temp = join(workspace, 'temp');
   await mkdir(temp, { recursive: true });
   const id = `${new Date().toISOString().replace(/[:.]/g, '-')}_${process.platform}_${randomUUID().slice(0, 8)}`;

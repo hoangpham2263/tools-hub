@@ -4,34 +4,20 @@
 import { createServer } from "node:http";
 import { spawn, execFile } from "node:child_process";
 import { createInterface } from "node:readline";
-import { mkdir, writeFile, appendFile, readFile, readdir, rm, stat } from "node:fs/promises";
-import { createReadStream, existsSync, mkdirSync, openSync, readFileSync, readdirSync, rmdirSync, statSync, renameSync, appendFileSync } from "node:fs";
+import { mkdir, writeFile, appendFile, readFile } from "node:fs/promises";
+import { createReadStream, existsSync, mkdirSync, openSync, readFileSync, statSync, renameSync, appendFileSync } from "node:fs";
 import { join, dirname, extname, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 import { randomUUID, createHash } from "node:crypto";
 import { createConfigApi } from "../../../hub/setup/config-api.mjs";
-import { PWSH, toolEnv, psFile, psCommand, killTree, appWindow, openFolder } from "../../../hub/platform.mjs";
+import { PWSH, toolEnv, psFile, psCommand, killTree, appWindow, onWindows } from "../../../hub/platform.mjs";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const root = resolve(here, "..");
 const hubRoot = resolve(root, "..", "..");
-const toolPort = (() => { try { return Number(JSON.parse(readFileSync(join(root, "tool.json"), "utf8").replace(/^\uFEFF/, "")).port) || 0; } catch { return 0; } })();
-const BASE_PORT = Number(process.env.GV_PORT || toolPort || 47000 + (parseInt(createHash("sha1").update(root).digest("hex").slice(0, 6), 16) % 1000));
+const BASE_PORT = Number(process.env.GV_PORT || 47000 + (parseInt(createHash("sha1").update(root).digest("hex").slice(0, 6), 16) % 1000));
 let PORT = BASE_PORT;
-// One workspace folder for every tool: <hub>/workspace/grok-video-prompt/ (Git ignores that single folder). A tool outside an install (a copy in
-// a temp folder) keeps its own workspace/. What an older install kept in apps/grok-video-prompt/workspace/ moves here, entry by entry.
-const installed = existsSync(join(hubRoot, "hub", "update.ps1"));
-const oldWorkspace = join(root, "workspace");
-const workspace = installed ? join(hubRoot, "workspace", "grok-video-prompt") : oldWorkspace;
-if (installed && existsSync(oldWorkspace)) {
-  mkdirSync(workspace, { recursive: true });
-  for (const name of readdirSync(oldWorkspace)) {
-    const target = join(workspace, name);
-    if (existsSync(target)) continue;
-    try { renameSync(join(oldWorkspace, name), target); } catch (e) { console.error(`Not moved to the common workspace: ${name} (${e.code})`); }
-  }
-  try { rmdirSync(oldWorkspace); } catch {}
-}
+const workspace = join(root, "workspace");
 const logs = join(workspace, "logs");
 const uploads = join(workspace, "temp", "uploads");
 const configApi = createConfigApi({ hubRoot, pwsh: PWSH, env: toolEnv });
@@ -48,14 +34,14 @@ const logError = (where, text) => {
 process.on("uncaughtException", (e) => { logError("Máy chủ Grok Video", e.stack || e); process.exit(1); });
 process.on("unhandledRejection", (e) => logError("Máy chủ Grok Video", e?.stack || e));
 
-const TYPES = { ".html": "text/html; charset=utf-8", ".css": "text/css", ".js": "text/javascript", ".json": "application/json", ".svg": "image/svg+xml", ".png": "image/png", ".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".webp": "image/webp", ".mp4": "video/mp4", ".woff2": "font/woff2" };
+const TYPES = { ".html": "text/html; charset=utf-8", ".css": "text/css", ".js": "text/javascript", ".json": "application/json", ".svg": "image/svg+xml", ".png": "image/png", ".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".webp": "image/webp", ".mp4": "video/mp4" };
 const IMAGE_EXT = [".png", ".jpg", ".jpeg", ".webp"];
 const SERVED_EXT = [...IMAGE_EXT, ".mp4"];
-const HUB_ASSETS = ["icon.svg", "hub.js"];
+const HUB_ASSETS = ["icon.svg", "tool.css", "hub.js"];
 
 const readJson = async (file) => JSON.parse((await readFile(file, "utf8")).replace(/^﻿/, ""));
 async function pageData() {
-  const library = await readJson(join(root, "data", "angles.json"));
+  const library = await readJson(join(hubRoot, "hub", "image", "angles.json"));
   const settings = await readJson(join(root, "data", "video.json"));
   return {
     settings,
@@ -108,34 +94,8 @@ async function startRun(job) {
 }
 const stopRun = () => { if (run.proc) { run.stopped = true; killTree(run.proc); } };
 
-// ----- Results of the runs on this machine: <workspace>/output/<stamp>-<name>/ -----
-const output = join(workspace, "output");
-const RUN_ID = /^\d{4}-\d{2}-\d{2}_\d{2}h\d{2}m\d{2}s-[\w-]*$/;
-const dirBytes = async (dir) => {
-  let total = 0;
-  for (const entry of await readdir(dir, { withFileTypes: true }).catch(() => [])) {
-    const full = join(dir, entry.name);
-    total += entry.isDirectory() ? await dirBytes(full) : (await stat(full).catch(() => ({ size: 0 }))).size;
-  }
-  return total;
-};
-async function listRuns() {
-  const runs = [];
-  for (const id of (await readdir(output).catch(() => [])).filter((n) => RUN_ID.test(n)).sort().reverse()) {
-    const dir = join(output, id);
-    const files = await readdir(dir).catch(() => []);
-    const video = files.find((f) => /^video-.*\.mp4$/.test(f)) || "";
-    runs.push({ id, name: id.replace(/^\d{4}-\d{2}-\d{2}_\d{2}h\d{2}m\d{2}s-?/, "") || id, folder: dir, bytes: await dirBytes(dir), video: video ? join(dir, video) : "", clips: files.filter((f) => /^clip-\d+\.mp4$/.test(f)).length, frames: files.filter((f) => /^khung-.*\.png$/.test(f)).length, running: !!(run.proc && run.folder && resolve(run.folder) === resolve(dir)) });
-  }
-  return { folder: output, bytes: runs.reduce((n, r) => n + r.bytes, 0), runs };
-}
-
 // ----- HTTP -----
-// The Tools Hub site (https://hoangpham.is-a.dev/tools-hub/) asks every tool's fixed port whether the app runs, to open it:
-// only this answer, only for that origin (the browser's own "loopback" permission still applies).
-const SITE_ORIGIN = "https://hoangpham.is-a.dev";
-const rootHeaders = (req) => (req.headers.origin === SITE_ORIGIN ? { "access-control-allow-origin": SITE_ORIGIN, "vary": "Origin" } : {});
-const send = (res, status, data, headers = {}) => { res.writeHead(status, { "content-type": "application/json; charset=utf-8", "cache-control": "no-store", ...headers }); res.end(JSON.stringify(data)); };
+const send = (res, status, data) => { res.writeHead(status, { "content-type": "application/json; charset=utf-8", "cache-control": "no-store" }); res.end(JSON.stringify(data)); };
 const body = async (req, limit = 60 * 1024 * 1024) => {
   const chunks = []; let size = 0;
   for await (const c of req) { size += c.length; if (size > limit) throw new Error("Tệp quá lớn."); chunks.push(c); }
@@ -172,7 +132,7 @@ function restart() {
 async function handle(req, res) {
   const url = new URL(req.url, "http://localhost");
   const path = url.pathname;
-  if (path === "/api/root") return send(res, 200, { root, service: "grok-video", protocol: 1, version: version(), pid: process.pid }, rootHeaders(req));
+  if (path === "/api/root") return send(res, 200, { root, service: "grok-video", protocol: 1, version: version(), pid: process.pid });
   if (path === "/api/data") return send(res, 200, await pageData());
   if (path === "/api/client-error" && req.method === "POST") {
     const { message = "", stack = "" } = JSON.parse((await body(req)).toString("utf8") || "{}");
@@ -201,28 +161,8 @@ async function handle(req, res) {
   if (path === "/api/open-folder" && req.method === "POST") {
     const folder = run.folder && resolve(run.folder);
     if (!folder || !folder.startsWith(workspace + sep) || !existsSync(folder)) return send(res, 404, { error: "Chưa có thư mục kết quả." });
-    openFolder(folder);
+    spawn(onWindows ? "explorer.exe" : "open", [folder], { detached: true, stdio: "ignore" }).unref();
     return send(res, 200, { ok: true });
-  }
-  if (path === "/api/runs" && req.method === "GET") return send(res, 200, await listRuns());
-  // Explorer or Finder on the output folder or one run of it, nothing else.
-  if (path === "/api/open" && req.method === "POST") {
-    const { path: target = "" } = JSON.parse((await body(req)).toString("utf8") || "{}");
-    const full = resolve(String(target) || output);
-    if (full !== resolve(output) && !full.startsWith(resolve(output) + sep)) return send(res, 400, { error: "Chỉ mở được thư mục kết quả." });
-    await mkdir(full, { recursive: true });
-    openFolder(full);
-    return send(res, 200, { ok: true });
-  }
-  if (path === "/api/runs/delete" && req.method === "POST") {
-    const { ids = [] } = JSON.parse((await body(req)).toString("utf8") || "{}");
-    const removed = [], kept = [];
-    for (const id of [].concat(ids)) {
-      const dir = join(output, String(id));
-      if (!RUN_ID.test(String(id)) || !existsSync(dir) || (run.proc && run.folder && resolve(run.folder) === resolve(dir))) { kept.push(id); continue; }
-      try { await rm(dir, { recursive: true, force: true }); removed.push(id); } catch { kept.push(id); }
-    }
-    return send(res, 200, { removed, kept });
   }
   if (path === "/file") {
     const file = url.searchParams.get("path") || "";
@@ -250,12 +190,6 @@ async function handle(req, res) {
   }
   if (path === "/api/quit" && req.method === "POST") { send(res, 200, { ok: true }); stopRun(); setTimeout(() => process.exit(0), 200); return; }
   if (path === "/icon.svg") return sendFile(req, res, join(root, "icon.svg"));
-  const uiAsset = /^\/hub\/assets\/ui\/([\w./-]+\.(?:css|js|woff2))$/.exec(path);
-  if (uiAsset) {
-    const base = resolve(hubRoot, "hub", "assets", "ui");
-    const file = resolve(base, uiAsset[1]);
-    return file.startsWith(base + sep) ? sendFile(req, res, file) : (res.writeHead(404), res.end());
-  }
   const hubAsset = /^\/hub\/assets\/([\w.-]+)$/.exec(path);
   if (hubAsset) return HUB_ASSETS.includes(hubAsset[1]) ? sendFile(req, res, join(hubRoot, "hub", "assets", hubAsset[1])) : (res.writeHead(404), res.end());
   const rel = path === "/" ? "index.html" : path.slice(1);

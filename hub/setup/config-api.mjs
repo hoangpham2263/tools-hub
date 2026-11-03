@@ -1,6 +1,6 @@
 // Cấu hình, shared by the Tools Hub menu (hub/picker.mjs) and Product Review's server: the same steps and
 // settings as hub/setup/*.ps1, kept once per install in <hub>/workspace/config.
-//   GET /setup[?back=<path>]        the Cấu hình page (page.html, page.js; the UI kit from hub/assets/ui)
+//   GET /setup[?back=<path>]        the Cấu hình page (page.html, page.js; tool.css from hub/assets)
 //   POST /api/setup                 the steps (setup-check.ps1 -AsJson)
 //   POST /api/setup-step {step}     install: Codex and the bridge (hub/bridge); login: codex login with a
 //                                   one-time code, typed on the sign-in page opened in the user's Chrome;
@@ -16,7 +16,7 @@
 //                                   Google's default, the first one signed in)
 import { execFile, spawn } from "node:child_process";
 import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
-import { dirname, extname, join, resolve, sep } from "node:path";
+import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { homedir } from "node:os";
 import { findTool as findIn, runTool, psCommand, psFile, onWindows, killTree, openTerminal, openChrome } from "../platform.mjs";
@@ -83,20 +83,8 @@ export function createConfigApi({ hubRoot, pwsh, env = process.env }) {
   };
 
   // The page and its two files, the same from the menu and from every tool's server.
-  const PAGE = { "/setup": [join(here, "page.html"), "text/html"], "/setup/page.js": [join(here, "page.js"), "text/javascript"] };
-  // The UI kit the page is built on (hub/assets/ui): its stylesheets, script and fonts, only from that folder.
-  const KIT = /^\/setup\/ui\/([\w./-]+\.(?:css|js|woff2))$/;
-  const KIT_TYPES = { ".css": "text/css", ".js": "text/javascript", ".woff2": "font/woff2" };
+  const PAGE = { "/setup": [join(here, "page.html"), "text/html"], "/setup/page.js": [join(here, "page.js"), "text/javascript"], "/setup/tool.css": [join(here, "..", "assets", "tool.css"), "text/css"] };
   return async function handle(req, res, path) {
-    const kit = KIT.exec(path);
-    if (kit && req.method === "GET") {
-      const base = join(here, "..", "assets", "ui");
-      const file = join(base, kit[1]);
-      if (!resolve(file).startsWith(resolve(base) + sep) || !existsSync(file)) { res.writeHead(404); res.end(); return true; }
-      res.writeHead(200, { "content-type": KIT_TYPES[extname(file)] || "application/octet-stream", "cache-control": "no-store" });
-      res.end(readFileSync(file));
-      return true;
-    }
     if (PAGE[path] && req.method === "GET") {
       res.writeHead(200, { "content-type": `${PAGE[path][1]}; charset=utf-8`, "cache-control": "no-store" });
       res.end(readFileSync(PAGE[path][0]));

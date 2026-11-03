@@ -1,7 +1,5 @@
-﻿# Test fixtures live in the tool's folder of the common workspace, tests/ (Git ignores the workspace). New-TestPng is Product Review's helper: a real PNG without an imaging library.
-$toolRoot = Split-Path $PSScriptRoot -Parent
-$hubRoot = Split-Path (Split-Path $toolRoot -Parent) -Parent
-$TestWorkspaceRoot = if (Test-Path -LiteralPath (Join-Path $hubRoot 'hub/update.ps1')) { Join-Path $hubRoot 'workspace/fb-content/tests' } else { Join-Path $toolRoot 'workspace/tests' }
+﻿# Test fixtures live in the tool's own workspace/tests (Git ignores it). New-TestPng is Product Review's helper: a real PNG without an imaging library.
+$TestWorkspaceRoot = Join-Path (Split-Path $PSScriptRoot -Parent) 'workspace/tests'
 New-Item -ItemType Directory -Force -Path $TestWorkspaceRoot | Out-Null
 
 # Write a real solid-colour PNG without an imaging library, so suites run on Windows and macOS.

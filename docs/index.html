@@ -259,10 +259,17 @@
   .page-title { font-size: 22px; }
   .hero { grid-template-columns: 300px minmax(0, 1fr); gap: 0; padding: 0; }
   .get { display: grid; justify-items: center; align-content: center; gap: 12px; padding: 32px 24px; text-align: center; }
+  .guide { display: grid; align-content: start; gap: 14px; padding: 28px; border-left: 1px solid var(--border); min-width: 0; }
   @media (max-width: 640px) { .hero { grid-template-columns: 1fr; } .guide { border-left: 0; border-top: 1px solid var(--border); } }
   .hero p { margin: 0; }
   a.btn.primary { padding: 0 16px; gap: 8px; color: #fff; }
+  .steps { margin: 0; padding-left: 20px; font-size: 14px; display: grid; gap: 6px; }
   .blocks-title { grid-column: 1 / -1; margin: 0; font-size: 16px; }
+  .steps ul { margin: 4px 0 0; padding-left: 18px; display: grid; gap: 2px; }
+  .os-tabs { display: flex; gap: 2px; padding: 3px; border-radius: 9px; background: var(--soft); }
+  .os-tabs button { height: 28px; padding: 0 12px; border: 0; background: none; color: var(--muted); font-size: 13px; }
+  .os-tabs button:hover { background: none; color: var(--fg); }
+  .os-tabs button.on { background: var(--bg); color: var(--fg); box-shadow: 0 1px 2px rgba(15, 23, 42, .08); }
   @media (max-width: 640px) {
     input, select { font-size: 16px !important; }
     .filters, .filters input, .filters select { width: 100%; }
@@ -282,10 +289,6 @@
     .top .labeled { font-size: 0; gap: 0; padding: 0 10px; }
   }
 </style>
-<script>try { if (matchMedia("(prefers-color-scheme: dark)").matches) document.documentElement.classList.add("dark"); } catch {}</script>
-<link rel="stylesheet" href="ui/fonts/fonts.css" />
-<link rel="stylesheet" href="ui/tokens.css?v=3" />
-<link rel="stylesheet" href="ui/site-kit.css?v=3" />
 </head>
 <body>
 <main class="wrap">
@@ -298,7 +301,7 @@
       <h1>Tools Hub</h1>
     </a>
     <div class="top-text"></div>
-    <a id="dlIcon" class="btn labeled primary" href="https://github.com/hoangpham2263/tools-hub/releases/latest/download/tools-hub.zip" title="Tải app" aria-label="Tải app">
+    <a id="dlIcon" class="btn labeled" hidden href="https://github.com/hoangpham2263/tools-hub/releases/latest/download/tools-hub.zip" title="Tải app" aria-label="Tải app">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M5 21h14"/></svg>Tải app
     </a>
     <button id="lockBtn" class="labeled" type="button" title="Đăng nhập quản lý" aria-label="Đăng nhập quản lý">
@@ -314,17 +317,18 @@
   <div class="side-shade" id="sideShade"></div>
   <nav class="side" id="side" aria-label="Menu">
     <div class="side-head"><span>Menu</span><button class="icon" type="button" id="menuClose" aria-label="Đóng menu">✕</button></div>
-        
+    <span class="side-label">Bắt đầu</span>
+    <button type="button" data-go=""><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m3 10 9-7 9 7v10a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/></svg>Trang chủ</button>
     <span class="side-label">Công cụ</span>
     <div class="side-group" data-group="product-review">
       <button class="side-toggle" type="button" aria-expanded="false"><img src="tools/product-review.svg" alt="" width="18" height="18" /><span>Product Review</span><svg class="chev-ic" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg></button>
       <div class="side-sub">
-        <button class="sub" type="button" data-go="product-review">Dùng tool</button>
+        <button class="sub" type="button" data-go="product-review">Giới thiệu</button>
         <button class="sub" type="button" data-go="nhap">Nhập hàng loạt</button>
       </div>
     </div>
-    <button type="button" data-go="grok-video-prompt" data-port="47102"><img src="tools/grok-video-prompt.svg" alt="" width="18" height="18" />Grok Video</button>
-    <button type="button" data-go="fb-content" data-port="47103"><img src="tools/fb-content.svg" alt="" width="18" height="18" />Content MXH</button>
+    <button type="button" data-go="grok-video-prompt"><img src="tools/grok-video-prompt.svg" alt="" width="18" height="18" />Grok Video</button>
+    <button type="button" data-go="fb-content"><img src="tools/fb-content.svg" alt="" width="18" height="18" />Content MXH</button>
     <span class="side-label admin-only">Quản lý</span>
     <button class="admin-only" type="button" data-go="anh"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.1-3.1a2 2 0 0 0-2.8 0L6 21"/></svg>Ảnh đã tạo</button>
     <button class="admin-only" type="button" data-go="nguon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.7-.9l-.8-1.2A2 2 0 0 0 7.9 3H4a2 2 0 0 0-2 2v13c0 1.1.9 2 2 2Z"/></svg>Nguồn ảnh</button>
@@ -332,31 +336,105 @@
     <button class="admin-only" type="button" data-go="api"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m16 18 6-6-6-6"/><path d="m8 6-6 6 6 6"/></svg>API</button>
   </nav>
   <div class="content">
-  <section id="download" class="home" hidden></section>
+  <section id="download" class="home">
+    <div class="intro">
+      <h2 class="page-title">Tools Hub</h2>
+      <p class="muted">Bộ công cụ cho shop: tạo ảnh review, viết prompt video và soạn bài đăng. Cài một lần, mở từ một menu, cập nhật chung một nút.</p>
+    </div>
+    <div class="card hero">
+    <div class="get">
+      <a class="btn primary" href="https://github.com/hoangpham2263/tools-hub/releases/latest/download/tools-hub.zip">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M5 21h14"/></svg>
+        Tải về
+      </a>
+      <span id="version" class="muted small"></span>
+      <a class="small" href="https://github.com/hoangpham2263/tools-hub/releases" target="_blank" rel="noopener">Các phiên bản trước</a>
+    </div>
+    <div class="guide">
+      <div class="sec-head">
+        <h2>Hướng dẫn</h2>
+        <div class="os-tabs" role="tablist">
+          <button type="button" data-os="win" class="on">Windows</button>
+          <button type="button" data-os="mac">Mac</button>
+        </div>
+      </div>
+      <ol class="steps" data-guide="win">
+        <li>Bấm <b>Tải về</b>, giải nén file zip.</li>
+        <li>Bấm đúp <b>start-app.cmd</b>.</li>
+        <li>Nếu Windows báo <i>Windows protected your PC</i>: bấm <b>More info</b> → <b>Run anyway</b>.</li>
+        <li>Menu <b>Tools Hub</b> hiện ra: bấm công cụ cần dùng, bấm <b>← Menu</b> để quay lại.</li>
+        <li>Lần đầu: bấm <b>Cấu hình</b> ở góc trên bên phải, bước nào thiếu thì bấm <b>Cài</b> hoặc <b>Đăng nhập</b>. Cấu hình dùng chung cho mọi công cụ.</li>
+        <li>Có bản mới thì bấm <b>Cập nhật</b> ở góc trên bên phải; một lần cập nhật cho mọi công cụ.</li>
+      </ol>
+      <ol class="steps" data-guide="mac" hidden>
+        <li>Bấm <b>Tải về</b>, giải nén file zip.</li>
+        <li>Bấm đúp <b>start-app.command</b>.</li>
+        <li>Nếu macOS báo <i>Not Opened</i>: bấm <b>Done</b>, vào <b>System Settings → Privacy &amp; Security</b>, kéo xuống bấm <b>Open Anyway</b>, rồi bấm đúp lại.</li>
+        <li>Lần đầu, nếu được hỏi cài Homebrew hay PowerShell: gõ <b>y</b> và mật khẩu máy.</li>
+        <li>Menu <b>Tools Hub</b> hiện ra: bấm công cụ cần dùng, bấm <b>← Menu</b> để quay lại.</li>
+        <li>Lần đầu: bấm <b>Cấu hình</b> ở góc trên bên phải, bước nào thiếu thì bấm <b>Cài</b> hoặc <b>Đăng nhập</b>. Cấu hình dùng chung cho mọi công cụ.</li>
+        <li>Có bản mới thì bấm <b>Cập nhật</b> ở góc trên bên phải; một lần cập nhật cho mọi công cụ.</li>
+      </ol>
+    </div>
+    </div>
+  </section>
 
-  <!-- A tool is the tool itself: its app on this computer, shown in a frame (fixed port, tool.json "port"). -->
+
+  <!-- One page per tool, from the left menu: what it is for, how to use it, what it needs. -->
   <section id="tool-product-review" class="tool-page" data-tool="product-review" hidden>
-    <iframe class="tool-frame" title="Product Review" allow="local-network-access; loopback-network; clipboard-read; clipboard-write" hidden></iframe>
-    <div class="tool-off card" hidden>
-      <h2>Product Review</h2>
-      <p class="muted">Chưa thấy app Tools Hub chạy trên máy này. Tải và mở app (start-app), nếu Chrome hỏi quyền truy cập thiết bị trong mạng nội bộ thì chọn Cho phép, rồi bấm Thử lại.</p>
-      <div class="row-actions"><a class="btn primary" href="https://github.com/hoangpham2263/tools-hub/releases/latest/download/tools-hub.zip">Tải app</a><button class="btn tool-retry" type="button">Thử lại</button></div>
+    <div class="tool-head"><img src="tools/product-review.svg" alt="" width="48" height="48" /><div><h2 class="page-title">Product Review</h2><p class="muted">Tạo ảnh review sản phẩm bằng AI, viết review mẫu và xuất CSV để nhập vào Loox.</p><div class="pchips"><span class="pchip"><i style="background:#5E8E3E"></i>Shopify (Loox)</span></div></div></div>
+    <button class="sub-link" type="button" data-go="nhap"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3h18v18H3z"/><path d="M3 9h18M3 15h18M9 3v18"/></svg><span><b>Nhập hàng loạt</b><span class="muted small">Thêm nhiều sản phẩm và ảnh một lần bằng thư mục <code>products.csv</code> + <code>images/</code>: cách làm, chuẩn file, ví dụ.</span></span><span class="chev">›</span></button>
+    <div class="tool-grid">
+      <div class="card"><h3>Làm được gì</h3><ul>
+        <li>Nhiều sản phẩm một lần: mỗi link có một hoặc nhiều ảnh sản phẩm, mỗi ảnh có các ảnh review đi kèm.</li>
+        <li>AI ghép sản phẩm vào bối cảnh của ảnh review và viết nội dung review.</li>
+        <li><b>Nhập hàng loạt</b> từ bảng CSV hoặc thư mục nén (ZIP / RAR / 7Z).</li>
+        <li>Duyệt từng ảnh (Giữ / Bỏ) rồi xuất file CSV cho Loox; ảnh tự tải lên Google Drive.</li>
+        <li>Theo dõi token đã dùng và hạn mức ChatGPT ngay khi chạy.</li></ul></div>
+      <div class="card"><h3>Cách dùng</h3><ol>
+        <li>Bấm <b>+ Thêm sản phẩm</b>: dán link, thêm ảnh sản phẩm và ảnh review. Hoặc <b>Nhập hàng loạt</b>.</li>
+        <li>Bấm <b>Bắt đầu</b>, chọn số luồng nếu muốn chạy nhanh hơn.</li>
+        <li>Xong thì bấm <b>Duyệt &amp; xuất file</b>, giữ ảnh đẹp, bỏ ảnh lỗi, rồi xuất CSV.</li>
+        <li>Lỗi khó hiểu thì bấm <b>Gửi lỗi</b>: AI đọc log và gửi báo cáo.</li></ol></div>
+      <div class="card"><h3>Cần có</h3><ul>
+        <li><b>Cấu hình</b> đủ các bước: mật khẩu app, Node.js, Codex, đăng nhập ChatGPT.</li>
+        <li>Thêm nhiều sản phẩm một lần: xem <a href="#nhap">Nhập hàng loạt</a>.</li></ul></div>
     </div>
   </section>
   <section id="tool-grok-video-prompt" class="tool-page" data-tool="grok-video-prompt" hidden>
-    <iframe class="tool-frame" title="Grok Video" allow="local-network-access; loopback-network; clipboard-read; clipboard-write" hidden></iframe>
-    <div class="tool-off card" hidden>
-      <h2>Grok Video</h2>
-      <p class="muted">Chưa thấy app Tools Hub chạy trên máy này. Tải và mở app (start-app), nếu Chrome hỏi quyền truy cập thiết bị trong mạng nội bộ thì chọn Cho phép, rồi bấm Thử lại.</p>
-      <div class="row-actions"><a class="btn primary" href="https://github.com/hoangpham2263/tools-hub/releases/latest/download/tools-hub.zip">Tải app</a><button class="btn tool-retry" type="button">Thử lại</button></div>
+    <div class="tool-head"><img src="tools/grok-video-prompt.svg" alt="" width="48" height="48" /><div><h2 class="page-title">Grok Video</h2><p class="muted">Từ một ảnh sản phẩm, Grok tạo video khoảng 1 phút đi quanh sản phẩm, các cảnh nối liền.</p><div class="pchips"><span class="pchip"><i style="background:#111"></i>Grok</span></div></div></div>
+    <div class="tool-grid">
+      <div class="card"><h3>Làm được gì</h3><ul>
+        <li>Video <b>khoảng 1 phút</b> (6 cảnh × 10 giây) từ <b>một ảnh</b> sản phẩm, máy quay đi liền một mạch quanh sản phẩm rồi vào chi tiết.</li>
+        <li>Chọn và sắp xếp góc máy từ thư viện góc dùng chung với Content MXH.</li>
+        <li>Mở đầu bằng <b>người mẫu</b> giới thiệu sản phẩm (tuỳ chọn).</li>
+        <li>Khổ <b>9:16</b>, <b>16:9</b> hoặc <b>1:1</b>; mỗi cảnh 6, 10 hoặc 15 giây.</li></ul></div>
+      <div class="card"><h3>Cách dùng</h3><ol>
+        <li>Thả <b>ảnh sản phẩm</b> vào, thêm ảnh người mẫu nếu muốn, điền <b>Tên sản phẩm</b>.</li>
+        <li>Giữ bộ 1 phút hoặc thêm, bớt, sắp lại các cảnh.</li>
+        <li>Bấm <b>Tạo video</b>, chờ khoảng 10–12 phút rồi bấm <b>Mở thư mục</b>.</li></ol></div>
+      <div class="card"><h3>Cần có</h3><ul>
+        <li>Chrome đã đăng nhập <b>grok.com</b> và đã cài extension Tools Hub.</li>
+        <li>ffmpeg tự tải về lần chạy đầu (khoảng 30 MB).</li>
+        <li>Video không có tiếng; thêm nhạc sau trong CapCut.</li></ul></div>
     </div>
   </section>
   <section id="tool-fb-content" class="tool-page" data-tool="fb-content" hidden>
-    <iframe class="tool-frame" title="Content MXH" allow="local-network-access; loopback-network; clipboard-read; clipboard-write" hidden></iframe>
-    <div class="tool-off card" hidden>
-      <h2>Content MXH</h2>
-      <p class="muted">Chưa thấy app Tools Hub chạy trên máy này. Tải và mở app (start-app), nếu Chrome hỏi quyền truy cập thiết bị trong mạng nội bộ thì chọn Cho phép, rồi bấm Thử lại.</p>
-      <div class="row-actions"><a class="btn primary" href="https://github.com/hoangpham2263/tools-hub/releases/latest/download/tools-hub.zip">Tải app</a><button class="btn tool-retry" type="button">Thử lại</button></div>
+    <div class="tool-head"><img src="tools/fb-content.svg" alt="" width="48" height="48" /><div><h2 class="page-title">Content MXH</h2><p class="muted">Từ thông tin và ảnh gốc của sản phẩm: tạo ảnh bối cảnh và soạn bài đăng riêng cho từng mạng xã hội.</p><div class="pchips"><span class="pchip"><i style="background:#1877F2"></i>Facebook</span><span class="pchip"><i style="background:#E1306C"></i>Instagram</span><span class="pchip"><i style="background:#111"></i>Threads</span><span class="pchip"><i style="background:#111"></i>TikTok</span></div></div></div>
+    <div class="tool-grid">
+      <div class="card"><h3>Làm được gì</h3><ul>
+        <li>Nhiều sản phẩm một lần, mỗi sản phẩm nhiều ảnh gốc.</li>
+        <li>Mỗi ảnh gốc tạo ra nhiều ảnh <b>bối cảnh</b> (chọn số lượng).</li>
+        <li>Chọn nền tảng ở <b>Đăng lên</b>: mỗi nền tảng một bài riêng, đúng giới hạn ký tự, cách để link và số hashtag của nó.</li>
+        <li>Bài đăng theo <b>giọng văn</b> chọn sẵn; thêm <b>lời nhắn cho AI</b> để viết theo ý.</li>
+        <li>Copy bài viết ngay trên app.</li></ul></div>
+      <div class="card"><h3>Cách dùng</h3><ol>
+        <li>Bấm <b>+ Thêm sản phẩm</b>: điền tên, điểm nổi bật, hashtag, thêm ảnh gốc.</li>
+        <li>Chọn nền tảng ở <b>Đăng lên</b>, giọng văn, ghi lời nhắn nếu cần.</li>
+        <li>Bấm <b>Bắt đầu</b>, xem ảnh tạo thành; mở tab từng nền tảng và copy bài đăng.</li></ol></div>
+      <div class="card"><h3>Trạng thái</h3><ul>
+        <li>Giao diện đã có; phần tạo ảnh và viết bài đang làm.</li>
+        <li>Sẽ dùng chung <b>Cấu hình</b> với Product Review.</li></ul></div>
     </div>
   </section>
   <section id="home" class="blocks" hidden>
@@ -434,6 +512,7 @@
       <div class="crumbs"><button id="srcBack" class="back" type="button">← Quản lý</button><h2 id="srcTitle">Nguồn ảnh</h2></div>
       <div class="filters">
         <button id="newGroupBtn" type="button">Tạo nhóm</button>
+        <button id="srcHelpBtn" class="labeled" type="button" title="Hướng dẫn"><span aria-hidden="true">?</span>Hướng dẫn</button>
         <button id="uploadBtn" class="primary" type="button">Tải ảnh lên</button>
         <input id="uploadInput" type="file" accept="image/jpeg,image/png,image/webp" multiple hidden />
       </div>
@@ -447,7 +526,7 @@
 
   </div>
   </div>
-  <footer class="muted small">© <span id="year">2026</span> Tools Hub · <span id="version"></span></footer>
+  <footer class="muted small">© <span id="year">2026</span> Tools Hub</footer>
 </main>
 
 <!-- Mã tạm cho AI: made from the API page's "Tạo mã cho AI" button. -->
@@ -486,6 +565,26 @@
     <input id="groupInput" placeholder="Tên nhóm, ví dụ: Áo" maxlength="60" required />
     <p id="groupError" class="small danger" hidden></p>
     <div class="actions"><button class="primary" type="submit">Tạo</button></div>
+  </form>
+</dialog>
+
+<dialog id="srcHelpDlg" class="dlg">
+  <form method="dialog" class="dlg-box">
+    <div class="dlg-head"><strong>Cập nhật nguồn ảnh</strong><button class="icon" value="cancel" aria-label="Đóng">✕</button></div>
+    <span class="settings-label">Trên trang này</span>
+    <ol class="help">
+      <li>Chọn nhóm, hoặc bấm <b>Tạo nhóm</b>.</li>
+      <li>Bấm <b>Tải ảnh lên</b>, kéo thả hoặc dán (Ctrl/Cmd+V) ảnh.</li>
+      <li>Bấm vào ảnh để xem hoặc xoá.</li>
+      <li>Bật công tắc của nhóm để nhóm hiện trong app. Nhóm mới để tắt.</li>
+    </ol>
+    <span class="settings-label">Từ thư mục trên máy</span>
+    <ol class="help">
+      <li>Chép ảnh vào <code>data/source-photos/&lt;nhóm&gt;/</code> trong thư mục source (bản git).</li>
+      <li>Mở Terminal ở thư mục source và chạy lệnh dưới. Chỉ ảnh chưa có mới được đẩy lên; nhóm mới tự được tạo.</li>
+    </ol>
+    <div class="cmd"><code id="srcCmd">HUB_ADMIN_KEY='mật khẩu admin' node scripts/upload-sources.mjs</code><button id="copyCmdBtn" type="button">Copy</button></div>
+    <p class="muted small">App chỉ tải nhóm đang chọn về máy khi chạy, ảnh đã có không tải lại.</p>
   </form>
 </dialog>
 
@@ -1008,11 +1107,8 @@ function route() {
   const nextGroup = state.view === "nguon" && group ? decodeURIComponent(group) : "";
   const groupChanged = nextGroup !== state.group;
   state.group = nextGroup;
-  // Entering the site is entering a tool: the one used last, else the first.
-  if (!state.view) { const last = (() => { try { return localStorage.getItem("tools-hub:tool"); } catch { return ""; } })(); location.replace("#" + (TOOLS.includes(last) ? last : TOOLS[0])); return; }
-  $("download").hidden = true;
+  $("download").hidden = state.view !== "";
   for (const page of document.querySelectorAll(".tool-page")) page.hidden = page.dataset.tool !== state.view;
-  if (TOOLS.includes(state.view)) { try { localStorage.setItem("tools-hub:tool", state.view); } catch {} openTool(state.view); }
   for (const b of document.querySelectorAll("#side [data-go]")) b.classList.toggle("on", b.dataset.go === state.view);
   // A tool's sub-menu opens on its own pages; elsewhere it stays as the visitor left it.
   for (const g of document.querySelectorAll(".side-group")) {
@@ -1048,6 +1144,7 @@ function showAdmin() {
   document.body.classList.toggle("admin", signedIn);
   $("lockBtn").hidden = signedIn;
   $("settingsBtn").hidden = !signedIn;
+  $("dlIcon").hidden = !signedIn;
   $("settingsBtn").classList.toggle("warn", !state.connected);
   $("settingsDlg").classList.toggle("warn", !state.connected);
   $("adminText").textContent = state.connected ? `Đã kết nối${state.email ? " · " + state.email : ""}` : "Chưa kết nối";
@@ -1155,34 +1252,16 @@ document.addEventListener("paste", (e) => {
   e.preventDefault();
   upload(files);
 });
-// Dùng tool ngay trên trang này: each tool's app listens on its fixed port (tool.json "port") on this computer; the page asks
-// /api/root (answered for this site only) and shows the app in a frame. Chrome asks once for the permission to reach apps on
-// this computer (loopback).
-const TOOL_PORTS = { "product-review": 47101, "grok-video-prompt": 47102, "fb-content": 47103 };
-async function findApp(id) {
-  for (let p = TOOL_PORTS[id]; p < TOOL_PORTS[id] + 20; p++) {
-    const r = await fetch(`http://127.0.0.1:${p}/api/root`, { cache: "no-store", signal: AbortSignal.timeout(1500) }).then((x) => x.json()).catch(() => null);
-    if (r && r.service) return `http://127.0.0.1:${p}/`;
-  }
-  return "";
+// Download guide: one tab per system, opened on the visitor's own.
+function showGuide(os) {
+  for (const b of document.querySelectorAll("[data-os]")) b.classList.toggle("on", b.dataset.os === os);
+  for (const list of document.querySelectorAll("[data-guide]")) list.hidden = list.dataset.guide !== os;
 }
-async function openTool(id) {
-  const page = document.getElementById("tool-" + id), frame = page.querySelector(".tool-frame"), off = page.querySelector(".tool-off");
-  if (frame.src && !frame.hidden) return;
-  off.hidden = true;
-  const url = await findApp(id);
-  if (!url) {
-    frame.hidden = true; off.hidden = false;
-    // The app may start a moment later: look again while this tool is the one shown.
-    clearTimeout(page._retry);
-    page._retry = setTimeout(() => { if (!page.hidden && frame.hidden) openTool(id); }, 4000);
-    return;
-  }
-  if (frame.dataset.url !== url) { frame.dataset.url = url; frame.src = url; }
-  frame.hidden = false;
-}
-for (const b of document.querySelectorAll(".tool-retry")) b.onclick = () => openTool(b.closest(".tool-page").dataset.tool);
+for (const b of document.querySelectorAll("[data-os]")) b.onclick = () => showGuide(b.dataset.os);
+showGuide(/Mac/i.test(navigator.platform || navigator.userAgent) ? "mac" : "win");
+$("srcHelpBtn").onclick = () => $("srcHelpDlg").showModal();
 $("year").textContent = new Date().getFullYear();
+$("copyCmdBtn").onclick = async () => { try { await navigator.clipboard.writeText($("srcCmd").textContent); toast("Đã copy lệnh"); } catch { toast("Không copy được"); } };
 $("newGroupBtn").onclick = () => { $("groupError").hidden = true; $("groupInput").value = ""; $("groupDlg").showModal(); };
 document.querySelector("[data-close-group]").onclick = () => $("groupDlg").close();
 $("groupForm").addEventListener("submit", async (event) => {

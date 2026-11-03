@@ -16,6 +16,5 @@
     "Viết review mẫu bằng AI",
     "Xuất CSV nhập vào Loox",
     "Nhập hàng loạt từ file CSV"
-  ],
-  "port": 47101
+  ]
 }

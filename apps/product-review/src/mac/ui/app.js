@@ -262,7 +262,7 @@ function buildMain() {
   ui.btnBulk = at(button("Nhập hàng loạt"), 172, 0, 150, 34);
   ui.btnClear = at(button("Xóa tất cả"), 334, 0, 120, 34);
   ui.flow = at(el("div", "flow"), 0, 44, null, null, { right: 0, bottom: 0 });
-  Object.assign(ui.flow.style, { background: "#fff", border: "1px solid var(--border)", borderRadius: "10px", padding: "10px 10px 6px 10px" });
+  Object.assign(ui.flow.style, { background: "#fff", border: "1px solid #000", padding: "10px 10px 6px 10px" });
   editor.append(ui.btnAdd, ui.btnBulk, ui.btnClear, ui.flow);
   cardList.append(editor);
 
@@ -445,7 +445,7 @@ function showDrivePicker() {
     loadBar.append(el("span"));
     loadBar.hidden = true;
     const grid = at(el("div", "flow"), 20, 52, 720, 420);
-    Object.assign(grid.style, { background: "#fff", border: "1px solid var(--border)", borderRadius: "10px", display: "flex", flexWrap: "wrap", alignContent: "flex-start", gap: "6px", padding: "6px" });
+    Object.assign(grid.style, { background: "#fff", border: "1px solid #000", display: "flex", flexWrap: "wrap", alignContent: "flex-start", gap: "6px", padding: "6px" });
     const add = at(button("Thêm", true), 536, 490, 110, 32), cancel = at(button("Hủy"), 656, 490, 84, 32);
     add.disabled = true;
     sync.disabled = !state.drive;
@@ -585,7 +585,7 @@ async function showProductDialog(target = null) {
   view.onClose = () => { document.removeEventListener("paste", onPaste); if (!saved) api("draftDiscard", { root }).catch(() => {}); };
   const urlBox = at(el("input", "text", { value: target ? target.url : "" }), 20, 40, 720, 25);
   const rowsBox = at(el("div", "flow"), 20, 100, 720, 250);
-  Object.assign(rowsBox.style, { background: "#fff", border: "1px solid var(--border)", borderRadius: "10px" });
+  Object.assign(rowsBox.style, { background: "#fff", border: "1px solid #000" });
   const status = at(label(""), 20, 358, 500, 26);
   status.style.lineHeight = "26px";
   const save = at(button("Lưu sản phẩm"), 516, 388, 120, 30);
@@ -1110,7 +1110,7 @@ async function startBatch() {
     return appendLog("Chưa khởi động được lượt xử lý: " + (body.error || r.status));
   }
   setRunning(true);
-  setStatus("Đang chạy", "var(--primary)");
+  setStatus("Đang chạy", "var(--accent)");
   setBar(0, 1, true);
   updateRunDisplay();
   poll();

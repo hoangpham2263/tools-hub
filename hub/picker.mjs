@@ -7,7 +7,7 @@ import { createServer } from "node:http";
 import { spawn, execFile, execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import { readFileSync, readdirSync, existsSync, openSync, mkdirSync, statSync } from "node:fs";
-import { basename, dirname, join, resolve, extname, sep } from "node:path";
+import { dirname, join, resolve, extname, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 import { createConfigApi } from "./setup/config-api.mjs";
 import { PWSH, toolEnv, psCommand, killMatching, appWindow } from "./platform.mjs";
@@ -16,7 +16,7 @@ const here = dirname(fileURLToPath(import.meta.url));
 const root = resolve(here, "..");
 const portFor = (dir, base) => base + (parseInt(createHash("sha1").update(dir).digest("hex").slice(0, 6), 16) % 1000);
 // HUB_PICKER_PORT (tests, the Windows launcher hub/launch.ps1): a fixed port and no window.
-const PORT = Number(process.env.HUB_PICKER_PORT) || 46100;
+const PORT = Number(process.env.HUB_PICKER_PORT) || portFor(root, 46000);
 const tools = readdirSync(join(root, "apps"), { withFileTypes: true })
   .filter((d) => d.isDirectory() && existsSync(join(root, "apps", d.name, "tool.json")))
   .map((d) => ({ ...JSON.parse(readFileSync(join(root, "apps", d.name, "tool.json"), "utf8")), dir: join(root, "apps", d.name) }))
@@ -35,33 +35,28 @@ const card = (t) => `<span class="top"><img src="/icon/${esc(t.id)}" alt=""><spa
   + `<span class="plat">${(t.platforms || []).map((p) => `<span style="--c:${esc(p.color || "#888")}"><i></i>${esc(p.name)}</span>`).join("")}</span></span></span>`
   + `<ul>${(t.features || []).map((f) => `<li>${esc(f)}</li>`).join("")}</ul>`;
 const page = () => `<!doctype html><html lang="vi"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-<title>${esc(`Tools Hub ${version}`.trim())}</title><link rel="icon" href="/hub/icon.svg">
-<script>(() => { try { const s = localStorage.getItem("themeMode"); if (s ? s === "dark" : matchMedia("(prefers-color-scheme: dark)").matches) document.documentElement.classList.add("dark"); } catch (_) {} })();</script>
-<link rel="stylesheet" href="/setup/ui/fonts/fonts.css"><link rel="stylesheet" href="/setup/ui/vendor/basecoat/basecoat.min.css"><link rel="stylesheet" href="/setup/ui/ui.css">
+<title>${esc(`Tools Hub ${version}`.trim())}</title><link rel="icon" href="/hub/icon.svg"><link rel="stylesheet" href="/hub/tool.css">
 <style>
-/* Tools in a 3-column grid: icon, name and the platforms it works with, then what it does. */
-.wrap{max-width:1120px;margin:0 auto;padding:20px 24px 24px;display:flex;flex-direction:column;gap:16px;min-height:100vh}.wrap>main{flex:1;display:flex;flex-direction:column;gap:16px}
-.top{display:flex;align-items:center;gap:8px}.top h1{margin-right:auto;padding-left:4px}
+/* Tools in a 3-column grid: icon, name and the platforms it works with, then what it does. No bold text. */
 .tools{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}.tools form{margin:0;display:flex}
-.tools button{position:relative;display:flex;flex-direction:column;align-items:stretch;width:100%;min-height:190px;padding:16px;text-align:left;font:inherit;color:inherit;background:var(--card);border:1px solid var(--border);border-radius:var(--radius-xl,14px)}
-.tools button:hover{border-color:var(--state-border);background:var(--state-fill)}
+.tools button{position:relative;display:flex;flex-direction:column;align-items:stretch;width:100%;min-height:190px;padding:16px;text-align:left;cursor:pointer;font:inherit;color:inherit}
+.tools button:hover{border-color:var(--accent);background:#fff}
 .tools .top{display:flex;gap:12px;align-items:center}.tools img{width:48px;height:48px;flex:none}
-.tools .name{display:block;font-size:1rem;line-height:1.3}
-.tools .dev{display:inline-block;margin-left:6px;padding:1px 7px;border:1px solid var(--border);border-radius:9999px;font-size:11px;color:var(--muted-foreground);vertical-align:2px}
+.tools .name{display:block;font-size:15px;line-height:1.3}
+.tools .dev{display:inline-block;margin-left:6px;padding:1px 7px;border:1px solid #d9a441;border-radius:10px;font-size:11px;color:#9a6a10;background:#fff7e6;vertical-align:2px}
 .tools .is-dev button{opacity:.75}.tools .is-dev button:hover{opacity:1}
-.tools .plat{display:flex;flex-wrap:wrap;gap:2px 8px;margin-top:3px;font-size:.75rem;color:var(--muted-foreground)}.tools .plat span{display:inline-flex;align-items:center;gap:4px;white-space:nowrap}
+.tools .plat{display:flex;flex-wrap:wrap;gap:2px 8px;margin-top:3px;font-size:11.5px;color:var(--muted)}.tools .plat span{display:inline-flex;align-items:center;gap:4px;white-space:nowrap}
 .tools .plat i{width:7px;height:7px;border-radius:50%;background:var(--c)}
-.tools ul{list-style:none;margin:14px 0 0;padding:12px 0 0;border-top:1px solid var(--border);font-size:.8125rem;line-height:1.75}
-.tools li{position:relative;padding-left:20px}.tools li::before{content:"✓";position:absolute;left:2px;color:var(--primary)}
-@media (max-width:900px){.tools{grid-template-columns:repeat(2,minmax(0,1fr))}}
-footer{text-align:center;font-size:.75rem}</style><script src="/hub/hub.js" defer></script></head>
-<body><div class="wrap"><main><header class="top"><h1>Tools Hub</h1></header><div class="setup-status" id="setupStatus" role="status"></div><section class="card"><header><h2>Công cụ</h2></header><section><div class="tools">
-${tools.map((t) => `<form method="post" action="/open/${esc(t.id)}"${t.status === "dev" ? ' class="is-dev"' : ""}><button type="submit" title="${esc(t.description)}">${card(t)}</button></form>`).join("")}
-</div></section></section></main><footer class="muted">© ${new Date().getFullYear()} Tools Hub</footer></div></body></html>`;
+.tools ul{list-style:none;margin:14px 0 0;padding:12px 0 0;border-top:1px solid #e3e3e3;font-size:13px;line-height:1.75}
+.tools li{position:relative;padding-left:20px}.tools li::before{content:"✓";position:absolute;left:2px;color:var(--accent)}
+@media (max-width:900px){.tools{grid-template-columns:repeat(2,minmax(0,1fr))}}body{min-height:100vh;display:flex;flex-direction:column}main{flex:1}footer{padding:0 20px 16px;text-align:center;font-size:12px}</style><script src="/hub/hub.js" defer></script></head>
+<body><main><header><h1>Tools Hub</h1></header><div class="setup-status" id="setupStatus" role="status"></div><section class="group"><h2>Công cụ</h2><div class="tools list">
+${tools.map((t) => `<form method="post" action="/open/${esc(t.id)}"${t.status === "dev" ? ' class="is-dev"' : ""}><button class="card" type="submit" title="${esc(t.description)}">${card(t)}</button></form>`).join("")}
+</div></section></main><footer class="muted">© ${new Date().getFullYear()} Tools Hub</footer></body></html>`;
 
 // A tool with its own server: its address when it is running, else "".
 async function findServer(tool) {
-  const base = Number(tool.port) || portFor(tool.dir, 47000);
+  const base = portFor(tool.dir, 47000);
   for (let port = base; port <= base + 20; port++) {
     const body = await fetch(`http://127.0.0.1:${port}/api/root`).then((r) => r.json()).catch(() => null);
     if (body?.root === tool.dir) return `http://127.0.0.1:${port}/`;
@@ -73,7 +68,7 @@ async function startServer(tool) {
   const find = () => findServer(tool);
   let url = await find();
   if (url) return url;
-  const logs = join(root, "workspace", basename(tool.dir), "logs");
+  const logs = join(tool.dir, "workspace", "logs");
   mkdirSync(logs, { recursive: true });
   const out = openSync(join(logs, "mac-server.log"), "a");
   spawn(process.execPath, [join(tool.dir, tool.mac), "--no-open"], { cwd: tool.dir, detached: true, windowsHide: true, stdio: ["ignore", out, out] }).unref();
@@ -81,7 +76,7 @@ async function startServer(tool) {
   return url;
 }
 
-const ASSETS = ["icon.svg", "hub.js"];
+const ASSETS = ["icon.svg", "tool.css", "hub.js"];
 const q = (p) => p.replace(/'/g, "''");
 const configApi = createConfigApi({ hubRoot: root, pwsh: PWSH, env: toolEnv });
 const pwsh = (command) => new Promise((done, fail) => execFile(PWSH, psCommand(command), { cwd: root, timeout: 300000, windowsHide: true }, (err, out) => (err ? fail(err) : done(String(out).trim()))));
@@ -147,7 +142,7 @@ const server = createServer(async (req, res) => {
   }
   if (tool && parts[1] === "open" && req.method === "POST") {
     const target = tool.web ? `/apps/${encodeURIComponent(tool.id)}/${tool.web}?hub=${PORT}` : await startServer(tool).then((u) => (u ? `${u}?hub=${PORT}` : ""));
-    if (!target) { res.writeHead(500, { "content-type": TYPES[".html"] }); return res.end(`<meta charset="utf-8"><link rel="stylesheet" href="/setup/ui/vendor/basecoat/basecoat.min.css"><link rel="stylesheet" href="/setup/ui/ui.css"><main class="page stack"><header><h1>Không mở được ${esc(tool.name)}</h1></header><a class="btn" href="/">← Menu</a></main>`); }
+    if (!target) { res.writeHead(500, { "content-type": TYPES[".html"] }); return res.end(`<meta charset="utf-8"><link rel="stylesheet" href="/hub/tool.css"><main><header><h1>Không mở được ${esc(tool.name)}</h1></header><a class="btn" href="/">← Menu</a></main>`); }
     res.writeHead(303, { location: target });
     return res.end();
   }

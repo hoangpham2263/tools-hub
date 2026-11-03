@@ -14,7 +14,7 @@ $root = Split-Path $PSScriptRoot -Parent
 $groups = @($Group -split '\|' | ForEach-Object { $_.Trim() } | Where-Object { $_ })
 $status = [ordered]@{ groups = $groups; index = 0; group = ''; done = 0; missing = 0; total = 0; downloaded = 0; removed = 0; failed = @(); finished = $false }
 $save = { if ($StatusFile) { [IO.File]::WriteAllText($StatusFile, (ConvertTo-Json -InputObject $status -Compress), [Text.UTF8Encoding]::new($false)) } }
-$drive = Get-DriveConfig (Get-ProjectWorkspace $root)
+$drive = Get-DriveConfig (Join-Path $root 'workspace')
 for ($i = 0; $i -lt $groups.Count; $i++) {
     $status.index = $i + 1; $status.group = $groups[$i]; $status.done = 0; $status.missing = 0; & $save
     try {

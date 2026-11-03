@@ -1,15 +1,6 @@
-﻿# Files, hashes and the event lines the window reads. Everything a run writes goes under the tool's workspace folder, output/<stamp>/.
+﻿# Files, hashes and the event lines the window reads. Everything a run writes goes under workspace/output/<stamp>/.
 
 function Get-ToolRoot { Split-Path (Split-Path $PSScriptRoot -Parent) -Parent }
-
-# One workspace folder for every tool: <hub>/workspace/fb-content/ (Git ignores that single folder); outside an install a tool keeps its
-# own workspace/. server.mjs moves what an older install kept in apps/fb-content/workspace/.
-function Get-ToolWorkspace {
-    $root = Get-ToolRoot
-    $hub = Split-Path (Split-Path $root -Parent) -Parent
-    if (Test-Path -LiteralPath (Join-Path $hub 'hub/update.ps1')) { return (Join-Path $hub 'workspace/fb-content') }
-    Join-Path $root 'workspace'
-}
 
 # One line the server turns into an event for the window: @@EVENT {json}. Human log lines stay as they are.
 function Send-Event([hashtable]$Event) {
