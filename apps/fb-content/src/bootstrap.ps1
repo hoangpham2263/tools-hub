@@ -1,9 +1,8 @@
 ﻿# Ordered module manifest, as Product Review's: the hub's AI core and image rules first, then this tool.
 $script:WorkflowModuleFiles = @(
     '../../../hub/ai/ai.ps1'
-    '../../../hub/image/product-rules.ps1'
-    '../../../hub/image/product-details.ps1'
-    '../../../hub/image/watermark.ps1'
+    'domain/product-rules.ps1'
+    'domain/product-details.ps1'
     'infrastructure/workspace.ps1'
     'infrastructure/ai.ps1'
     'infrastructure/watermark.ps1'

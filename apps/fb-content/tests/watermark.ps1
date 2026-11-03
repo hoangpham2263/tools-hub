@@ -1,5 +1,5 @@
-﻿# The watermark as the tool uses it: the brand's settings and the PowerShell calls over hub/image/watermark.mjs. The drawing
-# itself (PNG reading and writing, scaling, where it lands) is tested in hub/tests/watermark.test.mjs, in plain Node.
+﻿# The watermark as the tool uses it: the brand's settings and the PowerShell calls over src/infrastructure/watermark.mjs. The drawing
+# itself (PNG reading and writing, scaling, where it lands) is tested in tests/watermark-core.test.mjs, in plain Node.
 . (Join-Path $PSScriptRoot 'helpers.ps1')
 $ErrorActionPreference = 'Stop'
 $root = Split-Path $PSScriptRoot -Parent
@@ -28,7 +28,7 @@ Assert (-not [Linq.Enumerable]::SequenceEqual([byte[]]$before, [byte[]][IO.File]
 
 # The same call with other settings goes through to the drawing.
 $wide = Join-Path $temp 'wide.png'; New-TestPng $wide 1600 900 ([byte[]](110, 110, 110))
-Add-HubImageWatermark $wide $mark (Join-Path $temp 'wide-bl.png') ([int[]]$pack.watermark.content_box) 'bottom-left' 0.1 0.05 | Out-Null
+Add-ImageWatermark $wide $mark (Join-Path $temp 'wide-bl.png') ([int[]]$pack.watermark.content_box) 'bottom-left' 0.1 0.05 | Out-Null
 Assert ((Get-ImageSize ([IO.File]::ReadAllBytes((Join-Path $temp 'wide-bl.png')))).Width -eq 1600) 'Other corners and sizes must work through the same call.'
 
 # Reasons the plain image is kept, and refusals from the drawing.
@@ -37,31 +37,7 @@ Assert ($noBrand -eq '' -and $script:WatermarkNote -match 'chưa có logo') 'A b
 $text = Join-Path $temp 'notes.png'; Set-Content -LiteralPath $text 'not a picture'
 $refused = Add-BrandWatermark $text $pack
 Assert ($refused -eq '' -and $script:WatermarkNote -match 'Chưa đóng dấu logo được' -and $script:WatermarkNote -match 'PNG') 'A file that is not a PNG is kept as it is, with the reason.'
-Assert (Throws { Add-HubImageWatermark $image $mark (Join-Path $temp 'x.png') ([int[]]@(1, 2, 3)) }) 'A bad content box must be refused.'
-Assert (Throws { Add-HubImageWatermark $image $mark (Join-Path $temp 'x.png') ([int[]]$pack.watermark.content_box) 'top-right' 0.9 }) 'A watermark wider than half the image must be refused.'
-Assert (Throws { Add-HubImageWatermark (Join-Path $temp 'missing.png') $mark (Join-Path $temp 'x.png') ([int[]]$pack.watermark.content_box) }) 'A missing image must be refused.'
-# Google's sparkle (the hub's own step, for the tools that use Flow; Content MXH no longer loads it): a picture that has it is cleaned in place with the untouched one kept; a picture without it is left alone.
-. (Join-Path $PSScriptRoot '../../../hub/image/unsparkle.ps1')
-$spark = Join-Path $temp 'sparkled.png'
-$maker = Join-Path $temp 'make-sparkled.mjs'
-$hubImage = [Uri]::new((Resolve-Path (Join-Path $PSScriptRoot '../../../hub/image')).Path + [IO.Path]::DirectorySeparatorChar).AbsoluteUri
-Set-Content -LiteralPath $maker -Encoding UTF8 -Value @'
-import { writeFileSync } from 'node:fs';
-const hub = process.argv[3];
-const { encodePng } = await import(hub + 'watermark.mjs');
-const { sparkleCover } = await import(hub + 'unsparkle.mjs');
-const W = 1024, data = new Uint8Array(W * W * 4);
-for (let y = 0; y < W; y++) for (let x = 0; x < W; x++) { const i = (y * W + x) * 4, s = ((x + y) % 40 < 3) ? -50 : 0; data[i] = 120 + x / W * 60 + s; data[i + 1] = 90 + y / W * 50 + s; data[i + 2] = 70 + s; data[i + 3] = 255; }
-const { cover } = sparkleCover(W, W);
-for (let p = 0; p < cover.length; p++) if (cover[p] > 0) for (let c = 0; c < 3; c++) { const a = 0.3 * cover[p], i = p * 4 + c; data[i] = Math.round(data[i] * (1 - a) + 255 * a); }
-writeFileSync(process.argv[2], encodePng({ width: W, height: W, data }));
-'@
-& node $maker $spark $hubImage
-$sparkBefore = [IO.File]::ReadAllBytes($spark)
-$backup = Join-Path $temp 'goc/sparkled-goc.png'
-Assert ((Remove-HubImageSparkle $spark $backup) -eq $true) 'A picture with the sparkle must be cleaned.'
-Assert ([Linq.Enumerable]::SequenceEqual([byte[]]$sparkBefore, [byte[]][IO.File]::ReadAllBytes($backup))) 'The untouched picture is kept at the backup path.'
-Assert (-not [Linq.Enumerable]::SequenceEqual([byte[]]$sparkBefore, [byte[]][IO.File]::ReadAllBytes($spark))) 'The picture itself is changed in place.'
-Assert ((Remove-HubImageSparkle $spark (Join-Path $temp 'goc/again.png')) -eq $false -and -not (Test-Path -LiteralPath (Join-Path $temp 'goc/again.png')) -and -not (Test-Path -LiteralPath "$spark.clean.png")) 'A picture without the sparkle is left alone: no backup, no leftovers.'
-Assert (Throws { Remove-HubImageSparkle $text }) 'A file that is not a PNG must be refused.'
+Assert (Throws { Add-ImageWatermark $image $mark (Join-Path $temp 'x.png') ([int[]]@(1, 2, 3)) }) 'A bad content box must be refused.'
+Assert (Throws { Add-ImageWatermark $image $mark (Join-Path $temp 'x.png') ([int[]]$pack.watermark.content_box) 'top-right' 0.9 }) 'A watermark wider than half the image must be refused.'
+Assert (Throws { Add-ImageWatermark (Join-Path $temp 'missing.png') $mark (Join-Path $temp 'x.png') ([int[]]$pack.watermark.content_box) }) 'A missing image must be refused.'
 Write-Host 'PASS: brand watermark settings, marked copy beside the image, original untouched, reasons for no mark.' -ForegroundColor Green

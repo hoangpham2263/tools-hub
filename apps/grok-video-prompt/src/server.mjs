@@ -41,7 +41,7 @@ const HUB_ASSETS = ["icon.svg", "tool.css", "hub.js"];
 
 const readJson = async (file) => JSON.parse((await readFile(file, "utf8")).replace(/^﻿/, ""));
 async function pageData() {
-  const library = await readJson(join(hubRoot, "hub", "image", "angles.json"));
+  const library = await readJson(join(root, "data", "angles.json"));
   const settings = await readJson(join(root, "data", "video.json"));
   return {
     settings,

@@ -1,5 +1,5 @@
 ﻿# All checks run in fresh PowerShell processes (Windows PowerShell 5.1 on Windows, pwsh on macOS); no AI call is made.
-param([string[]]$Name = @('prompts', 'posts', 'watermark-core', 'unsparkle-core', 'watermark', 'content-run'))
+param([string[]]$Name = @('prompts', 'posts', 'watermark-core', 'watermark', 'content-run'))
 $ErrorActionPreference = 'Stop'
 $onWindows = ($PSVersionTable.PSEdition -eq 'Desktop') -or $IsWindows
 if ($onWindows) {
@@ -27,10 +27,9 @@ foreach ($testName in $Name) {
     if ($testName -notmatch '^[a-z][a-z0-9-]+$' -or $testName -eq 'run') { throw "Invalid test name: $testName" }
     $path = Join-Path $PSScriptRoot "$testName.ps1"
     # The drawing is plain Node, tested with node --test (same on every OS).
-    if ($testName -in @('watermark-core', 'unsparkle-core')) {
+    if ($testName -eq 'watermark-core') {
         Write-Host "Testing: $testName" -ForegroundColor Cyan
-        $coreFile = ($testName -replace '-core', '') + '.test.mjs'
-        & node --test (Join-Path $project "../../hub/tests/$coreFile")
+        & node --test (Join-Path $PSScriptRoot 'watermark-core.test.mjs')
         if ($LASTEXITCODE -ne 0) { $failures.Add($testName) }
         continue
     }

@@ -266,7 +266,7 @@ const persist = () => {
   } catch {}
 };
 const angleLabel = (id) => DATA.angles.find((a) => a.id === id)?.label || id;
-// Angles are picked from the library (hub/image/angles.json) and kept in the library's order. A photo saved with an id that
+// Angles are picked from the library (data/angles.json) and kept in the library's order. A photo saved with an id that
 // no longer exists, or with none, gets the default picks.
 const normalizeAngles = (list) => {
   const ids = Array.isArray(list) ? DATA.angles.filter((a) => list.includes(a.id)).map((a) => a.id) : [];

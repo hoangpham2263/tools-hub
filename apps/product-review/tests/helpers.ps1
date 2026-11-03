@@ -30,6 +30,6 @@ function Import-BatchRows([string]$Path) {
     if (-not (Test-Path -LiteralPath $results)) { return @() }
     if (-not (Get-Command Save-Csv -ErrorAction SilentlyContinue)) { . (Join-Path (Split-Path $PSScriptRoot -Parent) 'src/infrastructure/csv.ps1') }
     $csv = Join-Path $Path ('rows-' + [Guid]::NewGuid().ToString('N') + '.csv')
-    try { Save-Csv @(Get-Content -LiteralPath $results -Raw -Encoding UTF8 | ConvertFrom-Json) $csv; @(Import-Csv -LiteralPath $csv) }
+    try { Save-Csv @(Get-Content -LiteralPath $results -Raw -Encoding UTF8 | ConvertFrom-Json | ForEach-Object { $_ }) $csv; @(Import-Csv -LiteralPath $csv) }
     finally { Remove-Item -LiteralPath $csv -Force -ErrorAction SilentlyContinue }
 }
