@@ -1,0 +1,84 @@
+/* Product Review in the Tools Hub look (hub/assets/ui/tokens.css): the colors, radii, font and border-only states of the kit,
+   laid over app.css, which keeps the layout (every control is placed by app.js). Light only: the dropdown chevrons are drawn for a
+   light page. No bold, no ring, no outline: a state is a border color. */
+/* app.css names its colors differently from the kit and app.js reads them (var(--muted) is a text gray there, var(--accent) a
+   selection fill): they now point at the kit's tokens, so the old names keep working. */
+:root {
+  --font: var(--font-sans); color-scheme: light;
+  --ink: var(--foreground); --muted: var(--muted-foreground); --line: var(--border); --control: var(--background); --surface: var(--card);
+  --hover: var(--state-fill); --accent: color-mix(in srgb, var(--primary) 16%, var(--card)); --accent-dark: var(--primary);
+  --ok: var(--primary); --warn: #b45309; --error: var(--destructive); --dim: var(--muted-foreground); --smoke: var(--secondary);
+}
+body { background: var(--background); color: var(--foreground); font: 12.5px/1.3 var(--font-sans); font-weight: 400; }
+*, *:focus, *:focus-visible { outline: none !important; box-shadow: none !important; }
+b, strong { font-weight: 400; }
+.panel { background: transparent; }
+.card { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius-xl, 14px); }
+.muted { color: var(--muted-foreground); }
+
+/* buttons: outline look, the main one filled with the accent */
+.btn { color: var(--foreground); background: var(--card); border: 1px solid var(--border); border-radius: var(--radius-lg, 10px); }
+.btn:hover { color: var(--accent-foreground); background: var(--state-fill); border-color: var(--state-border); }
+.btn:active { border-color: var(--state-border-strong); }
+.btn:focus-visible { border-color: var(--state-border-strong); }
+.btn:disabled { color: var(--muted-foreground); background: var(--secondary); border-color: var(--border); }
+.btn.primary { color: var(--primary-foreground); background: var(--primary); border-color: var(--primary); }
+.btn.primary:hover, .btn.primary:active { background: color-mix(in srgb, var(--primary) 88%, black); border-color: color-mix(in srgb, var(--primary) 60%, black); color: var(--primary-foreground); }
+.btn.primary:disabled { color: var(--muted-foreground); background: var(--secondary); border-color: var(--border); }
+.btn.flat-error { color: #fff; background: var(--destructive); border-color: var(--destructive); }
+
+/* fields */
+.text, .num { color: var(--foreground); background: var(--card); border: 1px solid var(--input); border-radius: var(--radius-md, 8px); }
+.text:hover, .num:hover { border-color: var(--state-border); }
+.text:focus, .num:focus-within { border-color: var(--state-border-strong); }
+.text.plain { border: 0; background: transparent; }
+.combo { color: var(--foreground); background-color: var(--card); border: 1px solid var(--input); border-radius: var(--radius-md, 8px); }
+.combo:hover { background-color: var(--card); border-color: var(--state-border); }
+.combo:focus { border-color: var(--state-border-strong); }
+.combo:disabled { background-color: var(--secondary); border-color: var(--border); color: var(--muted-foreground); }
+.num .spin { border-left: 1px solid var(--border); }
+.num .spin button { background-color: var(--secondary); }
+.num .spin button:hover { background-color: var(--accent); }
+.num.disabled { background: var(--secondary); border-color: var(--border); color: var(--muted-foreground); }
+.check input { border: 1px solid var(--input); border-radius: 4px; background-color: var(--card); }
+.check input:hover { border-color: var(--state-border-strong); }
+
+/* progress: a bar in the accent */
+.progress { background: var(--secondary); border: 1px solid var(--border); border-radius: 9999px; }
+.progress > span { background: var(--primary); border-radius: 9999px; }
+
+/* pictures, rows and lists */
+.pic.border { border: 1px solid var(--border); border-radius: var(--radius-md, 8px); }
+.pic .empty { color: var(--muted-foreground); }
+.qrow { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius-lg, 10px); }
+.qrow:hover, .qrow:hover .text.plain { background: var(--state-fill); border-color: var(--state-border); }
+.qrow .pic { background: var(--secondary); border-radius: var(--radius-md, 8px); }
+.rrow { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius-lg, 10px); }
+.rrow.ok { background: color-mix(in srgb, var(--primary) 6%, var(--card)); border-color: var(--state-border); }
+.rrow.bad { background: color-mix(in srgb, var(--destructive) 6%, var(--card)); border-color: color-mix(in srgb, var(--destructive) 50%, transparent); }
+.list { background: var(--card); border: 1px solid var(--input); border-radius: var(--radius-md, 8px); }
+.list div.on { background: var(--accent); color: var(--accent-foreground); }
+.tabstrip button { background: var(--secondary); border: 1px solid var(--border); border-bottom: 0; border-radius: 8px 8px 0 0; color: var(--muted-foreground); }
+.tabstrip button.on { background: var(--card); color: var(--foreground); }
+.tabpage { background: var(--card); border: 1px solid var(--border); border-radius: 0 8px 8px 8px; }
+.label.link { color: var(--primary); }
+
+/* child windows, messages and menus */
+.window { background: var(--background); border: 1px solid var(--border); border-radius: var(--radius-xl, 14px); overflow: hidden; box-shadow: 0 8px 28px rgb(0 0 0 / 0.14) !important; }
+.titlebar { background: var(--card); border-bottom: 1px solid var(--border); font-size: 12.5px; }
+.titlebar .close { color: var(--foreground); font-family: var(--font-sans); }
+.titlebar .close:hover { background: var(--destructive); color: #fff; }
+.wbody.white, .msg .wbody { background: var(--card); }
+.wbody.dropping { background: var(--state-fill); }
+.msg .bar { background: var(--secondary); }
+.menu { background: var(--popover); border: 1px solid var(--border); border-radius: var(--radius-lg, 10px); padding: 4px; box-shadow: 0 8px 28px rgb(0 0 0 / 0.14) !important; }
+.menu div { border-radius: var(--radius-md, 8px); }
+.menu div:hover { background: var(--accent); color: var(--accent-foreground); }
+.menu div.off { color: var(--muted-foreground); }
+.menu div.off:hover { background: transparent; }
+
+/* scrollbars: thin, no arrow buttons */
+::-webkit-scrollbar { width: 10px; height: 10px; background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 9999px; border: 2px solid transparent; background-clip: padding-box; }
+::-webkit-scrollbar-thumb:hover { background: var(--muted-foreground); background-clip: padding-box; }
+::-webkit-scrollbar-button:single-button { display: none; height: 0; }

@@ -4,13 +4,13 @@
 import { createServer } from "node:http";
 import { spawn, execFile } from "node:child_process";
 import { createInterface } from "node:readline";
-import { mkdir, writeFile, appendFile, readFile } from "node:fs/promises";
+import { mkdir, writeFile, appendFile, readFile, readdir, rm, stat } from "node:fs/promises";
 import { createReadStream, existsSync, mkdirSync, openSync, readFileSync, readdirSync, rmdirSync, statSync, renameSync, appendFileSync } from "node:fs";
 import { join, dirname, extname, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 import { randomUUID, createHash } from "node:crypto";
 import { createConfigApi } from "../../../hub/setup/config-api.mjs";
-import { PWSH, toolEnv, psFile, psCommand, killTree, appWindow, onWindows } from "../../../hub/platform.mjs";
+import { PWSH, toolEnv, psFile, psCommand, killTree, appWindow, openFolder } from "../../../hub/platform.mjs";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const root = resolve(here, "..");
@@ -47,7 +47,7 @@ const logError = (where, text) => {
 process.on("uncaughtException", (e) => { logError("Máy chủ Grok Video", e.stack || e); process.exit(1); });
 process.on("unhandledRejection", (e) => logError("Máy chủ Grok Video", e?.stack || e));
 
-const TYPES = { ".html": "text/html; charset=utf-8", ".css": "text/css", ".js": "text/javascript", ".json": "application/json", ".svg": "image/svg+xml", ".png": "image/png", ".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".webp": "image/webp", ".mp4": "video/mp4" };
+const TYPES = { ".html": "text/html; charset=utf-8", ".css": "text/css", ".js": "text/javascript", ".json": "application/json", ".svg": "image/svg+xml", ".png": "image/png", ".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".webp": "image/webp", ".mp4": "video/mp4", ".woff2": "font/woff2" };
 const IMAGE_EXT = [".png", ".jpg", ".jpeg", ".webp"];
 const SERVED_EXT = [...IMAGE_EXT, ".mp4"];
 const HUB_ASSETS = ["icon.svg", "tool.css", "hub.js"];
@@ -106,6 +106,28 @@ async function startRun(job) {
   });
 }
 const stopRun = () => { if (run.proc) { run.stopped = true; killTree(run.proc); } };
+
+// ----- Results of the runs on this machine: <workspace>/output/<stamp>-<name>/ -----
+const output = join(workspace, "output");
+const RUN_ID = /^\d{4}-\d{2}-\d{2}_\d{2}h\d{2}m\d{2}s-[\w-]*$/;
+const dirBytes = async (dir) => {
+  let total = 0;
+  for (const entry of await readdir(dir, { withFileTypes: true }).catch(() => [])) {
+    const full = join(dir, entry.name);
+    total += entry.isDirectory() ? await dirBytes(full) : (await stat(full).catch(() => ({ size: 0 }))).size;
+  }
+  return total;
+};
+async function listRuns() {
+  const runs = [];
+  for (const id of (await readdir(output).catch(() => [])).filter((n) => RUN_ID.test(n)).sort().reverse()) {
+    const dir = join(output, id);
+    const files = await readdir(dir).catch(() => []);
+    const video = files.find((f) => /^video-.*\.mp4$/.test(f)) || "";
+    runs.push({ id, name: id.replace(/^\d{4}-\d{2}-\d{2}_\d{2}h\d{2}m\d{2}s-?/, "") || id, folder: dir, bytes: await dirBytes(dir), video: video ? join(dir, video) : "", clips: files.filter((f) => /^clip-\d+\.mp4$/.test(f)).length, frames: files.filter((f) => /^khung-.*\.png$/.test(f)).length, running: !!(run.proc && run.folder && resolve(run.folder) === resolve(dir)) });
+  }
+  return { folder: output, bytes: runs.reduce((n, r) => n + r.bytes, 0), runs };
+}
 
 // ----- HTTP -----
 const send = (res, status, data) => { res.writeHead(status, { "content-type": "application/json; charset=utf-8", "cache-control": "no-store" }); res.end(JSON.stringify(data)); };
@@ -174,8 +196,28 @@ async function handle(req, res) {
   if (path === "/api/open-folder" && req.method === "POST") {
     const folder = run.folder && resolve(run.folder);
     if (!folder || !folder.startsWith(workspace + sep) || !existsSync(folder)) return send(res, 404, { error: "Chưa có thư mục kết quả." });
-    spawn(onWindows ? "explorer.exe" : "open", [folder], { detached: true, stdio: "ignore" }).unref();
+    openFolder(folder);
     return send(res, 200, { ok: true });
+  }
+  if (path === "/api/runs" && req.method === "GET") return send(res, 200, await listRuns());
+  // Explorer or Finder on the output folder or one run of it, nothing else.
+  if (path === "/api/open" && req.method === "POST") {
+    const { path: target = "" } = JSON.parse((await body(req)).toString("utf8") || "{}");
+    const full = resolve(String(target) || output);
+    if (full !== resolve(output) && !full.startsWith(resolve(output) + sep)) return send(res, 400, { error: "Chỉ mở được thư mục kết quả." });
+    await mkdir(full, { recursive: true });
+    openFolder(full);
+    return send(res, 200, { ok: true });
+  }
+  if (path === "/api/runs/delete" && req.method === "POST") {
+    const { ids = [] } = JSON.parse((await body(req)).toString("utf8") || "{}");
+    const removed = [], kept = [];
+    for (const id of [].concat(ids)) {
+      const dir = join(output, String(id));
+      if (!RUN_ID.test(String(id)) || !existsSync(dir) || (run.proc && run.folder && resolve(run.folder) === resolve(dir))) { kept.push(id); continue; }
+      try { await rm(dir, { recursive: true, force: true }); removed.push(id); } catch { kept.push(id); }
+    }
+    return send(res, 200, { removed, kept });
   }
   if (path === "/file") {
     const file = url.searchParams.get("path") || "";
@@ -203,6 +245,12 @@ async function handle(req, res) {
   }
   if (path === "/api/quit" && req.method === "POST") { send(res, 200, { ok: true }); stopRun(); setTimeout(() => process.exit(0), 200); return; }
   if (path === "/icon.svg") return sendFile(req, res, join(root, "icon.svg"));
+  const uiAsset = /^\/hub\/assets\/ui\/([\w./-]+\.(?:css|js|woff2))$/.exec(path);
+  if (uiAsset) {
+    const base = resolve(hubRoot, "hub", "assets", "ui");
+    const file = resolve(base, uiAsset[1]);
+    return file.startsWith(base + sep) ? sendFile(req, res, file) : (res.writeHead(404), res.end());
+  }
   const hubAsset = /^\/hub\/assets\/([\w.-]+)$/.exec(path);
   if (hubAsset) return HUB_ASSETS.includes(hubAsset[1]) ? sendFile(req, res, join(hubRoot, "hub", "assets", hubAsset[1])) : (res.writeHead(404), res.end());
   const rel = path === "/" ? "index.html" : path.slice(1);

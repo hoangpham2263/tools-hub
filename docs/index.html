@@ -259,17 +259,10 @@
   .page-title { font-size: 22px; }
   .hero { grid-template-columns: 300px minmax(0, 1fr); gap: 0; padding: 0; }
   .get { display: grid; justify-items: center; align-content: center; gap: 12px; padding: 32px 24px; text-align: center; }
-  .guide { display: grid; align-content: start; gap: 14px; padding: 28px; border-left: 1px solid var(--border); min-width: 0; }
   @media (max-width: 640px) { .hero { grid-template-columns: 1fr; } .guide { border-left: 0; border-top: 1px solid var(--border); } }
   .hero p { margin: 0; }
   a.btn.primary { padding: 0 16px; gap: 8px; color: #fff; }
-  .steps { margin: 0; padding-left: 20px; font-size: 14px; display: grid; gap: 6px; }
   .blocks-title { grid-column: 1 / -1; margin: 0; font-size: 16px; }
-  .steps ul { margin: 4px 0 0; padding-left: 18px; display: grid; gap: 2px; }
-  .os-tabs { display: flex; gap: 2px; padding: 3px; border-radius: 9px; background: var(--soft); }
-  .os-tabs button { height: 28px; padding: 0 12px; border: 0; background: none; color: var(--muted); font-size: 13px; }
-  .os-tabs button:hover { background: none; color: var(--fg); }
-  .os-tabs button.on { background: var(--bg); color: var(--fg); box-shadow: 0 1px 2px rgba(15, 23, 42, .08); }
   @media (max-width: 640px) {
     input, select { font-size: 16px !important; }
     .filters, .filters input, .filters select { width: 100%; }
@@ -301,7 +294,7 @@
       <h1>Tools Hub</h1>
     </a>
     <div class="top-text"></div>
-    <a id="dlIcon" class="btn labeled" hidden href="https://github.com/hoangpham2263/tools-hub/releases/latest/download/tools-hub.zip" title="Tải app" aria-label="Tải app">
+    <a id="dlIcon" class="btn labeled primary" href="https://github.com/hoangpham2263/tools-hub/releases/latest/download/tools-hub.zip" title="Tải app" aria-label="Tải app">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M5 21h14"/></svg>Tải app
     </a>
     <button id="lockBtn" class="labeled" type="button" title="Đăng nhập quản lý" aria-label="Đăng nhập quản lý">
@@ -343,38 +336,8 @@
     </div>
     <div class="card hero">
     <div class="get">
-      <a class="btn primary" href="https://github.com/hoangpham2263/tools-hub/releases/latest/download/tools-hub.zip">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M5 21h14"/></svg>
-        Tải về
-      </a>
       <span id="version" class="muted small"></span>
       <a class="small" href="https://github.com/hoangpham2263/tools-hub/releases" target="_blank" rel="noopener">Các phiên bản trước</a>
-    </div>
-    <div class="guide">
-      <div class="sec-head">
-        <h2>Hướng dẫn</h2>
-        <div class="os-tabs" role="tablist">
-          <button type="button" data-os="win" class="on">Windows</button>
-          <button type="button" data-os="mac">Mac</button>
-        </div>
-      </div>
-      <ol class="steps" data-guide="win">
-        <li>Bấm <b>Tải về</b>, giải nén file zip.</li>
-        <li>Bấm đúp <b>start-app.cmd</b>.</li>
-        <li>Nếu Windows báo <i>Windows protected your PC</i>: bấm <b>More info</b> → <b>Run anyway</b>.</li>
-        <li>Menu <b>Tools Hub</b> hiện ra: bấm công cụ cần dùng, bấm <b>← Menu</b> để quay lại.</li>
-        <li>Lần đầu: bấm <b>Cấu hình</b> ở góc trên bên phải, bước nào thiếu thì bấm <b>Cài</b> hoặc <b>Đăng nhập</b>. Cấu hình dùng chung cho mọi công cụ.</li>
-        <li>Có bản mới thì bấm <b>Cập nhật</b> ở góc trên bên phải; một lần cập nhật cho mọi công cụ.</li>
-      </ol>
-      <ol class="steps" data-guide="mac" hidden>
-        <li>Bấm <b>Tải về</b>, giải nén file zip.</li>
-        <li>Bấm đúp <b>start-app.command</b>.</li>
-        <li>Nếu macOS báo <i>Not Opened</i>: bấm <b>Done</b>, vào <b>System Settings → Privacy &amp; Security</b>, kéo xuống bấm <b>Open Anyway</b>, rồi bấm đúp lại.</li>
-        <li>Lần đầu, nếu được hỏi cài Homebrew hay PowerShell: gõ <b>y</b> và mật khẩu máy.</li>
-        <li>Menu <b>Tools Hub</b> hiện ra: bấm công cụ cần dùng, bấm <b>← Menu</b> để quay lại.</li>
-        <li>Lần đầu: bấm <b>Cấu hình</b> ở góc trên bên phải, bước nào thiếu thì bấm <b>Cài</b> hoặc <b>Đăng nhập</b>. Cấu hình dùng chung cho mọi công cụ.</li>
-        <li>Có bản mới thì bấm <b>Cập nhật</b> ở góc trên bên phải; một lần cập nhật cho mọi công cụ.</li>
-      </ol>
     </div>
     </div>
   </section>
@@ -512,7 +475,6 @@
       <div class="crumbs"><button id="srcBack" class="back" type="button">← Quản lý</button><h2 id="srcTitle">Nguồn ảnh</h2></div>
       <div class="filters">
         <button id="newGroupBtn" type="button">Tạo nhóm</button>
-        <button id="srcHelpBtn" class="labeled" type="button" title="Hướng dẫn"><span aria-hidden="true">?</span>Hướng dẫn</button>
         <button id="uploadBtn" class="primary" type="button">Tải ảnh lên</button>
         <input id="uploadInput" type="file" accept="image/jpeg,image/png,image/webp" multiple hidden />
       </div>
@@ -565,26 +527,6 @@
     <input id="groupInput" placeholder="Tên nhóm, ví dụ: Áo" maxlength="60" required />
     <p id="groupError" class="small danger" hidden></p>
     <div class="actions"><button class="primary" type="submit">Tạo</button></div>
-  </form>
-</dialog>
-
-<dialog id="srcHelpDlg" class="dlg">
-  <form method="dialog" class="dlg-box">
-    <div class="dlg-head"><strong>Cập nhật nguồn ảnh</strong><button class="icon" value="cancel" aria-label="Đóng">✕</button></div>
-    <span class="settings-label">Trên trang này</span>
-    <ol class="help">
-      <li>Chọn nhóm, hoặc bấm <b>Tạo nhóm</b>.</li>
-      <li>Bấm <b>Tải ảnh lên</b>, kéo thả hoặc dán (Ctrl/Cmd+V) ảnh.</li>
-      <li>Bấm vào ảnh để xem hoặc xoá.</li>
-      <li>Bật công tắc của nhóm để nhóm hiện trong app. Nhóm mới để tắt.</li>
-    </ol>
-    <span class="settings-label">Từ thư mục trên máy</span>
-    <ol class="help">
-      <li>Chép ảnh vào <code>data/source-photos/&lt;nhóm&gt;/</code> trong thư mục source (bản git).</li>
-      <li>Mở Terminal ở thư mục source và chạy lệnh dưới. Chỉ ảnh chưa có mới được đẩy lên; nhóm mới tự được tạo.</li>
-    </ol>
-    <div class="cmd"><code id="srcCmd">HUB_ADMIN_KEY='mật khẩu admin' node scripts/upload-sources.mjs</code><button id="copyCmdBtn" type="button">Copy</button></div>
-    <p class="muted small">App chỉ tải nhóm đang chọn về máy khi chạy, ảnh đã có không tải lại.</p>
   </form>
 </dialog>
 
@@ -1144,7 +1086,6 @@ function showAdmin() {
   document.body.classList.toggle("admin", signedIn);
   $("lockBtn").hidden = signedIn;
   $("settingsBtn").hidden = !signedIn;
-  $("dlIcon").hidden = !signedIn;
   $("settingsBtn").classList.toggle("warn", !state.connected);
   $("settingsDlg").classList.toggle("warn", !state.connected);
   $("adminText").textContent = state.connected ? `Đã kết nối${state.email ? " · " + state.email : ""}` : "Chưa kết nối";
@@ -1252,16 +1193,7 @@ document.addEventListener("paste", (e) => {
   e.preventDefault();
   upload(files);
 });
-// Download guide: one tab per system, opened on the visitor's own.
-function showGuide(os) {
-  for (const b of document.querySelectorAll("[data-os]")) b.classList.toggle("on", b.dataset.os === os);
-  for (const list of document.querySelectorAll("[data-guide]")) list.hidden = list.dataset.guide !== os;
-}
-for (const b of document.querySelectorAll("[data-os]")) b.onclick = () => showGuide(b.dataset.os);
-showGuide(/Mac/i.test(navigator.platform || navigator.userAgent) ? "mac" : "win");
-$("srcHelpBtn").onclick = () => $("srcHelpDlg").showModal();
 $("year").textContent = new Date().getFullYear();
-$("copyCmdBtn").onclick = async () => { try { await navigator.clipboard.writeText($("srcCmd").textContent); toast("Đã copy lệnh"); } catch { toast("Không copy được"); } };
 $("newGroupBtn").onclick = () => { $("groupError").hidden = true; $("groupInput").value = ""; $("groupDlg").showModal(); };
 document.querySelector("[data-close-group]").onclick = () => $("groupDlg").close();
 $("groupForm").addEventListener("submit", async (event) => {

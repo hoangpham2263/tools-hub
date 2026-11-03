@@ -50,7 +50,7 @@ function logError(where, text) {
 process.on("uncaughtException", (e) => { logError("Máy chủ Mac", e.stack || e); process.exit(1); });
 process.on("unhandledRejection", (e) => logError("Máy chủ Mac", e?.stack || e));
 
-const TYPES = { ".html": "text/html; charset=utf-8", ".css": "text/css", ".js": "text/javascript", ".svg": "image/svg+xml", ".png": "image/png", ".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".webp": "image/webp", ".ico": "image/x-icon" };
+const TYPES = { ".html": "text/html; charset=utf-8", ".css": "text/css", ".js": "text/javascript", ".svg": "image/svg+xml", ".png": "image/png", ".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".webp": "image/webp", ".ico": "image/x-icon", ".woff2": "font/woff2" };
 
 // ----- PowerShell application calls -----
 let rpcProc = null;
@@ -296,6 +296,15 @@ async function handle(req, res) {
     if (!allowedFile(file) || !existsSync(file)) { res.writeHead(404); return res.end(); }
     res.writeHead(200, { "content-type": TYPES[extname(file).toLowerCase()], "cache-control": "no-store" });
     return createReadStream(file).pipe(res);
+  }
+  // The hub's UI kit (fonts and tokens), served as the hub's own assets.
+  const uiAsset = /^\/hub\/assets\/ui\/([\w./-]+\.(?:css|woff2))$/.exec(path);
+  if (uiAsset) {
+    const base = resolve(hubRoot, "hub", "assets", "ui");
+    const asset = resolve(base, uiAsset[1]);
+    if (!asset.startsWith(base + sep) || !existsSync(asset)) { res.writeHead(404); return res.end(); }
+    res.writeHead(200, { "content-type": TYPES[extname(asset).toLowerCase()], "cache-control": "no-store" });
+    return createReadStream(asset).pipe(res);
   }
   const rel = path === "/" ? "index.html" : path.slice(1);
   const file = resolve(here, "ui", rel);
