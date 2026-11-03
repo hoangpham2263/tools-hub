@@ -49,7 +49,7 @@ process.on("unhandledRejection", (e) => logError("Máy chủ Content MXH", e?.st
 
 const TYPES = { ".html": "text/html; charset=utf-8", ".css": "text/css", ".js": "text/javascript", ".json": "application/json", ".svg": "image/svg+xml", ".png": "image/png", ".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".webp": "image/webp", ".woff2": "font/woff2" };
 const IMAGE_EXT = [".png", ".jpg", ".jpeg", ".webp"];
-const HUB_ASSETS = ["icon.svg", "tool.css", "hub.js"];
+const HUB_ASSETS = ["icon.svg", "hub.js"];
 
 // Which AIs the window offers. The run checks the choice again against the hub's registry (Test-ContentJob).
 const CHOICES = {

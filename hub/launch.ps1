@@ -63,7 +63,7 @@ function Get-HubPort([string]$Dir, [int]$Base) {
 if ($tools.Count -eq 1 -and $tools[0].mac) {
     $serverService = [string]$tools[0].id
     $entry = [IO.Path]::GetFullPath((Join-Path $tools[0].Root $tools[0].mac)); $serverRoot = $tools[0].Root; $port = Get-HubPort $serverRoot 47000
-    $env:PR_PORT = [string]$port; $serverLogs = Join-Path $serverRoot 'workspace/logs'; $arguments = @(('"' + $entry + '"'), '--no-open')
+    $env:PR_PORT = [string]$port; $serverLogs = Join-Path $root ('workspace/' + (Split-Path $serverRoot -Leaf) + '/logs'); $arguments = @(('"' + $entry + '"'), '--no-open')
 } else {
     $serverService = 'tools-hub-picker'
     $entry = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot 'picker.mjs')); $serverRoot = $root; $port = Get-HubPort $root 46000

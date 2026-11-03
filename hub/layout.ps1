@@ -114,6 +114,8 @@ $script:MovedFiles = @(
     'hub/image/watermark.ps1'
     'hub/tests/watermark.test.mjs'
     'hub/tests/unsparkle.test.mjs'
+    # The old shared stylesheet of the tool pages: every page is on the UI kit (hub/assets/ui) now.
+    'hub/assets/tool.css'
 )
 function Remove-MovedFiles([string]$Root) {
     if ((Test-Path -LiteralPath (Join-Path $Root '.git')) -or -not (Test-Path -LiteralPath (Join-Path $Root 'hub/ai/ai.ps1'))) { return }

@@ -50,7 +50,7 @@ process.on("unhandledRejection", (e) => logError("Máy chủ Grok Video", e?.sta
 const TYPES = { ".html": "text/html; charset=utf-8", ".css": "text/css", ".js": "text/javascript", ".json": "application/json", ".svg": "image/svg+xml", ".png": "image/png", ".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".webp": "image/webp", ".mp4": "video/mp4", ".woff2": "font/woff2" };
 const IMAGE_EXT = [".png", ".jpg", ".jpeg", ".webp"];
 const SERVED_EXT = [...IMAGE_EXT, ".mp4"];
-const HUB_ASSETS = ["icon.svg", "tool.css", "hub.js"];
+const HUB_ASSETS = ["icon.svg", "hub.js"];
 
 const readJson = async (file) => JSON.parse((await readFile(file, "utf8")).replace(/^﻿/, ""));
 async function pageData() {

@@ -6,6 +6,9 @@
 
 @import url("tokens.css");
 
+/* hidden wins over a component that sets display (.btn) */
+[hidden] { display: none !important; }
+
 html { font-family: var(--font-sans); }
 body {
   margin: 0;
@@ -117,3 +120,19 @@ input[type="radio"].input:not(:disabled):is(:hover, :focus-visible) { border-col
   .shell { grid-template-columns: minmax(0, 1fr); }
   .side { border-right: 0; border-bottom: 1px solid var(--border); }
 }
+
+/* the hub's own chrome, built by hub/assets/hub.js on every page: the Cấu hình status bar and the update dialog */
+.setup-status { display: flex; align-items: center; gap: 10px; min-height: 40px; padding: 8px 14px; background: var(--card); border: 1px solid var(--border); border-radius: var(--radius-lg, 10px); }
+.setup-status .mark { width: 18px; text-align: center; }
+.setup-status .text { flex: 1; min-width: 0; }
+.setup-status.ok { border-color: var(--state-border); }
+.setup-status.ok .mark { color: var(--primary); }
+.setup-status.todo { border-color: color-mix(in srgb, var(--destructive) 50%, transparent); }
+.setup-status.todo .mark { color: var(--destructive); }
+.shade { position: fixed; inset: 0; z-index: 50; background: rgb(0 0 0 / 0.3); display: flex; align-items: center; justify-content: center; }
+.shade > .dialog { width: 440px; max-width: calc(100vw - 32px); background: var(--popover); color: var(--popover-foreground); border: 1px solid var(--border); border-radius: var(--radius-xl, 14px); padding: 20px; display: block; box-shadow: 0 8px 28px rgb(0 0 0 / 0.14) !important; }
+.shade .dialog .status { min-height: 44px; }
+.shade .dialog .bar { height: 8px; margin: 8px 0 20px; background: var(--muted); border: 1px solid var(--border); border-radius: 9999px; overflow: hidden; }
+.shade .dialog .bar > span { display: block; width: 22%; height: 100%; background: var(--primary); border-radius: 9999px; animation: hub-marquee 2.2s linear infinite; }
+.shade .dialog .actions { display: flex; justify-content: flex-end; gap: 10px; }
+@keyframes hub-marquee { from { transform: translateX(-100%); } to { transform: translateX(460%); } }
