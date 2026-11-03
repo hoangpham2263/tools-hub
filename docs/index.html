@@ -1171,7 +1171,13 @@ async function openTool(id) {
   if (frame.src && !frame.hidden) return;
   off.hidden = true;
   const url = await findApp(id);
-  if (!url) { frame.hidden = true; off.hidden = false; return; }
+  if (!url) {
+    frame.hidden = true; off.hidden = false;
+    // The app may start a moment later: look again while this tool is the one shown.
+    clearTimeout(page._retry);
+    page._retry = setTimeout(() => { if (!page.hidden && frame.hidden) openTool(id); }, 4000);
+    return;
+  }
   if (frame.dataset.url !== url) { frame.dataset.url = url; frame.src = url; }
   frame.hidden = false;
 }
