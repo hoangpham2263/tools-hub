@@ -5,227 +5,261 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Content MXH</title>
 <link rel="icon" href="../icon.svg">
-<link rel="stylesheet" href="../../../hub/assets/tool.css">
+<script>
+  // light or dark before the first paint, the same key Basecoat uses
+  (() => { try { const s = localStorage.getItem("themeMode"); if (s ? s === "dark" : matchMedia("(prefers-color-scheme: dark)").matches) document.documentElement.classList.add("dark"); } catch (_) {} })();
+</script>
+<link rel="stylesheet" href="../../../hub/assets/ui/fonts/fonts.css">
+<link rel="stylesheet" href="../../../hub/assets/ui/vendor/basecoat/basecoat.min.css">
+<link rel="stylesheet" href="../../../hub/assets/ui/ui.css">
 <style>
-/* Laid out like Product Review's window: the product list with Thao tác beside it, the run row, then the results of the
-   chosen product (its images and a post to copy) where Product Review shows its progress. Fits the window. */
-body { height: 100vh; overflow: hidden; }
-main { height: 100%; display: flex; flex-direction: column; }
-.layout { flex: 1; min-height: 0; grid-template-columns: minmax(0, 1fr) 400px; grid-template-rows: auto auto auto minmax(0, 1fr); }
-.tools-row { display: flex; gap: 12px; margin-bottom: 10px; }
-#rows { height: 224px; padding: 10px 10px 6px; }
-/* One row per product, as in Product Review: #, name, status, thumbnail, Xem / sửa, ×. */
-.qrow { display: grid; grid-template-columns: 34px minmax(0, 1fr) 150px 44px 96px 34px; gap: 8px; align-items: center; height: 60px; padding: 0 8px 0 10px; margin-bottom: 4px; background: #fff; border: 1px solid var(--line); cursor: pointer; }
-.qrow:hover { background: var(--hover); }
-.qrow[aria-current="true"] { border-color: var(--accent); box-shadow: inset 3px 0 0 var(--accent); }
-.qrow .name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.qrow .thumb { width: 44px; height: 44px; background: var(--control); object-fit: cover; display: block; }
-.qrow .btn { height: 34px; padding: 0; }
-.ok { color: #006400; } .warn { color: rgb(176, 96, 0); }
-.pair2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-.pair2 label { margin: 0 0 8px; }
-dialog .pair > div > input + label { margin-top: 12px; }
-.wm-preview { position: relative; margin-top: 8px; width: 100%; background: linear-gradient(135deg, #dcd5c8, #b7ab97); border: 1px solid var(--line); overflow: hidden; }
-.wm-preview .bg { display: block; width: 100%; height: 100%; object-fit: fill; }
-.wm-preview img.mark { position: absolute; max-width: none; }
-.wm-preview.plate { cursor: pointer; }
-.wm-preview.off img.mark { opacity: .35; }
-.wm-preview.plate { background: #eceae4; }
-.wm-preview.none { display: grid; place-content: center; height: 64px; background: #fff; border-style: dashed; color: var(--muted); font-size: 12px; text-align: center; padding: 6px; }
-.check[hidden] { display: none; }
-.check { display: flex; align-items: center; gap: 8px; margin: 4px 0 0; cursor: pointer; }
-.check input { width: auto; margin: 0; }
-.actions-col { padding-top: 10px; }
-.tile.waiting.warn { border-color: rgb(176, 96, 0); }
-.empty-note.warn { white-space: pre-line; text-align: left; max-height: 90px; overflow: auto; }
-.empty-list { height: 100%; display: grid; place-content: center; color: var(--muted); }
-/* Đăng lên: the platforms to write for, each with its logo; at least one stays on. */
-.platforms { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; }
-.platforms button { display: flex; align-items: center; justify-content: center; gap: 6px; height: 36px; padding: 0 4px; font: inherit; font-size: 12.5px; color: var(--ink); background: #fff; border: 1px solid var(--line); cursor: pointer; }
-.platforms button:hover { background: var(--hover); }
-.platforms button[aria-pressed="true"] { border-color: var(--accent); box-shadow: inset 0 -3px 0 var(--accent); }
+/* Content MXH on the Tools Hub kit (hub/assets/ui): only what this page adds to the kit's tokens and components. */
+.wrap { max-width: 1120px; margin: 0 auto; padding: 20px 24px 40px; display: flex; flex-direction: column; gap: 16px; }
+.top { display: flex; align-items: center; gap: 8px; }
+.top img { width: 32px; height: 32px; border-radius: var(--radius-lg, 10px); }
+.top h1 { margin-right: auto; padding-left: 4px; }
+.top .reload { margin-left: 0; }
+.head-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.head-row .row { flex-wrap: nowrap; }
+.card > header { display: block; }
+.card .head-row h2 { white-space: nowrap; }
+
+/* one row per product: #, name, status, thumbnail, Xem / sửa, × (the kit's .qrow with a sixth column) */
+#rows { display: flex; flex-direction: column; gap: 8px; min-height: 120px; max-height: 300px; overflow-y: auto; }
+#rows .qrow { grid-template-columns: 28px minmax(0, 1fr) auto 40px auto auto; cursor: pointer; }
+#rows .qrow .thumb { object-fit: cover; display: block; }
+#rows .empty-list { display: grid; place-content: center; min-height: 100px; color: var(--muted-foreground); }
+
+/* a segmented choice: the platforms and tones, the post's tabs, Kết quả / Lịch sử */
+.seg { display: inline-flex; gap: 2px; padding: 2px; border: 1px solid var(--border); border-radius: var(--radius-lg, 10px); background: var(--muted); }
+.seg button { display: inline-flex; align-items: center; gap: 6px; height: 30px; padding: 0 12px; font: inherit; font-size: 0.8125rem; color: var(--muted-foreground); background: transparent; border: 1px solid transparent; border-radius: var(--radius-md, 8px); }
+.seg button:not(:disabled):hover { border-color: var(--state-border); color: var(--accent-foreground); }
+.seg button[aria-pressed="true"], .seg button[aria-selected="true"] { background: var(--card); color: var(--foreground); border-color: var(--border); }
+.seg button[aria-pressed="true"]:not(:disabled):hover, .seg button[aria-selected="true"]:not(:disabled):hover { border-color: var(--state-border); }
+.seg button:disabled { opacity: .5; }
+#tones { display: flex; }
+#tones button { flex: 1; justify-content: center; padding: 0 6px; }
+.platforms { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; }
+.platforms button { justify-content: center; gap: 6px; }
 .platforms button[aria-pressed="false"] svg { filter: grayscale(1); opacity: .5; }
 .logo { width: 16px; height: 16px; flex: none; display: block; }
-#tones { display: flex; }
-#tones button { flex: 1; padding: 0 8px; }
-/* One post per chosen platform: a tab each, the post, then its length and what suits that platform. */
-.post-head { display: flex; align-items: center; gap: 10px; margin-bottom: 6px; }
-.post-head .seg button { display: inline-flex; align-items: center; gap: 6px; padding: 0 12px; }
-.post-head .btn { margin-left: auto; }
-.post-tip { display: flex; justify-content: space-between; gap: 12px; margin-top: 6px; font-size: 12px; color: var(--muted); }
-.post-tip .over { color: #b00020; }
-#note { min-height: 72px; max-height: 120px; }
-.run { grid-column: 1 / -1; display: flex; align-items: center; gap: 12px; padding: 11px 14px; }
-.run .btn { height: 40px; }
-#btnRun { width: 160px; } #btnStop { width: 100px; }
-#status { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-#logGroup { grid-column: 1 / -1; display: flex; flex-direction: column; gap: 6px; }
-#logGroup h2 { margin: 0; }
+
+/* the run: buttons, the status, a progress bar and the log */
+.run-row { display: flex; align-items: center; gap: 12px; }
+.run-row #status { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+#btnRun { min-width: 150px; } #btnStop { min-width: 96px; }
 #progress { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-#log { height: 96px; min-height: 96px; max-height: 96px; resize: none; font-size: 12px; line-height: 1.5; background: #fff; }
-/* Same look as Product Review: a green bar filled by the shots done (sliding while none is done yet), greyed controls while running. */
-.progress { background: #e6e6e6; border: 1px solid #bcbcbc; height: 8px; overflow: hidden; }
-.progress > span { display: block; height: 100%; width: 0; background: #06b025; transition: width .4s; }
+#log { height: 104px; min-height: 104px; resize: none; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 0.75rem; line-height: 1.6; }
+.progress { height: 8px; overflow: hidden; }
+.progress { background: var(--muted); border: 1px solid var(--border); border-radius: 9999px; }
+.progress > span { display: block; height: 100%; width: 0; background: var(--primary); border-radius: 9999px; transition: width .4s; }
 .progress.marquee > span { width: 22%; transition: none; animation: marquee 2.2s linear infinite; }
 @keyframes marquee { from { transform: translateX(-100%); } to { transform: translateX(460%); } }
-.btn:disabled, .btn.primary:disabled { background: #cccccc; border-color: #bfbfbf; color: #838383; cursor: default; }
-select:disabled, input:disabled, textarea:disabled { background-color: #cccccc; border-color: #bfbfbf; color: #838383; }
-.qrow .btn:disabled { opacity: 1; }
-/* Results of the chosen product: its images on the left, the post on the right. */
-#resultGroup { grid-column: 1 / -1; display: flex; flex-direction: column; min-height: 0; }
-#result { flex: 1; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr); gap: 16px; min-height: 0; }
-#result .side { display: flex; flex-direction: column; min-height: 0; }
-#result .side > label { margin: 0 0 6px; display: flex; align-items: center; justify-content: space-between; height: 32px; }
-#out { flex: 1; min-height: 0; max-height: none; margin: 0; }
-.tiles { display: flex; flex-wrap: wrap; align-content: flex-start; gap: 10px; overflow-y: auto; min-height: 0; flex: 1; }
-.tile { position: relative; flex: none; width: 112px; height: 112px; background: #fff; border: 1px solid var(--line); }
+
+/* results of the chosen product: its pictures, then the post */
+#result { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr); gap: 16px; }
+#result .col { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.tiles { display: flex; flex-wrap: wrap; align-content: flex-start; gap: 8px; }
+#results { flex-direction: column; flex-wrap: nowrap; max-height: 420px; overflow-y: auto; }
+.group-row { display: flex; gap: 8px; align-items: center; width: 100%; }
+.group-row .arrow { color: var(--muted-foreground); }
+.tile { position: relative; flex: none; width: 84px; height: 84px; border: 1px solid var(--border); border-radius: var(--radius-lg, 10px); background: var(--muted); overflow: hidden; }
 .tile img { width: 100%; height: 100%; object-fit: cover; display: block; }
-.tile .remove { position: absolute; top: 4px; right: 4px; width: 22px; height: 22px; padding: 0; font-size: 13px; }
-.tile.add { display: grid; place-content: center; text-align: center; gap: 4px; border-style: dashed; color: var(--muted); font: inherit; cursor: pointer; }
-.tile.add:hover, .tiles.dropping .tile.add { background: var(--hover); border-color: var(--accent); }
-.tile.add b { font-size: 26px; font-weight: 300; line-height: 1; }
-.tile.waiting { display: grid; place-content: center; text-align: center; border-style: dashed; color: var(--muted); padding: 8px; font-size: 12px; }
-/* Each original image gives several bối cảnh: in the dialog a count under each image, in the results one row per
-   original (the original, then its bối cảnh). */
-.src { display: flex; flex-direction: column; gap: 4px; flex: none; }
-.src .count { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--muted); }
-.src .count input { width: 52px; height: 24px; padding: 0 4px; }
-.group-row { display: flex; gap: 10px; align-items: center; width: 100%; }
-.group-row .tile.origin { border-color: #000; }
-.group-row .arrow { color: var(--muted); }
-#results { flex-direction: column; flex-wrap: nowrap; }
-#results .tile { width: 84px; height: 84px; font-size: 11px; }
-#results .group-row { gap: 8px; }
-.empty-note { flex: 1; display: grid; place-content: center; text-align: center; background: #fff; border: 1px dashed var(--line); color: var(--muted); padding: 12px; }
-/* Xem / sửa: the product's details and original images, like Product Review's product dialog. */
-dialog { width: 760px; max-width: calc(100vw - 40px); padding: 0; border: 1px solid #7a7a7a; background: var(--control); box-shadow: 0 8px 30px rgba(0, 0, 0, .25); }
-dialog::backdrop { background: rgba(0, 0, 0, .25); }
-dialog .bar { display: flex; align-items: center; justify-content: space-between; height: 32px; padding: 0 4px 0 12px; background: #fff; border-bottom: 1px solid var(--line); }
-dialog .bar button { width: 32px; height: 28px; border: 0; background: none; font-size: 16px; }
-dialog .body { padding: 14px 16px 16px; }
-dialog .pair { display: grid; grid-template-columns: 2fr 1fr; gap: 12px; }
-dialog .pair label { margin-top: 0; }
-dialog textarea { min-height: 72px; max-height: 120px; }
-#tags { min-height: 96px; }
-dialog .tiles { flex-wrap: nowrap; overflow-x: auto; overflow-y: hidden; padding-bottom: 2px; align-items: flex-start; }
-dialog .foot { display: flex; justify-content: flex-end; gap: 10px; margin-top: 16px; }
-dialog .foot .btn { width: 104px; }
-#imgDlg { width: 760px; }
-#imgDlg.compare { width: min(1180px, calc(100vw - 40px)); }
+.tile:not(.waiting):hover { border-color: var(--state-border); }
+.tile.origin { border-color: var(--foreground); }
+.tile.waiting { display: grid; place-content: center; text-align: center; border-style: dashed; background: transparent; color: var(--muted-foreground); padding: 6px; font-size: 0.6875rem; line-height: 1.3; }
+.tile.waiting.warn { border-color: var(--destructive); color: var(--destructive); }
+.result-color { margin: 4px 0 0; }
+.empty-note { display: grid; place-content: center; text-align: center; min-height: 120px; border: 1px dashed var(--border); border-radius: var(--radius-lg, 10px); color: var(--muted-foreground); padding: 12px; width: 100%; }
+.empty-note.warn { white-space: pre-line; text-align: left; max-height: 90px; overflow: auto; color: var(--destructive); border-color: var(--destructive); }
+.post-head { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.post-head .btn { margin-left: auto; }
+.out { margin: 0; min-height: 200px; max-height: 360px; overflow: auto; padding: 12px; border: 1px solid var(--border); border-radius: var(--radius-lg, 10px); background: var(--muted); white-space: pre-wrap; word-break: break-word; font: inherit; }
+.post-tip { display: flex; justify-content: space-between; gap: 12px; font-size: 0.8125rem; color: var(--muted-foreground); }
+.post-tip .over { color: var(--destructive); }
+
+/* history: one card per run on this machine */
+#history { display: flex; flex-direction: column; gap: 8px; }
+.run-item { border: 1px solid var(--border); border-radius: var(--radius-lg, 10px); background: var(--card); }
+.run-item:hover { border-color: var(--state-border); }
+.run-item .line { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 12px; align-items: center; padding: 10px 12px; }
+.run-item .what { min-width: 0; }
+.run-item .what .names { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.run-item .strip { display: flex; flex-wrap: wrap; gap: 6px; padding: 0 12px 12px; }
+.run-item .strip .tile { width: 64px; height: 64px; }
+.run-item .strip .cap { width: 100%; margin: 6px 0 -2px; font-size: 0.75rem; color: var(--muted-foreground); }
+.history-bar { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.history-bar .grow { color: var(--muted-foreground); }
+
+/* dialogs */
+dialog.dialog { max-width: calc(100vw - 32px); width: 760px; }
+#imgDlg { width: 760px; } #imgDlg.compare { width: min(1180px, calc(100vw - 32px)); }
 #imgGrid { display: flex; gap: 12px; justify-content: center; align-items: flex-start; }
 #imgGrid figure { flex: 1; min-width: 0; margin: 0; text-align: center; }
-#imgGrid img { display: block; max-width: 100%; max-height: 64vh; margin: 0 auto; object-fit: contain; background: #fff; border: 1px solid var(--line); }
-#imgGrid figcaption { margin-top: 6px; font-size: 12px; color: var(--muted); }
-#imgGrid figure.result figcaption { color: var(--text, #222); font-weight: 600; }
-#brandOther { margin-top: 6px; }
-.colors { max-height: 300px; min-height: 120px; overflow-y: auto; background: #fff; border: 1px solid var(--line); }
-.crow { display: flex; align-items: flex-start; gap: 8px; padding: 8px; border-bottom: 1px solid var(--line); }
-.crow[aria-current="true"] { background: var(--hover); }
-.crow .arrow { flex: none; height: 56px; line-height: 56px; color: var(--muted); }
+#imgGrid img { display: block; max-width: 100%; max-height: 64vh; margin: 0 auto; object-fit: contain; background: var(--muted); border: 1px solid var(--border); border-radius: var(--radius-lg, 10px); }
+#imgGrid figcaption { margin-top: 6px; font-size: 0.8125rem; color: var(--muted-foreground); }
+#imgGrid figure.result figcaption { color: var(--foreground); }
+.pair { display: grid; grid-template-columns: 2fr 1fr; gap: 16px; }
+#tags { min-height: 96px; }
+.wm-preview { position: relative; margin-top: 8px; width: 100%; background: linear-gradient(135deg, #dcd5c8, #b7ab97); border: 1px solid var(--border); border-radius: var(--radius-lg, 10px); overflow: hidden; }
+.wm-preview img.mark { position: absolute; max-width: none; }
+.wm-preview.plate { cursor: pointer; background: #eceae4; }
+.wm-preview.off img.mark { opacity: .35; }
+.wm-preview.none { display: grid; place-content: center; height: 64px; background: transparent; border-style: dashed; color: var(--muted-foreground); font-size: 0.75rem; text-align: center; padding: 6px; }
+.check[hidden] { display: none; }
+.colors { max-height: 300px; min-height: 120px; overflow-y: auto; border: 1px solid var(--border); border-radius: var(--radius-lg, 10px); background: var(--card); }
+.crow { display: flex; align-items: flex-start; gap: 8px; padding: 8px; border-bottom: 1px solid var(--border); }
+.crow[aria-current="true"] { background: var(--state-fill); }
+.crow .arrow { flex: none; height: 56px; line-height: 56px; color: var(--muted-foreground); }
 .crow .scenes { display: flex; flex-wrap: wrap; gap: 8px; flex: 1; min-width: 0; align-items: flex-start; }
-.crow .hint { align-self: center; font-size: 12px; color: var(--muted); }
+.crow .hint { align-self: center; font-size: 0.75rem; color: var(--muted-foreground); }
 .crow-add { display: flex; align-items: center; gap: 8px; padding: 8px; }
 .pt { display: flex; align-items: flex-start; gap: 4px; flex: none; }
-.pt .th { position: relative; width: 56px; height: 56px; background: var(--control); border: 1px solid var(--line); cursor: zoom-in; }
+.pt .th { position: relative; width: 56px; height: 56px; background: var(--muted); border: 1px solid var(--border); border-radius: var(--radius-md, 8px); overflow: hidden; cursor: zoom-in; }
+.pt .th:hover { border-color: var(--state-border); }
 .pt .th img { width: 100%; height: 100%; object-fit: cover; display: block; }
-.pt .th .remove { position: absolute; top: 2px; right: 2px; width: 18px; height: 18px; padding: 0; font-size: 11px; line-height: 1; }
-.pt .chip { width: 56px; height: 56px; padding: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; font-size: 12px; line-height: 1.2; }
-.pt .chip small { font-size: inherit; line-height: inherit; color: inherit; }
-.addtile { flex: none; width: 56px; height: 56px; padding: 0; font: inherit; font-size: 12px; color: var(--muted); background: #fff; border: 1px dashed var(--line); cursor: pointer; }
-.addtile:hover { background: var(--hover); border-color: var(--accent); }
-.result-color { margin: 4px 0 0; }
-.angles-btn { height: 26px; padding: 0 8px; font-size: 12px; }
-#angleDlg { width: 720px; }
-.angle-top { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
+.pt .th .remove { position: absolute; top: 2px; right: 2px; width: 18px; height: 18px; min-width: 0; padding: 0; font-size: 0.6875rem; line-height: 1; }
+.pt .chip { width: 56px; height: 56px; min-width: 0; padding: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; font-size: 0.75rem; line-height: 1.2; }
+.addtile { flex: none; width: 56px; height: 56px; padding: 0; font: inherit; font-size: 0.75rem; color: var(--muted-foreground); background: transparent; border: 1px dashed var(--border); border-radius: var(--radius-md, 8px); }
+.addtile:hover { border-color: var(--state-border); color: var(--accent-foreground); }
+.angle-top { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; flex-wrap: wrap; }
 .angle-top .spacer { flex: 1; }
-.angle-top .sets { display: inline-flex; gap: 8px; }
-.angle-top .btn { height: 28px; padding: 0 10px; }
-.angle-list { max-height: 54vh; overflow-y: auto; background: #fff; border: 1px solid var(--line); padding: 4px 12px 8px; }
-.angle-group { margin: 12px 0 4px; font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; }
-.angle-item { display: grid; grid-template-columns: 20px minmax(0, 1fr); gap: 8px; align-items: start; margin: 0; padding: 6px 0; border-bottom: 1px solid #eee; cursor: pointer; }
-.angle-item:hover { background: var(--hover); }
-.angle-item input { width: auto; margin: 2px 0 0; }
+.angle-top .sets { display: inline-flex; gap: 8px; flex-wrap: wrap; }
+.angle-list { max-height: 50vh; overflow-y: auto; border: 1px solid var(--border); border-radius: var(--radius-lg, 10px); padding: 4px 12px 8px; background: var(--card); }
+.angle-group { margin: 12px 0 4px; font-size: 0.75rem; color: var(--muted-foreground); text-transform: uppercase; letter-spacing: .06em; }
+.angle-item { display: grid; grid-template-columns: 20px minmax(0, 1fr); gap: 8px; align-items: start; margin: 0; padding: 6px 0; border-bottom: 1px solid var(--border); cursor: pointer; }
+.angle-item input { margin: 3px 0 0; }
+.warn { color: var(--destructive); }
+#brandOther { margin-top: 6px; }
+@media (max-width: 860px) { #result, .pair { grid-template-columns: minmax(0, 1fr); } }
 </style>
 <script src="../../../hub/assets/hub.js" defer></script>
+<script src="../../../hub/assets/ui/vendor/basecoat/basecoat-all.min.js" defer></script>
 </head>
 <body data-fit="980x700">
-<main>
-  <header><a class="btn" id="menu" href="#" hidden>← Menu</a><h1>Content MXH</h1></header>
+<main class="wrap">
+  <header class="top">
+    <img src="../icon.svg" alt="">
+    <h1>Content MXH</h1>
+    <a class="btn" data-variant="outline" id="menu" href="#" hidden>← Menu</a>
+    <button type="button" class="btn" data-variant="ghost" id="themeBtn" aria-label="Đổi giao diện sáng tối">Tối</button>
+  </header>
 
-  <div class="layout">
-    <section class="group">
-      <h2>Sản phẩm &amp; ảnh</h2>
-      <div class="tools-row">
-        <button class="btn primary" id="btnAdd" type="button" style="width:160px">+ Thêm sản phẩm</button>
-        <button class="btn" id="btnClear" type="button" style="width:120px">Xóa tất cả</button>
-      </div>
-      <div class="listbox" id="rows"></div>
-    </section>
-    <section class="group actions-col">
-      
-      <label>Đăng lên</label>
-      <div class="platforms" id="platforms" role="group" aria-label="Đăng lên"></div>
-      <label>Giọng văn</label>
-      <div class="seg" id="tones" role="group" aria-label="Giọng văn"></div>
-      <div class="pair2"><div><label for="imageAi">Tạo ảnh</label><select id="imageAi"></select></div><div><label for="textAi">Viết bài</label><select id="textAi"></select></div></div>
-      <label for="note">Lời nhắn cho AI</label>
-      <textarea id="note" placeholder="Ý muốn thêm hoặc góp ý cho bài viết. Ví dụ: nhấn mạnh khoảnh khắc buổi tối, giọng gần gũi."></textarea>
-    </section>
-    <section class="group run">
-      <button class="btn primary" id="btnRun" type="button">Bắt đầu</button>
-      <button class="btn" id="btnStop" type="button" disabled>Dừng</button>
-      <span class="muted" id="status"></span>
-    </section>
-    <section class="group" id="logGroup">
-      <h2>Tiến trình &amp; thông báo</h2>
-      <div class="progress" id="bar"><span></span></div>
-      <div class="muted" id="progress"></div>
-      <textarea id="log" readonly></textarea>
-    </section>
-    <section class="group" id="resultGroup">
-      <h2 id="resultTitle">Kết quả</h2>
-      <div id="result">
-        <div class="side"><label>Ảnh tạo thành</label><div class="tiles" id="results"></div></div>
-        <div class="side"><div class="post-head"><div class="seg" id="tabs" role="tablist" aria-label="Nền tảng"></div><button class="btn" id="copy" type="button">Copy bài đăng</button></div><pre class="out" id="out"></pre><div class="post-tip"><span id="tip"></span><span id="count"></span></div></div>
-      </div>
+  <div class="grid-main" style="grid-template-columns: minmax(0, 1fr) 340px">
+    <div class="stack">
+      <section class="card">
+        <header><div class="head-row"><h2>Sản phẩm và ảnh</h2><div class="row"><button class="btn" id="btnAdd" type="button" data-size="sm">+ Thêm sản phẩm</button><button class="btn" data-variant="outline" id="btnClear" type="button" data-size="sm">Xóa tất cả</button></div></div></header>
+        <section><div id="rows"></div></section>
+      </section>
+      <section class="card">
+        <section class="stack">
+          <div class="run-row">
+            <button class="btn" id="btnRun" type="button">Bắt đầu</button>
+            <button class="btn" data-variant="outline" id="btnStop" type="button" disabled>Dừng</button>
+            <span class="muted" id="status"></span>
+          </div>
+          <div class="progress" id="bar" role="progressbar" aria-label="Tiến độ"><span></span></div>
+          <div class="muted small" id="progress"></div>
+          <textarea class="textarea" id="log" readonly aria-label="Tiến trình và thông báo"></textarea>
+        </section>
+      </section>
+    </div>
+    <section class="card">
+      <header><h2>Đăng lên</h2></header>
+      <section class="stack">
+        <div class="platforms seg" id="platforms" aria-label="Đăng lên" style="display:grid"></div>
+        <div class="field"><label>Giọng văn</label><div class="seg" id="tones" aria-label="Giọng văn"></div></div>
+        <div class="grid-2">
+          <div role="group" class="field"><label for="imageAi">Tạo ảnh</label><select class="select" id="imageAi"></select></div>
+          <div role="group" class="field"><label for="textAi">Viết bài</label><select class="select" id="textAi"></select></div>
+        </div>
+        <div role="group" class="field"><label for="note">Lời nhắn cho AI</label><textarea class="textarea" id="note" placeholder="Ý muốn thêm hoặc góp ý cho bài viết. Ví dụ: nhấn mạnh khoảnh khắc buổi tối, giọng gần gũi."></textarea></div>
+      </section>
     </section>
   </div>
+
+  <section class="card">
+    <header>
+      <div class="head-row">
+        <div class="seg" id="views" role="tablist" aria-label="Kết quả hoặc lịch sử"><button type="button" role="tab" id="viewResult" aria-selected="true">Kết quả</button><button type="button" role="tab" id="viewHistory" aria-selected="false">Lịch sử</button></div>
+        <div class="row"><button class="btn" data-variant="outline" data-size="sm" id="openFolder" type="button" title="Mở thư mục chứa kết quả của lần chạy này">Mở thư mục lần chạy này</button></div>
+      </div>
+    </header>
+    <section id="resultPane">
+      <h3 id="resultTitle" class="muted" style="margin-bottom:10px">Kết quả</h3>
+      <div id="result">
+        <div class="col"><div class="tiles" id="results"></div></div>
+        <div class="col"><div class="post-head"><div class="seg" id="tabs" role="tablist" aria-label="Nền tảng"></div><button class="btn" data-variant="outline" data-size="sm" id="copy" type="button">Copy bài đăng</button></div><pre class="out" id="out"></pre><div class="post-tip"><span id="tip"></span><span id="count"></span></div></div>
+      </div>
+    </section>
+    <section id="historyPane" hidden>
+      <div class="history-bar" style="margin-bottom:10px"><span class="grow small" id="historySummary"></span><button class="btn" data-variant="outline" data-size="sm" id="btnCleanup" type="button">Dọn bớt…</button></div>
+      <div id="history"></div>
+    </section>
+  </section>
 </main>
 
-<dialog id="dlg">
-  <div class="bar"><span id="dlgTitle">Sản phẩm</span><button type="button" id="dlgX" aria-label="Đóng">✕</button></div>
-  <div class="body">
-    <div class="pair">
-      <div><label for="name">Tên sản phẩm</label><input id="name" placeholder="Bàn trà gỗ óc chó chân vòm"><label for="link">Link sản phẩm</label><input id="link" placeholder="https://…"><label for="tags">Hashtag (cách nhau bởi dấu cách)</label><textarea id="tags" placeholder="#BanTraGo #GocTra"></textarea></div>
-      <div><label for="brand">Thương hiệu</label><select id="brand"></select><input id="brandOther" hidden placeholder="Tên thương hiệu" autocomplete="off">
-        <div class="wm-preview" id="wmPreview"></div><label class="check" id="wmCheck"><input type="checkbox" id="watermark"><span>Đóng dấu logo lên ảnh</span></label></div>
-    </div>
-    <label>Ảnh sản phẩm theo màu và ảnh cảnh</label>
-    <div class="colors" id="colors"></div>
-    <div class="muted small" id="dlgNote"></div>
-    <input id="pick" type="file" accept="image/jpeg,image/png,image/webp" multiple hidden>
-    <div class="foot"><button class="btn primary" id="dlgSave" type="button">Lưu</button><button class="btn" id="dlgCancel" type="button">Hủy</button></div>
+<dialog id="dlg" class="dialog" aria-labelledby="dlgTitle" onpointerdown="this.dataset.backdropPress = event.target === this" onclick="if (event.target === this && this.dataset.backdropPress === 'true') this.close()">
+  <div>
+    <header><h2 id="dlgTitle">Sản phẩm</h2></header>
+    <section class="stack">
+      <div class="pair">
+        <div class="stack">
+          <div role="group" class="field"><label for="name">Tên sản phẩm</label><input id="name" placeholder="Bàn trà gỗ óc chó chân vòm"></div>
+          <div role="group" class="field"><label for="link">Link sản phẩm</label><input id="link" placeholder="https://…"></div>
+          <div role="group" class="field"><label for="tags">Hashtag (cách nhau bởi dấu cách)</label><textarea class="textarea" id="tags" placeholder="#BanTraGo #GocTra"></textarea></div>
+        </div>
+        <div class="stack">
+          <div role="group" class="field"><label for="brand">Thương hiệu</label><select class="select" id="brand"></select><input id="brandOther" hidden placeholder="Tên thương hiệu" autocomplete="off"></div>
+          <div class="wm-preview" id="wmPreview"></div>
+          <div role="group" class="field check" data-orientation="horizontal" id="wmCheck"><input type="checkbox" class="input" id="watermark"><label for="watermark">Đóng dấu logo lên ảnh</label></div>
+        </div>
+      </div>
+      <div role="group" class="field"><label>Ảnh sản phẩm theo màu và ảnh cảnh</label><div class="colors" id="colors"></div></div>
+      <div class="muted small" id="dlgNote"></div>
+      <input id="pick" type="file" accept="image/jpeg,image/png,image/webp" multiple hidden>
+    </section>
+    <footer><button class="btn" data-variant="outline" id="dlgCancel" type="button">Hủy</button><button class="btn" id="dlgSave" type="button">Lưu</button></footer>
+    <button type="button" id="dlgX" aria-label="Đóng"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button>
   </div>
 </dialog>
-<dialog id="imgDlg">
-  <div class="bar"><span id="imgTitle"></span><button type="button" id="imgX" aria-label="Đóng">✕</button></div>
-  <div class="body"><div id="imgGrid"></div><div class="foot"><button class="btn" id="imgClose" type="button">Đóng</button></div></div>
-</dialog>
-<dialog id="angleDlg">
-  <div class="bar"><span>Chọn góc máy</span><button type="button" id="angleX" aria-label="Đóng">✕</button></div>
-  <div class="body">
-    <div class="angle-top"><span class="muted" id="angleSummary"></span><span class="spacer"></span><span id="angleSets" class="sets"></span><button class="btn" id="angleClear" type="button">Bỏ chọn hết</button></div>
-    <div id="angleList" class="angle-list"></div>
-    <div class="foot"><button class="btn primary" id="angleOk" type="button">Xong</button></div>
+<dialog id="imgDlg" class="dialog" aria-labelledby="imgTitle" onpointerdown="this.dataset.backdropPress = event.target === this" onclick="if (event.target === this && this.dataset.backdropPress === 'true') this.close()">
+  <div>
+    <header><h2 id="imgTitle"></h2></header>
+    <section><div id="imgGrid"></div></section>
+    <footer><button class="btn" data-variant="outline" id="imgClose" type="button">Đóng</button></footer>
+    <button type="button" id="imgX" aria-label="Đóng"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button>
   </div>
 </dialog>
-<div class="toast" id="toast"></div>
+<dialog id="angleDlg" class="dialog" aria-labelledby="angleTitle" style="width:720px">
+  <div>
+    <header><h2 id="angleTitle">Chọn góc máy</h2></header>
+    <section>
+      <div class="angle-top"><span class="muted small" id="angleSummary"></span><span class="spacer"></span><span id="angleSets" class="sets"></span><button class="btn" data-variant="outline" data-size="sm" id="angleClear" type="button">Bỏ chọn hết</button></div>
+      <div id="angleList" class="angle-list"></div>
+    </section>
+    <footer><button class="btn" id="angleOk" type="button">Xong</button></footer>
+    <button type="button" id="angleX" aria-label="Đóng"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button>
+  </div>
+</dialog>
+<dialog id="cleanDlg" class="dialog" aria-labelledby="cleanTitle" style="width:480px" onpointerdown="this.dataset.backdropPress = event.target === this" onclick="if (event.target === this && this.dataset.backdropPress === 'true') this.close()">
+  <div>
+    <header><h2 id="cleanTitle">Dọn bớt kết quả cũ</h2><p>Xóa hẳn các lần chạy cũ khỏi máy này để lấy lại chỗ. Bản đã đẩy lên Drive không bị ảnh hưởng.</p></header>
+    <section class="stack">
+      <div role="group" class="field"><label for="keepN">Giữ lại bao nhiêu lần chạy gần nhất</label><input id="keepN" type="number" min="0" value="5"></div>
+      <div class="muted" id="cleanInfo"></div>
+    </section>
+    <footer><button class="btn" data-variant="outline" id="cleanCancel" type="button">Hủy</button><button class="btn" data-variant="destructive" id="cleanGo" type="button">Xóa</button></footer>
+    <button type="button" id="cleanX" aria-label="Đóng"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button>
+  </div>
+</dialog>
+<div id="toaster" class="toaster"></div>
 <script>
 // Content MXH: many products at once. A product has colors; a color has its product photo and, optionally, scene photos
 // (rooms to place it in); every scene (or the product photo itself when a color has none) is shot from the camera angles
 // picked for it. One post per platform chosen in Đăng lên. This page only collects the job and shows the run; the work is
 // src/run-content.ps1, started by src/server.mjs, which turns the run's @@EVENT lines into the events this page polls.
-// The product details and the photos' paths are kept in this browser; photos live in workspace/temp/uploads.
+// The product details and the photos' paths are kept in this browser; photos live in the tool's workspace folder (temp/uploads).
 const $ = (id) => document.getElementById(id);
 const KEY = "fb-content:v4";
 const FIELDS = ["name", "link", "tags"];
@@ -280,14 +314,14 @@ const scenesOf = (color) => (color.scenes.length ? color.scenes.map((s) => ({ ..
 const shotsOfRow = (row) => row.colors.reduce((n, c) => n + scenesOf(c).reduce((m, s) => m + s.angles.length, 0), 0);
 
 function rowStatus(row) {
-  if (row.status === "working") return { text: `● Đang làm · ${Object.keys(row.images || {}).length}/${shotsOfRow(row)} ảnh`, cls: "" };
+  if (row.status === "working") return { text: `Đang làm · ${Object.keys(row.images || {}).length}/${shotsOfRow(row)} ảnh`, variant: "" };
   if (row.status === "ok") {
     const shots = Object.values(row.images).filter((i) => i.ok).length, posts = Object.values(row.posts).filter((p) => p.text).length;
-    return { text: `● Xong · ${shots} ảnh · ${posts} bài`, cls: row.errors.length ? "warn" : "ok" };
+    return { text: `Xong · ${shots} ảnh · ${posts} bài`, variant: row.errors.length ? "destructive" : "secondary" };
   }
-  if (row.status === "failed") return { text: "● Lỗi, xem Kết quả", cls: "warn" };
-  if (!row.colors.length) return { text: "● Chưa có ảnh", cls: "warn" };
-  return { text: `● ${row.colors.length} màu · ${shotsOfRow(row)} ảnh`, cls: "ok" };
+  if (row.status === "failed") return { text: "Lỗi, xem Kết quả", variant: "destructive" };
+  if (!row.colors.length) return { text: "Chưa có ảnh", variant: "outline" };
+  return { text: `${row.colors.length} màu · ${shotsOfRow(row)} ảnh`, variant: "secondary" };
 }
 
 function renderRows() {
@@ -300,7 +334,10 @@ function renderRows() {
     if (row.colors[0]) { thumb.style.cursor = "zoom-in"; thumb.onclick = (e) => { e.stopPropagation(); showImage(fileUrl(row.colors[0].product.path), `#${i + 1} ${row.name}`); }; }
     const open = el("button", { type: "button", className: "btn", textContent: "Xem / sửa", disabled: state.running });
     const remove = el("button", { type: "button", className: "btn", textContent: "×", title: "Xóa sản phẩm", disabled: state.running });
-    card.append(el("span", { className: "muted", textContent: `#${i + 1}` }), el("span", { className: "name", textContent: row.name, title: row.link }), el("span", { className: st.cls, textContent: st.text }), thumb, open, remove);
+    open.dataset.variant = "outline"; open.dataset.size = "sm"; remove.dataset.variant = "ghost"; remove.dataset.size = "sm";
+    const badge = el("span", { className: "badge", textContent: st.text });
+    if (st.variant) badge.dataset.variant = st.variant;
+    card.append(el("span", { className: "muted", textContent: `#${i + 1}` }), el("span", { className: "grow", textContent: row.name, title: row.link }), badge, thumb, open, remove);
     card.onclick = () => { state.current = row.id; render(); };
     open.onclick = (e) => { e.stopPropagation(); state.current = row.id; render(); edit(row); };
     remove.onclick = (e) => { e.stopPropagation(); state.rows.splice(state.rows.indexOf(row), 1); render(); };
@@ -404,6 +441,7 @@ function renderStatus() {
   if (log.value !== text) { const stick = log.scrollTop + log.clientHeight >= log.scrollHeight - 24; log.value = text; if (stick) log.scrollTop = log.scrollHeight; }
   $("btnRun").disabled = state.running; $("btnStop").disabled = !state.running;
   $("btnAdd").disabled = state.running; $("btnClear").disabled = state.running;
+  $("openFolder").disabled = $("historyPane").hidden && !(state.summary?.folder || state.runFolder);
   $("imageAi").disabled = $("textAi").disabled = $("note").disabled = $("watermark").disabled = state.running;
 }
 setInterval(() => { if (state.running) renderStatus(); }, 1000);
@@ -423,6 +461,7 @@ const brandOf = (name) => DATA.brands.find((b) => b.name.toLowerCase() === Strin
 // Preview of the brand's watermark alone: the visible plate of its PNG, cropped by content_box.
 function updateWatermarkPreview() {
   const box = $("wmPreview"), check = $("wmCheck");
+  box.hidden = false;
   const brand = brandOf(getBrand());
   box.className = "wm-preview";
   box.replaceChildren();
@@ -458,11 +497,13 @@ const photoBlock = (photo, title, onRemove, holder) => {
   th.append(el("img", { src: fileUrl(photo.path), alt: photo.name }));
   th.onclick = () => showImage(fileUrl(photo.path), photo.name);
   const remove = el("button", { type: "button", className: "btn remove", textContent: "×", title: "Bỏ ảnh này" });
+  remove.dataset.variant = "secondary";
   remove.onclick = (e) => { e.stopPropagation(); onRemove(); };
   th.append(remove);
   box.append(th);
   if (holder) {
     const chip = el("button", { type: "button", className: "btn chip", title: "Chọn góc máy cho ảnh này" });
+    chip.dataset.variant = "outline";
     chip.append(String(anglesOf(holder).length), el("small", { textContent: "góc" }));
     chip.onclick = () => openAngles(holder);
     box.append(chip);
@@ -575,7 +616,7 @@ function renderAngles() {
     const head = el("div", { className: "angle-group", textContent: g.label });
     return [head, ...items.map((a) => {
       const row = el("label", { className: "angle-item" });
-      const box = el("input", { type: "checkbox", checked: angleDraft.has(a.id) });
+      const box = el("input", { type: "checkbox", className: "input", checked: angleDraft.has(a.id) });
       box.onchange = () => { box.checked ? angleDraft.add(a.id) : angleDraft.delete(a.id); renderAngles(); };
       const text = el("span", {});
       text.append(el("span", { textContent: a.label }), el("span", { className: "muted small", textContent: ` · ${a.label_en}` }));
@@ -589,6 +630,7 @@ function renderAngles() {
   $("angleOk").disabled = !angleDraft.size;
   $("angleSets").replaceChildren(...DATA.angleSets.map((set) => {
     const b = el("button", { type: "button", className: "btn", textContent: set.label, title: set.note });
+    b.dataset.variant = "outline"; b.dataset.size = "sm";
     b.onclick = () => { angleDraft = new Set(set.angles); renderAngles(); };
     return b;
   }));
@@ -657,7 +699,7 @@ function onEvent(e) {
   else if (e.kind === "post" && row) row.posts[e.platform] = { text: e.text, warnings: e.warnings || [], error: e.error || "" };
   else if (e.kind === "warning" && row) row.warnings.push(e.message);
   else if (e.kind === "product-done" && row) { row.status = e.ok ? "ok" : "failed"; row.errors = e.errors || []; }
-  else if (e.kind === "done") state.summary = e;
+  else if (e.kind === "done") { state.summary = e; loadRuns(); }
   else if (e.kind === "fatal") state.fatal = e.message;
 }
 let polling = false;
@@ -670,6 +712,7 @@ async function poll() {
       r.events.forEach(onEvent);
       state.since = r.next;
       state.running = r.running;
+      if (r.folder) state.runFolder = r.folder;
       render();
       if (!r.running) break;
       await new Promise((done) => setTimeout(done, 1500));
@@ -702,14 +745,14 @@ $("btnRun").onclick = async () => {
   poll();
 };
 $("btnStop").onclick = async () => { await fetch("/api/stop", { method: "POST" }).catch(() => {}); toast("Đang dừng…"); };
-$("copy").onclick = async () => { await navigator.clipboard.writeText($("out").textContent); toast(`Đã copy bài đăng ${PLATFORMS[state.tab].name}`); };
+$("copy").onclick = async () => { await navigator.clipboard.writeText($("out").textContent); toast(`Đã copy bài đăng ${PLATFORMS[state.tab].name}`, "success"); };
 $("note").value = state.note;
 $("watermark").checked = state.watermark;
 // Clicking the logo preview is the same as ticking the box.
 $("wmPreview").onclick = () => { const box = $("watermark"); if (!box.disabled && $("wmPreview").classList.contains("plate")) box.click(); };
 $("watermark").onchange = (e) => { state.watermark = e.target.checked; persist(); updateWatermarkPreview(); };
 $("note").oninput = (e) => { state.note = e.target.value; persist(); };
-function toast(text) { const t = $("toast"); t.textContent = text; t.classList.add("show"); clearTimeout(t._h); t._h = setTimeout(() => t.classList.remove("show"), 2200); }
+function toast(text, category = "info") { try { $("toaster").toast({ category, title: text }); } catch {} }
 
 // ----- Khởi động -----
 const hubPort = new URLSearchParams(location.search).get("hub");
@@ -734,6 +777,98 @@ function fillSelect(select, choices, key) {
   render();
   poll(); // a run still going (or just finished) on the server is shown again after a reload
 })();
+
+// ----- Kết quả / Lịch sử -----
+const MB = (bytes) => bytes >= 1024 * 1024 * 1024 ? `${(bytes / 1024 / 1024 / 1024).toFixed(1)} GB` : `${Math.max(1, Math.round(bytes / 1024 / 1024))} MB`;
+const runTime = (id) => { const m = /^(\d{4})-(\d{2})-(\d{2})_(\d{2})h(\d{2})m(\d{2})s$/.exec(id); return m ? `${m[4]}:${m[5]} · ${m[3]}/${m[2]}/${m[1]}` : id; };
+let RUNS = { folder: "", bytes: 0, runs: [] };
+const openedRuns = new Set();
+async function openInExplorer(path) {
+  const r = await fetch("/api/open", { method: "POST", body: JSON.stringify({ path }) }).catch(() => null);
+  if (!r || !r.ok) toast("Không mở được thư mục.", "error");
+}
+function showView(view) {
+  const history = view === "history";
+  $("viewResult").setAttribute("aria-selected", !history); $("viewHistory").setAttribute("aria-selected", history);
+  $("resultPane").hidden = history; $("historyPane").hidden = !history;
+  $("openFolder").textContent = history ? "Mở thư mục kết quả" : "Mở thư mục lần chạy này";
+  $("openFolder").title = history ? "Mở thư mục chứa mọi kết quả trên máy này" : "Mở thư mục chứa kết quả của lần chạy này";
+  try { localStorage.setItem(KEY + ":view", view); } catch {}
+  renderStatus();
+  if (history) loadRuns();
+}
+$("viewResult").onclick = () => showView("result");
+$("viewHistory").onclick = () => showView("history");
+$("openFolder").onclick = () => openInExplorer($("historyPane").hidden ? (state.summary?.folder || state.runFolder || "") : "");
+function renderHistory() {
+  $("historySummary").textContent = RUNS.runs.length ? `${RUNS.runs.length} lần chạy · ${MB(RUNS.bytes)} trên máy này` : "Chưa có lần chạy nào.";
+  $("btnCleanup").disabled = RUNS.runs.length === 0 || state.running;
+  $("history").replaceChildren(...RUNS.runs.map((run) => {
+    const item = el("div", { className: "run-item" });
+    const images = run.products.reduce((n, p) => n + p.images.length, 0), posts = run.products.reduce((n, p) => n + p.posts.length, 0);
+    const what = el("div", { className: "what" });
+    what.append(el("div", { textContent: runTime(run.id) }), el("div", { className: "muted small names", textContent: `${run.products.map((p) => p.name).join(", ") || "Không có sản phẩm"}` }), el("div", { className: "muted small", textContent: `${run.products.length} sản phẩm · ${images} ảnh · ${posts} bài · ${MB(run.bytes)}` }));
+    const actions = el("div", { className: "row" });
+    const view = el("button", { type: "button", className: "btn", textContent: openedRuns.has(run.id) ? "Ẩn ảnh" : "Xem ảnh", disabled: !images });
+    const open = el("button", { type: "button", className: "btn", textContent: "Mở thư mục" });
+    const del = el("button", { type: "button", className: "btn", textContent: "Xóa", disabled: run.running });
+    view.dataset.variant = open.dataset.variant = "outline"; del.dataset.variant = "ghost";
+    view.dataset.size = open.dataset.size = del.dataset.size = "sm";
+    view.onclick = () => { openedRuns.has(run.id) ? openedRuns.delete(run.id) : openedRuns.add(run.id); renderHistory(); };
+    open.onclick = () => openInExplorer(run.folder);
+    del.onclick = async () => {
+      if (!confirm(`Xóa hẳn lần chạy ${runTime(run.id)} (${MB(run.bytes)}) khỏi máy này?`)) return;
+      await deleteRuns([run.id]);
+    };
+    actions.append(view, open, del);
+    item.append(el("div", { className: "line" }));
+    item.firstChild.append(what, actions);
+    if (openedRuns.has(run.id)) {
+      const strip = el("div", { className: "strip" });
+      for (const product of run.products) {
+        if (!product.images.length) continue;
+        strip.append(el("div", { className: "cap", textContent: product.name }));
+        for (const image of product.images) {
+          const tile = el("div", { className: "tile", title: `${product.name} · ${image.label}. Bấm để xem lớn` });
+          tile.style.cursor = "zoom-in";
+          tile.append(el("img", { src: fileUrl(image.file), alt: image.label, loading: "lazy" }));
+          tile.onclick = () => showImage(fileUrl(image.file), `${product.name} · ${image.label}`);
+          strip.append(tile);
+        }
+      }
+      item.append(strip);
+    }
+    return item;
+  }));
+}
+async function loadRuns() {
+  try { RUNS = await fetch("/api/runs").then((r) => r.json()); } catch { return; }
+  renderHistory();
+}
+async function deleteRuns(ids) {
+  const r = await fetch("/api/runs/delete", { method: "POST", body: JSON.stringify({ ids }) }).then((x) => x.json()).catch(() => null);
+  if (!r) return toast("Không xóa được.", "error");
+  toast(`Đã xóa ${r.removed.length} lần chạy${r.kept.length ? `, giữ lại ${r.kept.length}` : ""}`, r.kept.length ? "info" : "success");
+  await loadRuns();
+}
+// Dọn bớt: keep the newest N runs, delete the rest (never the one that is running).
+const toClean = () => { const keep = Math.max(0, Math.floor(Number($("keepN").value) || 0)); return RUNS.runs.slice(keep).filter((r) => !r.running); };
+function renderClean() {
+  const old = toClean(), bytes = old.reduce((n, r) => n + r.bytes, 0);
+  $("cleanInfo").textContent = old.length ? `Sẽ xóa ${old.length} lần chạy cũ, lấy lại ${MB(bytes)}.` : "Không có lần chạy nào cần xóa.";
+  $("cleanGo").disabled = !old.length;
+}
+$("btnCleanup").onclick = () => { renderClean(); $("cleanDlg").showModal(); };
+$("keepN").oninput = renderClean;
+$("cleanCancel").onclick = $("cleanX").onclick = () => $("cleanDlg").close();
+$("cleanGo").onclick = async () => { const ids = toClean().map((r) => r.id); $("cleanDlg").close(); await deleteRuns(ids); };
+
+// ----- Giao diện sáng / tối -----
+const themeBtn = $("themeBtn");
+const themeLabel = () => { themeBtn.textContent = document.documentElement.classList.contains("dark") ? "Sáng" : "Tối"; };
+themeBtn.onclick = () => { const dark = document.documentElement.classList.toggle("dark"); try { localStorage.setItem("themeMode", dark ? "dark" : "light"); } catch {} themeLabel(); };
+themeLabel();
+try { if (localStorage.getItem(KEY + ":view") === "history") showView("history"); } catch {}
 </script>
 </body>
 </html>

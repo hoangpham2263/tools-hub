@@ -4,13 +4,13 @@
 import { createServer } from "node:http";
 import { spawn, execFile } from "node:child_process";
 import { createInterface } from "node:readline";
-import { mkdir, writeFile, appendFile, readFile, readdir } from "node:fs/promises";
+import { mkdir, writeFile, appendFile, readFile, readdir, rm, stat } from "node:fs/promises";
 import { createReadStream, existsSync, mkdirSync, openSync, readFileSync, readdirSync, rmdirSync, statSync, renameSync, appendFileSync } from "node:fs";
 import { join, dirname, extname, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 import { randomUUID, createHash } from "node:crypto";
 import { createConfigApi } from "../../../hub/setup/config-api.mjs";
-import { PWSH, toolEnv, psFile, psCommand, killTree, appWindow } from "../../../hub/platform.mjs";
+import { PWSH, toolEnv, psFile, psCommand, killTree, appWindow, openFolder } from "../../../hub/platform.mjs";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const root = resolve(here, "..");
@@ -47,7 +47,7 @@ const logError = (where, text) => {
 process.on("uncaughtException", (e) => { logError("Máy chủ Content MXH", e.stack || e); process.exit(1); });
 process.on("unhandledRejection", (e) => logError("Máy chủ Content MXH", e?.stack || e));
 
-const TYPES = { ".html": "text/html; charset=utf-8", ".css": "text/css", ".js": "text/javascript", ".json": "application/json", ".svg": "image/svg+xml", ".png": "image/png", ".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".webp": "image/webp" };
+const TYPES = { ".html": "text/html; charset=utf-8", ".css": "text/css", ".js": "text/javascript", ".json": "application/json", ".svg": "image/svg+xml", ".png": "image/png", ".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".webp": "image/webp", ".woff2": "font/woff2" };
 const IMAGE_EXT = [".png", ".jpg", ".jpeg", ".webp"];
 const HUB_ASSETS = ["icon.svg", "tool.css", "hub.js"];
 
@@ -123,6 +123,42 @@ async function startRun(job) {
 }
 const stopRun = () => { if (run.proc) { run.stopped = true; killTree(run.proc); } };
 
+// ----- Results of the runs on this machine: <workspace>/output/<stamp>/<STT>-<name>/ -----
+const output = join(workspace, "output");
+const RUN_ID = /^\d{4}-\d{2}-\d{2}_\d{2}h\d{2}m\d{2}s$/;
+const dirBytes = async (dir) => {
+  let total = 0;
+  for (const entry of await readdir(dir, { withFileTypes: true }).catch(() => [])) {
+    const full = join(dir, entry.name);
+    total += entry.isDirectory() ? await dirBytes(full) : (await stat(full).catch(() => ({ size: 0 }))).size;
+  }
+  return total;
+};
+// What a run left, read from its folders (results.json keeps absolute paths of the machine it ran on, which move with the install).
+async function listRuns() {
+  const runs = [];
+  for (const id of (await readdir(output).catch(() => [])).filter((n) => RUN_ID.test(n)).sort().reverse()) {
+    const dir = join(output, id);
+    const products = [];
+    for (const name of await readdir(dir, { withFileTypes: true }).catch(() => [])) {
+      if (!name.isDirectory()) continue;
+      const folder = join(dir, name.name);
+      const files = await readdir(folder).catch(() => []);
+      const snapshot = await readJson(join(folder, "snapshot.json")).catch(() => null);
+      // The marked copy (-logo.png) is the one to post; the plain image stays beside it.
+      const pictures = files.filter((f) => /^anh-.*\.png$/.test(f) && !f.endsWith("-logo.png"));
+      products.push({
+        folder: name.name,
+        name: snapshot?.product || name.name.replace(/^\d+-/, ""),
+        images: pictures.map((f) => { const logo = f.replace(/\.png$/, "-logo.png"); return { file: join(folder, files.includes(logo) ? logo : f), label: f.replace(/^anh-/, "").replace(/\.png$/, "") }; }),
+        posts: files.filter((f) => /^bai-.*\.txt$/.test(f)).map((f) => f.replace(/^bai-/, "").replace(/\.txt$/, "")),
+      });
+    }
+    runs.push({ id, folder: dir, bytes: await dirBytes(dir), products, running: run.proc ? run.folder === dir : false });
+  }
+  return { folder: output, bytes: runs.reduce((n, r) => n + r.bytes, 0), runs };
+}
+
 // ----- HTTP -----
 const send = (res, status, data) => { res.writeHead(status, { "content-type": "application/json; charset=utf-8", "cache-control": "no-store" }); res.end(JSON.stringify(data)); };
 const body = async (req, limit = 60 * 1024 * 1024) => {
@@ -176,6 +212,27 @@ async function handle(req, res) {
     return send(res, 200, { running: !!run.proc, done: run.done, exitCode: run.exitCode, stopped: run.stopped, folder: run.folder, events: run.events.slice(since), next: run.events.length });
   }
   if (path === "/api/stop" && req.method === "POST") { stopRun(); return send(res, 200, { ok: true }); }
+  if (path === "/api/runs" && req.method === "GET") return send(res, 200, await listRuns());
+  // Explorer or Finder on a folder of the results: the output folder, a run or a product of it, nothing else.
+  if (path === "/api/open" && req.method === "POST") {
+    const { path: target = "" } = JSON.parse((await body(req)).toString("utf8") || "{}");
+    const full = resolve(String(target) || output);
+    if (full !== resolve(output) && !full.startsWith(resolve(output) + sep)) return send(res, 400, { error: "Chỉ mở được thư mục kết quả." });
+    await mkdir(full, { recursive: true });
+    openFolder(full);
+    return send(res, 200, { ok: true });
+  }
+  // Old runs are removed by the window's cleanup: only run folders by their id, never the one that is running.
+  if (path === "/api/runs/delete" && req.method === "POST") {
+    const { ids = [] } = JSON.parse((await body(req)).toString("utf8") || "{}");
+    const removed = [], kept = [];
+    for (const id of [].concat(ids)) {
+      const dir = join(output, String(id));
+      if (!RUN_ID.test(String(id)) || !existsSync(dir) || (run.proc && run.folder === dir)) { kept.push(id); continue; }
+      try { await rm(dir, { recursive: true, force: true }); removed.push(id); } catch { kept.push(id); }
+    }
+    return send(res, 200, { removed, kept });
+  }
   if (path === "/file") {
     const file = url.searchParams.get("path") || "";
     return allowedImage(file) ? sendFile(res, resolve(file)) : (res.writeHead(404), res.end());
@@ -205,6 +262,12 @@ async function handle(req, res) {
   // A brand's watermark file, for the preview next to the brand choice.
   const brandFile = /^\/brand\/([\w-]+)\/(watermark\.png)$/.exec(path);
   if (brandFile) return sendFile(res, join(root, "data", "brands", brandFile[1], brandFile[2]));
+  const uiAsset = /^\/hub\/assets\/ui\/([\w./-]+\.(?:css|js|woff2))$/.exec(path);
+  if (uiAsset) {
+    const base = resolve(hubRoot, "hub", "assets", "ui");
+    const file = resolve(base, uiAsset[1]);
+    return file.startsWith(base + sep) ? sendFile(res, file) : (res.writeHead(404), res.end());
+  }
   const hubAsset = /^\/hub\/assets\/([\w.-]+)$/.exec(path);
   if (hubAsset) return HUB_ASSETS.includes(hubAsset[1]) ? sendFile(res, join(hubRoot, "hub", "assets", hubAsset[1])) : (res.writeHead(404), res.end());
   const rel = path === "/" ? "index.html" : path.slice(1);

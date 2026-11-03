@@ -27,6 +27,9 @@
   // Tải lại: the menu starts again on the files as they are now and the page loads afresh (after an update, or when
   // the page looks out of date).
   const reload = Object.assign(document.createElement("button"), { type: "button", className: "btn reload", textContent: "Tải lại" });
+  // The kit (hub/assets/ui) styles a button by data-variant; a page on the old tool.css ignores it.
+  const mark = (button, primary) => { button.classList.toggle("primary", primary); if (primary) delete button.dataset.variant; else button.dataset.variant = "outline"; };
+  for (const button of [reload, config, btn]) mark(button, false);
   header.append(reload, config, btn);
   reload.onclick = async () => {
     reload.disabled = true;
@@ -73,11 +76,11 @@
       ? `<span class="mark">✔</span><span class="text">Đã cấu hình đủ. Các công cụ sẵn sàng dùng.</span>`
       : `<span class="mark">✖</span><span class="text">Chưa cấu hình xong: còn thiếu ${missing.join(", ")}. Cấu hình đủ rồi mới dùng được các công cụ.</span><button class="btn primary" type="button">Cấu hình ngay</button>`;
     status.querySelector("button")?.addEventListener("click", showSetup);
-    config.classList.toggle("primary", !done);
+    mark(config, !done);
   }
   refreshStatus();
   let next = "", current = "";
-  const show = () => { btn.textContent = next ? `Cập nhật ${next}` : "Cập nhật"; btn.classList.toggle("primary", !!next); };
+  const show = () => { btn.textContent = next ? `Cập nhật ${next}` : "Cập nhật"; mark(btn, !!next); };
   const check = () => fetch("/api/update-check").then((r) => (r.ok ? r.json() : Promise.reject())).then((r) => { next = r.next || ""; current = r.current || ""; show(); return true; }).catch(() => false);
   setTimeout(check, 3000);
   setInterval(check, 6 * 3600 * 1000);

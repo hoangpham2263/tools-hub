@@ -63,3 +63,8 @@ Mọi prompt cùng bố cục `TASK` rồi các `STEP` đánh số. Mọi đầu
 - Các góc xoay quanh sản phẩm hoặc đổi độ cao từ một ảnh: Flow gần như không di chuyển máy; các góc cỡ cảnh (đặc tả, cận, trung cảnh) hoạt động tốt. Muốn xoay thật cần ảnh tham chiếu thứ hai của mặt cần thấy hoặc prompt viết tay.
 - Màu mặt gỗ có thể đậm cam hơn ảnh gốc một chút.
 - Content MXH chỉ tạo ảnh bằng Codex nên không có dấu sao 4 cánh của Google (chỉ ảnh Flow có). Bộ gỡ dấu sao (`unsparkle.mjs`, gỡ lớp phủ bằng phép trừ, đã so với `GargantuaX/gemini-watermark-remover` và thử dựng hình sao đo từ ảnh thật: không tốt hơn công thức) đã gỡ khỏi hub khi mỗi tool tách riêng; cần lại cho tool dùng Flow thì lấy từ lịch sử Git (`git show 93cd646:hub/image/unsparkle.mjs`, `unsparkle.ps1` và `hub/tests/unsparkle.test.mjs` cùng commit).
+
+## Giao diện và kết quả
+
+- `ui/index.html` dùng bộ giao diện chung `hub/assets/ui/` (Basecoat, font, `ui.css`; chữ một độ dày, trạng thái bằng viền); máy chủ phục vụ bộ này ở `/hub/assets/ui/...`. Sáng/tối lưu ở `localStorage.themeMode`.
+- Tab **Kết quả** (sản phẩm đang chọn) và **Lịch sử** (mọi lần chạy đọc từ `<workspace>/output/`, không dựa `results.json` vì file đó giữ đường dẫn tuyệt đối cũ). Máy chủ: `GET /api/runs`, `POST /api/open` (chỉ mở thư mục trong `output/`; `openFolder` ở `hub/platform.mjs`), `POST /api/runs/delete` (theo id lần chạy, không xóa lần đang chạy). **Dọn bớt** giữ N lần gần nhất, xóa phần còn lại sau khi người dùng xác nhận.
