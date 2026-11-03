@@ -1,0 +1,60 @@
+/* Tools Hub UI tokens: the colors, radius, weights and fonts of the kit (light and dark), alone, so a page with its own
+   component classes (Product Review) can take the look without the kit's components. ui.css imports this file. Change a
+   color here, never inside a component. */
+
+:root {
+  --background: #f0f2f5;
+  --foreground: #050505;
+  --card: #ffffff;
+  --card-foreground: #050505;
+  --popover: #ffffff;
+  --popover-foreground: #050505;
+  --primary: #1877f2;
+  --primary-foreground: #ffffff;
+  --secondary: #e4e6eb;
+  --secondary-foreground: #050505;
+  --muted: #f0f2f5;
+  --muted-foreground: #65676b;
+  --accent: #e7f3ff;
+  --accent-foreground: #1877f2;
+  --destructive: #e41e3f;
+  --border: #e4e6eb;
+  --input: #e4e6eb;
+  --ring: #1877f2;
+  --radius: 0.625rem;
+
+  /* what a state looks like: the border turns to the accent, a little less than full */
+  --state-border: color-mix(in srgb, var(--primary) 40%, transparent);
+  --state-border-strong: color-mix(in srgb, var(--primary) 70%, transparent);
+  --state-fill: color-mix(in srgb, var(--primary) 6%, var(--card));
+
+  /* No bold: Basecoat sets buttons, labels and headings with these weights; all of them become the normal weight, so rank
+     is made by size and by color (foreground against muted-foreground). */
+  --font-weight-medium: 400;
+  --font-weight-semibold: 400;
+  --font-weight-bold: 400;
+  --font-sans: "Be Vietnam Pro", "Segoe UI", system-ui, -apple-system, "Helvetica Neue", Arial, sans-serif;
+  --font-heading: "Newsreader Variable", "Newsreader", Georgia, "Times New Roman", serif;
+  --default-font-family: var(--font-sans);
+}
+.dark {
+  --background: #18191a;
+  --foreground: #e4e6eb;
+  --card: #242526;
+  --card-foreground: #e4e6eb;
+  --popover: #242526;
+  --popover-foreground: #e4e6eb;
+  --primary: #2d88ff;
+  --primary-foreground: #ffffff;
+  --secondary: #3a3b3c;
+  --secondary-foreground: #e4e6eb;
+  --muted: #3a3b3c;
+  --muted-foreground: #b0b3b8;
+  --accent: #263951;
+  --accent-foreground: #4599ff;
+  --destructive: #ff5c6c;
+  --border: #3e4042;
+  --input: #3e4042;
+  --ring: #2d88ff;
+  --state-fill: color-mix(in srgb, var(--primary) 10%, var(--card));
+}

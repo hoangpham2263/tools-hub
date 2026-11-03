@@ -282,6 +282,10 @@
     .top .labeled { font-size: 0; gap: 0; padding: 0 10px; }
   }
 </style>
+<script>try { if (matchMedia("(prefers-color-scheme: dark)").matches) document.documentElement.classList.add("dark"); } catch {}</script>
+<link rel="stylesheet" href="ui/fonts/fonts.css" />
+<link rel="stylesheet" href="ui/tokens.css" />
+<link rel="stylesheet" href="ui/site-kit.css" />
 </head>
 <body>
 <main class="wrap">
@@ -334,11 +338,9 @@
       <h2 class="page-title">Tools Hub</h2>
       <p class="muted">Bộ công cụ cho shop: tạo ảnh review, viết prompt video và soạn bài đăng. Cài một lần, mở từ một menu, cập nhật chung một nút.</p>
     </div>
-    <div class="card hero">
-    <div class="get">
+    <div class="get" style="display:flex;gap:12px;align-items:center;flex-wrap:wrap">
       <span id="version" class="muted small"></span>
       <a class="small" href="https://github.com/hoangpham2263/tools-hub/releases" target="_blank" rel="noopener">Các phiên bản trước</a>
-    </div>
     </div>
   </section>
 
@@ -354,11 +356,6 @@
         <li><b>Nhập hàng loạt</b> từ bảng CSV hoặc thư mục nén (ZIP / RAR / 7Z).</li>
         <li>Duyệt từng ảnh (Giữ / Bỏ) rồi xuất file CSV cho Loox; ảnh tự tải lên Google Drive.</li>
         <li>Theo dõi token đã dùng và hạn mức ChatGPT ngay khi chạy.</li></ul></div>
-      <div class="card"><h3>Cách dùng</h3><ol>
-        <li>Bấm <b>+ Thêm sản phẩm</b>: dán link, thêm ảnh sản phẩm và ảnh review. Hoặc <b>Nhập hàng loạt</b>.</li>
-        <li>Bấm <b>Bắt đầu</b>, chọn số luồng nếu muốn chạy nhanh hơn.</li>
-        <li>Xong thì bấm <b>Duyệt &amp; xuất file</b>, giữ ảnh đẹp, bỏ ảnh lỗi, rồi xuất CSV.</li>
-        <li>Lỗi khó hiểu thì bấm <b>Gửi lỗi</b>: AI đọc log và gửi báo cáo.</li></ol></div>
       <div class="card"><h3>Cần có</h3><ul>
         <li><b>Cấu hình</b> đủ các bước: mật khẩu app, Node.js, Codex, đăng nhập ChatGPT.</li>
         <li>Thêm nhiều sản phẩm một lần: xem <a href="#nhap">Nhập hàng loạt</a>.</li></ul></div>
@@ -372,10 +369,6 @@
         <li>Chọn và sắp xếp góc máy từ thư viện góc dùng chung với Content MXH.</li>
         <li>Mở đầu bằng <b>người mẫu</b> giới thiệu sản phẩm (tuỳ chọn).</li>
         <li>Khổ <b>9:16</b>, <b>16:9</b> hoặc <b>1:1</b>; mỗi cảnh 6, 10 hoặc 15 giây.</li></ul></div>
-      <div class="card"><h3>Cách dùng</h3><ol>
-        <li>Thả <b>ảnh sản phẩm</b> vào, thêm ảnh người mẫu nếu muốn, điền <b>Tên sản phẩm</b>.</li>
-        <li>Giữ bộ 1 phút hoặc thêm, bớt, sắp lại các cảnh.</li>
-        <li>Bấm <b>Tạo video</b>, chờ khoảng 10–12 phút rồi bấm <b>Mở thư mục</b>.</li></ol></div>
       <div class="card"><h3>Cần có</h3><ul>
         <li>Chrome đã đăng nhập <b>grok.com</b> và đã cài extension Tools Hub.</li>
         <li>ffmpeg tự tải về lần chạy đầu (khoảng 30 MB).</li>
@@ -391,10 +384,6 @@
         <li>Chọn nền tảng ở <b>Đăng lên</b>: mỗi nền tảng một bài riêng, đúng giới hạn ký tự, cách để link và số hashtag của nó.</li>
         <li>Bài đăng theo <b>giọng văn</b> chọn sẵn; thêm <b>lời nhắn cho AI</b> để viết theo ý.</li>
         <li>Copy bài viết ngay trên app.</li></ul></div>
-      <div class="card"><h3>Cách dùng</h3><ol>
-        <li>Bấm <b>+ Thêm sản phẩm</b>: điền tên, điểm nổi bật, hashtag, thêm ảnh gốc.</li>
-        <li>Chọn nền tảng ở <b>Đăng lên</b>, giọng văn, ghi lời nhắn nếu cần.</li>
-        <li>Bấm <b>Bắt đầu</b>, xem ảnh tạo thành; mở tab từng nền tảng và copy bài đăng.</li></ol></div>
       <div class="card"><h3>Trạng thái</h3><ul>
         <li>Giao diện đã có; phần tạo ảnh và viết bài đang làm.</li>
         <li>Sẽ dùng chung <b>Cấu hình</b> với Product Review.</li></ul></div>
