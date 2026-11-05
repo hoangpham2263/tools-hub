@@ -722,7 +722,7 @@ async function showProductDialog(target = null) {
 
 // ----- Nhập hàng loạt (Show-ProductQueueBulkDialog): plain links join the list at once; a table (docs/import.md)
 // runs src/import-batch.ps1 in the background, which downloads and attaches the images -----
-const IMPORT_GUIDE = "https://hoangpham.is-a.dev/tools-hub/#nhap";
+const IMPORT_GUIDE = "https://hoangpham.is-a.dev/tools-hub/nhap";
 async function addLinks(urls) {
   const added = [];
   for (const url of urls) {

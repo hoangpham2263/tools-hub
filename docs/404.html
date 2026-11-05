@@ -1,0 +1,10 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Đang chuyển trang</title>
+<meta name="robots" content="noindex">
+<script>
+var base = "/tools-hub/";
+var path = location.pathname.indexOf(base) === 0 ? location.pathname.slice(base.length) : "";
+var query = location.search ? "&" + location.search.slice(1) : "";
+location.replace(base + "?p=" + encodeURIComponent(path) + query + location.hash);
+</script>

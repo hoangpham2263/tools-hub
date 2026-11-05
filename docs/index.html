@@ -2,6 +2,24 @@
 <html lang="vi">
 <head>
 <meta charset="utf-8" />
+<base href="/tools-hub/">
+<script>
+// GitHub Pages only has this one page: 404.html sends deep links here as ?p=.
+// Old links used #view; both become a clean path before the app starts.
+function cleanUrl() {
+  const base = "/tools-hub/";
+  const params = new URLSearchParams(location.search);
+  const p = params.get("p");
+  if (p !== null) {
+    params.delete("p");
+    const rest = params.toString();
+    history.replaceState(null, "", base + p.replace(/^\/+/, "") + (rest ? "?" + rest : "") + location.hash);
+  }
+  const old = location.hash.match(/^#((?:nhap|anh|nguon|log|api|product-review|grok-video-prompt|fb-content)(?:\/[^#]*)?)$/);
+  if (old) history.replaceState(null, "", base + old[1] + location.search);
+}
+cleanUrl();
+</script>
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Tools Hub</title>
 <meta name="description" content="Tools Hub: một app gom các công cụ Product Review, Grok Video và Content MXH. Tải app, hướng dẫn và trang quản lý." />
@@ -398,7 +416,7 @@
         <li>Lỗi khó hiểu thì bấm <b>Gửi lỗi</b>: AI đọc log và gửi báo cáo.</li></ol></div>
       <div class="card"><h3>Cần có</h3><ul>
         <li><b>Cấu hình</b> đủ các bước: mật khẩu app, Node.js, Codex, đăng nhập ChatGPT.</li>
-        <li>Thêm nhiều sản phẩm một lần: xem <a href="#nhap">Nhập hàng loạt</a>.</li></ul></div>
+        <li>Thêm nhiều sản phẩm một lần: xem <a href="nhap" data-go="nhap">Nhập hàng loạt</a>.</li></ul></div>
     </div>
   </section>
   <section id="tool-grok-video-prompt" class="tool-page" data-tool="grok-video-prompt" hidden>
@@ -747,9 +765,10 @@ function dataTable(box, { rows: all, key, columns, bulk = [], menu = [], search,
 }
 const kb = (size) => `${num(Math.max(1, Math.round(size / 1024)))} KB`;
 const at = (d) => new Date(d).toLocaleString("vi-VN");
-const go = (hash) => {
-  if (hash) location.hash = "#" + hash;
-  else { history.pushState(null, "", location.pathname + location.search); route(); }
+const BASE = "/tools-hub/";
+const go = (path) => {
+  history.pushState(null, "", BASE + path + location.search);
+  route();
 };
 const num = (n) => n.toLocaleString("vi-VN");
 
@@ -986,7 +1005,7 @@ async function loadImportDoc() {
 }
 $("importCopy").onclick = async () => {
   if (!state.importDoc) return;
-  try { await navigator.clipboard.writeText(`${state.importDoc}\n\nLink tài liệu: ${new URL("import.md", location.href).href}\n`); toast("Đã copy tài liệu nhập hàng loạt"); }
+  try { await navigator.clipboard.writeText(`${state.importDoc}\n\nLink tài liệu: ${new URL("import.md", document.baseURI).href}\n`); toast("Đã copy tài liệu nhập hàng loạt"); }
   catch { toast("Chưa copy được, chọn và copy tay."); }
 };
 async function loadApiDoc() {
@@ -1041,7 +1060,7 @@ function renderMarkdown(text) {
   }
   return out.join("\n");
 }
-$("apiLink").href = new URL("api.md", location.href).href;
+$("apiLink").href = new URL("api.md", document.baseURI).href;
 // Mã tạm: a key that expires, sent to an AI with the guide instead of the admin password. Shown once.
 const when = (iso) => new Date(iso).toLocaleString("vi-VN", { hour: "2-digit", minute: "2-digit", day: "2-digit", month: "2-digit" });
 async function loadTempKeys() {
@@ -1101,7 +1120,7 @@ $("apiCopy").onclick = async () => {
 
 function route() {
   const signedIn = !!store.get();
-  const [view, group] = location.hash.slice(1).split("/");
+  const [view, group] = location.pathname.slice(BASE.length).split("/");
   const TOOLS = ["product-review", "grok-video-prompt", "fb-content"];
   state.view = view === "nhap" || TOOLS.includes(view) || (signedIn && ["anh", "nguon", "log", "api"].includes(view)) ? view : "";
   const nextGroup = state.view === "nguon" && group ? decodeURIComponent(group) : "";
@@ -1210,7 +1229,7 @@ $("csvBtn").onclick = () => { $("settingsDlg").close(); downloadCsv(); };
 $("search").oninput = () => { state.imgShown = PAGE; render(); };
 $("batch").onchange = () => { state.imgShown = PAGE; render(); };
 $("imgMore").onclick = () => { state.imgShown += PAGE; render(); };
-for (const b of document.querySelectorAll("[data-go]")) b.onclick = () => go(b.dataset.go);
+for (const b of document.querySelectorAll("[data-go]")) b.onclick = (e) => { e.preventDefault(); go(b.dataset.go); };
 // Phones: the menu slides in from the left; picking a page, the shade or Esc closes it.
 function setMenu(open) {
   document.body.classList.toggle("menu-open", open);
@@ -1235,7 +1254,7 @@ for (const g of document.querySelectorAll(".side-group")) {
 // Logo and name go back to the management home (or the download page when signed out).
 $("homeLink").onclick = (e) => { e.preventDefault(); go(""); };
 $("srcBack").onclick = () => go(state.group ? "nguon" : "");
-window.addEventListener("hashchange", route);
+window.addEventListener("hashchange", () => { cleanUrl(); route(); });
 window.addEventListener("popstate", route);
 $("srcMore").onclick = () => { state.shown += PAGE; renderSources(); };
 $("uploadBtn").onclick = () => $("uploadInput").click();
