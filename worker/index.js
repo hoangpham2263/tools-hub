@@ -508,7 +508,7 @@ async function handle(req, env, ctx) {
 
   // Review Video: phát/tải file bằng link ký có hạn (thẻ <video> không gửi được header mật khẩu)
   const rvFile = path.match(/^\/review\/file\/([\w-]+)$/);
-  if (rvFile && req.method === "GET") return reviewFile(req, env, url, rvFile[1], { drive });
+  if (rvFile && req.method === "GET") return reviewFile(req, env, url, rvFile[1], { drive, ctx });
 
   // Review Video mở công khai (không cần mật khẩu) theo yêu cầu; xoá chỉ đưa vào thùng rác Drive.
   const review = path.match(/^\/api\/review(?:\/([\w-]+)(?:\/(upload|files)(?:\/([\w-]+))?)?)?$/);
