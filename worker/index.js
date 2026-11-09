@@ -510,6 +510,10 @@ async function handle(req, env, ctx) {
   const rvFile = path.match(/^\/review\/file\/([\w-]+)$/);
   if (rvFile && req.method === "GET") return reviewFile(req, env, url, rvFile[1], { drive });
 
+  // Review Video mở công khai (không cần mật khẩu) theo yêu cầu; xoá chỉ đưa vào thùng rác Drive.
+  const review = path.match(/^\/api\/review(?:\/([\w-]+)(?:\/(upload|files)(?:\/([\w-]+))?)?)?$/);
+  if (review) return handleReview(req, env, url, [review[1], review[2], review[3]], { drive, folder, json });
+
   if (path === "/api/status" && req.method === "GET") {
     return json({ connected: !!(await env.STORE.get("refresh_token")), email: isAdmin(req, env) ? await env.STORE.get("drive_email") : undefined });
   }
@@ -570,9 +574,6 @@ async function handle(req, env, ctx) {
 
   const grok = path.match(/^\/api\/grok-videos\/(\w+)\/([^/]+)$/);
   if (grok) return role === "admin" ? handleGrokVideos(req, env, url, grok[1], grok[2]) : json({ error: "Chỉ admin được tải video mẫu." }, 403);
-
-  const review = path.match(/^\/api\/review(?:\/([\w-]+)(?:\/(upload|files)(?:\/([\w-]+))?)?)?$/);
-  if (review) return handleReview(req, env, url, [review[1], review[2], review[3]], { drive, folder, json });
 
   const sources = path.match(/^\/api\/sources(?:\/([^/]+)(?:\/([^/]+))?)?$/);
   if (sources) return handleSources(req, env, url, [sources[1], sources[2]], role);
