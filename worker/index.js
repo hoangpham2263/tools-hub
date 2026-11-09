@@ -1,7 +1,7 @@
 // Tools Hub API — Product Review's routes: stores generated images in a private Google Drive folder and serves
 // them through stable public links for the review CSV. Same pattern as memories-api:
 // refresh token in KV, drive.file scope, admin password header for writes.
-import { handleReview, reviewFile } from "./review.js";
+import { handleReview, reviewFile } from "./video-editing.js";
 
 const ORIGINS = ["https://hoangpham.is-a.dev", "http://localhost:8000", "http://127.0.0.1:8000"];
 const SCOPE = "openid email https://www.googleapis.com/auth/drive.file";
@@ -95,7 +95,7 @@ export function appAllowed(method, path) {
     || (method === "GET" && /^\/api\/sources(\/[^/]+)?$/.test(path))
     || (method === "POST" && path === "/api/logs")
     // Review Video: người quay dùng mật khẩu app để tạo sản phẩm, up source, tải kết quả
-    || /^\/api\/review(\/|$)/.test(path);
+    || /^\/api\/(review|video-editing-tools)(\/|$)/.test(path);
 }
 
 // Batch ids and file names come from the local app; keep them to safe characters.
@@ -507,11 +507,11 @@ async function handle(req, env, ctx) {
   }
 
   // Review Video: phát/tải file bằng link ký có hạn (thẻ <video> không gửi được header mật khẩu)
-  const rvFile = path.match(/^\/review\/file\/([\w-]+)$/);
+  const rvFile = path.match(/^\/(?:review|video-editing-tools)\/file\/([\w-]+)$/);
   if (rvFile && req.method === "GET") return reviewFile(req, env, url, rvFile[1], { drive, ctx });
 
   // Review Video mở công khai (không cần mật khẩu) theo yêu cầu; xoá chỉ đưa vào thùng rác Drive.
-  const review = path.match(/^\/api\/review(?:\/([\w-]+)(?:\/(upload|files)(?:\/([\w-]+))?)?)?$/);
+  const review = path.match(/^\/api\/(?:review|video-editing-tools)(?:\/([\w-]+)(?:\/(upload|files)(?:\/([\w-]+))?)?)?$/);
   if (review) return handleReview(req, env, url, [review[1], review[2], review[3]], { drive, folder, json });
 
   if (path === "/api/status" && req.method === "GET") {

@@ -1,9 +1,10 @@
-// Review Video: người quay up source, người dựng trả video kết quả. File nằm ở Drive
-// "Tools Hub/Review Video/<mã sản phẩm>/Source|Kết quả/".
+// Video Editing Tools (trước là "Review Video"): người quay up source, người dựng trả video kết quả. File nằm ở Drive
+// "Tools Hub/Video Editing Tools/<mã sản phẩm>/Source|Kết quả/".
 // Nhanh theo kiểu memories-api: cả danh sách nằm trong 1 khoá KV (1 lần đọc), danh sách trả kèm link xem
 // đã ký nên web không phải gọi thêm, file được cache ở edge sau lần xem đầu.
 // File lớn: Worker chỉ mở phiên upload resumable, trình duyệt gửi thẳng lên Google (không qua giới hạn 100 MB).
-export const REVIEW_FOLDER = "Review Video";
+export const REVIEW_FOLDER = "Video Editing Tools";
+const OLD_FOLDER = "Review Video"; // tên cũ: đổi tên đúng thư mục đó trên Drive (id, file giữ nguyên)
 // Video mẫu (để phân tích style) nằm riêng: "Review Video/Video mẫu/<tên mẫu>/<file>", không chia Source/Kết quả
 const SAMPLE_FOLDER = "Video mẫu";
 // Sản phẩm nằm ngang cấp với video mẫu: "Review Video/Sản phẩm/<mã>/Source|Kết quả/"
@@ -29,7 +30,7 @@ async function hmac(env, text) {
 async function links(env, origin, f) {
   const exp = (Math.floor(Date.now() / 3600e3) + LINK_HOURS) * 3600e3;
   const q = `exp=${exp}&sig=${await hmac(env, `${f.id}.${exp}`)}`;
-  return { url: `${origin}/review/file/${f.id}?${q}`, download: `${origin}/review/file/${f.id}?${q}&dl=1&name=${encodeURIComponent(f.name)}` };
+  return { url: `${origin}/video-editing-tools/file/${f.id}?${q}`, download: `${origin}/video-editing-tools/file/${f.id}?${q}&dl=1&name=${encodeURIComponent(f.name)}` };
 }
 
 /** Toàn bộ sản phẩm: { [slug]: product }. Lần đầu gom từ các khoá cũ "review:<slug>". */
@@ -84,10 +85,18 @@ export async function reviewFile(req, env, url, id, { drive, ctx }) {
   return new Response(res.body, { status: res.status, headers: h });
 }
 
-/** /api/review[/<mã>[/upload|/files[/<id>]]] */
+/** /api/video-editing-tools (hoặc /api/review cũ)[/<mã>[/upload|/files[/<id>]]] */
 export async function handleReview(req, env, url, parts, { drive, folder, json }) {
   const [slug, sub, fileId] = parts;
-  const root = async () => folder(env, REVIEW_FOLDER, await folder(env, "Tools Hub"));
+  const root = async () => {
+    const hub = await folder(env, "Tools Hub");
+    const newKey = `folder:${hub}:${REVIEW_FOLDER}`, oldId = await env.STORE.get(`folder:${hub}:${OLD_FOLDER}`);
+    if (oldId && !(await env.STORE.get(newKey))) {
+      await drive(env, `/drive/v3/files/${oldId}?fields=id`, { method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify({ name: REVIEW_FOLDER }) });
+      await env.STORE.put(newKey, oldId);
+    }
+    return folder(env, REVIEW_FOLDER, hub);
+  };
   const homeOf = async (type) => folder(env, type === "sample" ? SAMPLE_FOLDER : PRODUCT_FOLDER, await root());
   const ensureFolder = async (p) => {
     if (!p.folderId) { p.folderId = await folder(env, p.slug, await homeOf(p.type)); await writeAll(env, all); }
