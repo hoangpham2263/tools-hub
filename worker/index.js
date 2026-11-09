@@ -1,7 +1,9 @@
 // Tools Hub API — Product Review's routes: stores generated images in a private Google Drive folder and serves
 // them through stable public links for the review CSV. Same pattern as memories-api:
 // refresh token in KV, drive.file scope, admin password header for writes.
-const ORIGINS = ["https://hoangpham.is-a.dev", "http://localhost:8000"];
+import { handleReview, reviewFile } from "./review.js";
+
+const ORIGINS = ["https://hoangpham.is-a.dev", "http://localhost:8000", "http://127.0.0.1:8000"];
 const SCOPE = "openid email https://www.googleapis.com/auth/drive.file";
 const OWNER_EMAILS = ["quochoang.idx@gmail.com", "hoangpham2263@gmail.com"];
 // Drive layout: "Tools Hub/" holds one folder per tool. "Tools Hub/Product Review/" holds "Ảnh đã tạo/<run>/",
@@ -91,7 +93,9 @@ export function appAllowed(method, path) {
     || (method === "POST" && path === "/api/images")
     || (method === "POST" && path === "/api/tool-files")
     || (method === "GET" && /^\/api\/sources(\/[^/]+)?$/.test(path))
-    || (method === "POST" && path === "/api/logs");
+    || (method === "POST" && path === "/api/logs")
+    // Review Video: người quay dùng mật khẩu app để tạo sản phẩm, up source, tải kết quả
+    || /^\/api\/review(\/|$)/.test(path);
 }
 
 // Batch ids and file names come from the local app; keep them to safe characters.
@@ -502,6 +506,10 @@ async function handle(req, env, ctx) {
     return res;
   }
 
+  // Review Video: phát/tải file bằng link ký có hạn (thẻ <video> không gửi được header mật khẩu)
+  const rvFile = path.match(/^\/review\/file\/([\w-]+)$/);
+  if (rvFile && req.method === "GET") return reviewFile(req, env, url, rvFile[1], { drive });
+
   if (path === "/api/status" && req.method === "GET") {
     return json({ connected: !!(await env.STORE.get("refresh_token")), email: isAdmin(req, env) ? await env.STORE.get("drive_email") : undefined });
   }
@@ -562,6 +570,9 @@ async function handle(req, env, ctx) {
 
   const grok = path.match(/^\/api\/grok-videos\/(\w+)\/([^/]+)$/);
   if (grok) return role === "admin" ? handleGrokVideos(req, env, url, grok[1], grok[2]) : json({ error: "Chỉ admin được tải video mẫu." }, 403);
+
+  const review = path.match(/^\/api\/review(?:\/([\w-]+)(?:\/(upload|files)(?:\/([\w-]+))?)?)?$/);
+  if (review) return handleReview(req, env, url, [review[1], review[2], review[3]], { drive, folder, json });
 
   const sources = path.match(/^\/api\/sources(?:\/([^/]+)(?:\/([^/]+))?)?$/);
   if (sources) return handleSources(req, env, url, [sources[1], sources[2]], role);
