@@ -4,6 +4,9 @@
 // đã ký nên web không phải gọi thêm, file được cache ở edge sau lần xem đầu.
 // File lớn: Worker chỉ mở phiên upload resumable, trình duyệt gửi thẳng lên Google (không qua giới hạn 100 MB).
 export const REVIEW_FOLDER = "Review Video";
+// Video mẫu (để phân tích style) nằm riêng: "Review Video/Video mẫu/<tên mẫu>/<file>", không chia Source/Kết quả
+const SAMPLE_FOLDER = "Video mẫu";
+const TYPES = ["product", "sample"];
 const STATUS = ["new", "editing", "done", "posted"];
 const KIND_FOLDER = { source: "Source", result: "Kết quả" };
 const LINK_HOURS = 12;
@@ -82,6 +85,12 @@ export async function reviewFile(req, env, url, id, { drive, ctx }) {
 export async function handleReview(req, env, url, parts, { drive, folder, json }) {
   const [slug, sub, fileId] = parts;
   const root = async () => folder(env, REVIEW_FOLDER, await folder(env, "Tools Hub"));
+  const homeOf = async (type) => (type === "sample" ? folder(env, SAMPLE_FOLDER, await root()) : root());
+  const ensureFolder = async (p) => {
+    if (!p.folderId) { p.folderId = await folder(env, p.slug, await homeOf(p.type)); await writeAll(env, all); }
+    return p.folderId;
+  };
+  const move = (id, to, from) => drive(env, `/drive/v3/files/${id}?addParents=${to}&removeParents=${from}&fields=id`, { method: "PATCH", headers: { "content-type": "application/json" }, body: "{}" });
   const all = await readAll(env);
   const out = async (p, status = 200) => json(await withLinks(env, url.origin, p), status, { "cache-control": "no-store" });
 
@@ -91,12 +100,12 @@ export async function handleReview(req, env, url, parts, { drive, folder, json }
       return json(list, 200, { "cache-control": "no-store" });
     }
     if (req.method === "POST") {
-      const { name, note = "" } = await req.json();
+      const { name, note = "", type = "product" } = await req.json();
       if (!String(name || "").trim()) return json({ error: "Cần tên sản phẩm." }, 400);
       const now = new Date().toISOString();
       const p = {
         slug: `${slugify(name)}-${Date.now().toString(36).slice(-4)}`, name: String(name).trim().slice(0, 120),
-        note: String(note).slice(0, 4000), status: "new", createdAt: now, updatedAt: now, files: [],
+        note: String(note).slice(0, 4000), type: TYPES.includes(type) ? type : "product", status: "new", createdAt: now, updatedAt: now, files: [],
       };
       all[p.slug] = p;
       await writeAll(env, all);
@@ -117,6 +126,19 @@ export async function handleReview(req, env, url, parts, { drive, folder, json }
       if (b.status !== undefined) { if (!STATUS.includes(b.status)) return json({ error: "Trạng thái không hợp lệ." }, 400); p.status = b.status; }
       if (b.note !== undefined) p.note = String(b.note).slice(0, 4000);
       if (b.name !== undefined && String(b.name).trim()) p.name = String(b.name).trim().slice(0, 120);
+      // Đổi loại (sản phẩm ↔ video mẫu): chuyển thư mục trên Drive; video mẫu thì đưa file ra thẳng thư mục mẫu
+      if (b.type !== undefined && TYPES.includes(b.type) && b.type !== (p.type || "product")) {
+        const from = await homeOf(p.type), to = await homeOf(b.type);
+        const dir = await ensureFolder(p);
+        if (from !== to) await move(dir, to, from);
+        if (b.type === "sample") {
+          const src = await folder(env, KIND_FOLDER.source, dir);
+          await Promise.all((p.files || []).map((f) => move(f.id, dir, src).catch(() => {})));
+          await trash(src).catch(() => {});
+          await env.STORE.delete(`folder:${dir}:${KIND_FOLDER.source}`);
+        }
+        p.type = b.type;
+      }
       await save();
       return out(p);
     }
@@ -136,8 +158,8 @@ export async function handleReview(req, env, url, parts, { drive, folder, json }
     const fname = cleanFile(name);
     if (!fname || !(size > 0) || !KIND_FOLDER[kind]) return json({ error: "Thiếu tên, cỡ hoặc loại file." }, 400);
     if (size > 5 * 1024 ** 3) return json({ error: "File quá 5 GB." }, 400);
-    if (!p.folderId) { p.folderId = await folder(env, p.slug, await root()); await writeAll(env, all); }
-    const parent = await folder(env, KIND_FOLDER[kind], p.folderId);
+    const dir = await ensureFolder(p);
+    const parent = p.type === "sample" ? dir : await folder(env, KIND_FOLDER[kind], dir);
     const r = await drive(env, "/upload/drive/v3/files?uploadType=resumable&fields=id,name,size,mimeType,createdTime", {
       method: "POST",
       headers: {
