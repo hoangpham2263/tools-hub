@@ -6,6 +6,9 @@
 export const REVIEW_FOLDER = "Review Video";
 // Video mẫu (để phân tích style) nằm riêng: "Review Video/Video mẫu/<tên mẫu>/<file>", không chia Source/Kết quả
 const SAMPLE_FOLDER = "Video mẫu";
+// Sản phẩm nằm ngang cấp với video mẫu: "Review Video/Sản phẩm/<mã>/Source|Kết quả/"
+const PRODUCT_FOLDER = "Sản phẩm";
+const LAYOUT_KEY = "review:layout"; // "2" = đã chuyển thư mục sản phẩm cũ vào "Sản phẩm/"
 const TYPES = ["product", "sample"];
 const STATUS = ["new", "editing", "done", "posted"];
 const KIND_FOLDER = { source: "Source", result: "Kết quả" };
@@ -85,13 +88,22 @@ export async function reviewFile(req, env, url, id, { drive, ctx }) {
 export async function handleReview(req, env, url, parts, { drive, folder, json }) {
   const [slug, sub, fileId] = parts;
   const root = async () => folder(env, REVIEW_FOLDER, await folder(env, "Tools Hub"));
-  const homeOf = async (type) => (type === "sample" ? folder(env, SAMPLE_FOLDER, await root()) : root());
+  const homeOf = async (type) => folder(env, type === "sample" ? SAMPLE_FOLDER : PRODUCT_FOLDER, await root());
   const ensureFolder = async (p) => {
     if (!p.folderId) { p.folderId = await folder(env, p.slug, await homeOf(p.type)); await writeAll(env, all); }
     return p.folderId;
   };
   const move = (id, to, from) => drive(env, `/drive/v3/files/${id}?addParents=${to}&removeParents=${from}&fields=id`, { method: "PATCH", headers: { "content-type": "application/json" }, body: "{}" });
   const all = await readAll(env);
+  // Một lần: thư mục sản phẩm cũ nằm thẳng trong "Review Video/" → chuyển vào "Sản phẩm/" (id, link giữ nguyên)
+  if ((await env.STORE.get(LAYOUT_KEY)) !== "2") {
+    const top = await root(), prod = await homeOf("product");
+    await Promise.all(Object.values(all).filter((p) => p.folderId && p.type !== "sample").map(async (p) => {
+      const { parents = [] } = await (await drive(env, `/drive/v3/files/${p.folderId}?fields=parents`)).json();
+      if (parents.includes(top)) await move(p.folderId, prod, top);
+    }));
+    await env.STORE.put(LAYOUT_KEY, "2");
+  }
   const out = async (p, status = 200) => json(await withLinks(env, url.origin, p), status, { "cache-control": "no-store" });
 
   if (!slug) {
